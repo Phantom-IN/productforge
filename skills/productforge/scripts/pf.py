@@ -31,6 +31,7 @@ from dataclasses import dataclass  # noqa: E402
 
 from pflib import (  # noqa: E402
     __version__,
+    brief,
     commands,
     gates,
     merge,
@@ -244,9 +245,27 @@ def _cmd_staging(args: argparse.Namespace) -> dict[str, Any]:
     return {"run_id": run_id, "path": str(path)}
 
 
-def _cmd_merge(args: argparse.Namespace) -> dict[str, Any]:
+def _cmd_merge(args: argparse.Namespace) -> Any:
     ws = workspace.resolve_workspace(args.workspace)
+    if args.check:
+        result = merge.preflight(ws, args.run_id)
+        return CommandResult(result, EXIT_OK if result["ok"] else EXIT_CHECK_FAILED)
     return merge.merge(ws, args.run_id).to_dict()
+
+
+def _cmd_brief(args: argparse.Namespace) -> CommandResult:
+    ws = workspace.resolve_workspace(args.workspace)
+    result = brief.render(
+        ws,
+        role=args.role,
+        task=args.task,
+        partition=args.partition,
+        inputs=args.input,
+        templates=args.template,
+        budget=args.budget,
+        run_id=args.run_id,
+    )
+    return CommandResult(result.to_dict(), human=result.text)
 
 
 def _not_implemented(name: str, phase: str) -> Handler:
@@ -295,6 +314,19 @@ def _add_staging(p: argparse.ArgumentParser) -> None:
 
 def _add_merge(p: argparse.ArgumentParser) -> None:
     p.add_argument("run_id", help="staging run id")
+    p.add_argument(
+        "--check", action="store_true", help="preflight: merge into a scratch copy and validate"
+    )
+
+
+def _add_brief(p: argparse.ArgumentParser) -> None:
+    p.add_argument("--role", required=True, help="role agent, e.g. research-agent")
+    p.add_argument("--task", required=True, help="what the agent must do")
+    p.add_argument("--partition", help="this run's slice of the work (parallel runs)")
+    p.add_argument("--input", action="append", help="workspace file the agent must read (repeat)")
+    p.add_argument("--template", action="append", help="template to fill, e.g. research/sources.md")
+    p.add_argument("--budget", help="e.g. 'at most 15 sources'")
+    p.add_argument("--run-id", help="existing run: render a repair brief with preflight findings")
 
 
 def _add_validate(p: argparse.ArgumentParser) -> None:
@@ -331,6 +363,7 @@ SUBCOMMANDS: list[tuple[str, str, Callable[[argparse.ArgumentParser], None], Han
     ("next-id", "allocate one record ID", _add_next_id, _cmd_next_id),
     ("staging", "manage agent staging runs", _add_staging, _cmd_staging),
     ("merge", "merge a staging run into canonical files", _add_merge, _cmd_merge),
+    ("brief", "render the brief for one agent run", _add_brief, _cmd_brief),
     (
         "validate",
         "schema, references, confidence and locks",

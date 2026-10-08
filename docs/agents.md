@@ -15,4 +15,9 @@ is registered by the plugin.
 | `scope-editor` | SCOPE_DEFINED | Phase 13 |
 | `phase-planner` | PHASE_PLAN_READY | Phase 15 |
 
-The shared agent contract (`_contract.md`) lands in Phase 04.
+The shared agent contract lives in `skills/productforge/references/agent-contract.md`.
+
+**Only agent definitions may live in `agents/`.** Claude Code registers every `.md` file there as an
+agent (`productforge:<file-stem>`), so READMEs and shared docs belong elsewhere — this file used to be
+`agents/README.md` and showed up as a bogus `productforge:README` agent. A prompt-contract test
+enforces that every file in `agents/` is a real agent definition.

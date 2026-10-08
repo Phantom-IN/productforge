@@ -25,6 +25,15 @@ versions follow [Semantic Versioning](https://semver.org/).
   rules with transitive evidence (`confidence.py`); `urls.py`, `taxonomy.py`; tolerant parsing;
   `pf.py validate` / `check`; `G-VALIDATE-CLEAN` gate condition; Tasklet DISCOVERY fixture + one
   invalid overlay per code; `references/confidence-rules.md`, `references/source-tiers.md`.
+- Phase 04: full orchestrator `SKILL.md` (dispatch via `check-command`, user-confirmed one-step
+  transitions, agent run protocol with preflight + repair loop, inline fallback, end-of-command
+  report); `pf.py brief` + `templates/agent-brief.md`; `pf.py merge --check` preflight; merge reports
+  list `new_ids`; references `agent-contract.md`, `philosophy.md`, `guardrails.md`; prompt-contract
+  tests.
+
+### Fixed
+- `agents/README.md` was registered by Claude Code as a bogus `productforge:README` agent; moved to
+  `docs/agents.md`.
 
 ### Changed
 - `ruff format` is enforced by `make lint`.

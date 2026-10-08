@@ -65,7 +65,10 @@ We are building **v1** — phases in [`plans/v1/`](plans/v1/README.md).
   contributor-scout).
 - **Orchestrator skill**: `skills/productforge/SKILL.md` + `references/` (load on demand) +
   `templates/{research,spec,project,plans}/` + `scripts/pf.py` + `scripts/pflib/`.
-- **Agents**: `agents/{research-agent,product-analyst,ux-analyst,domain-architect,scope-editor,systems-architect,phase-planner}.md`.
+- **Agents**: `agents/{research-agent,product-analyst,ux-analyst,domain-architect,scope-editor,systems-architect,phase-planner}.md`,
+  registered by Claude Code as `productforge:<name>`. **Only agent definitions may live in `agents/`**
+  (every `.md` there becomes an agent). Shared rules: `skills/productforge/references/agent-contract.md`;
+  briefs come only from `pf.py brief` (template `templates/agent-brief.md`).
 - **Capabilities**: `skills/productforge/capabilities.json` (capability → providers) +
   `skills/productforge/adapters/<provider>.md` (brief + ingest guide) + `pflib/capabilities.py`.
 - **Hook**: `hooks/hooks.json` → `hooks/stage_guard.py` (no-op outside a ProductForge workspace).
@@ -93,6 +96,8 @@ python3.11 skills/productforge/scripts/pf.py --help
 python3.11 skills/productforge/scripts/pf.py init https://tasklet.example --out /tmp/tl --scope "task tracking"
 python3.11 skills/productforge/scripts/pf.py status --workspace /tmp/tl
 python3.11 skills/productforge/scripts/pf.py check-command features --workspace /tmp/tl --json
+python3.11 skills/productforge/scripts/pf.py brief --role research-agent --task "…" --workspace /tmp/tl
+python3.11 skills/productforge/scripts/pf.py merge <run-id> --check --workspace /tmp/tl --json   # preflight
 python3.11 skills/productforge/scripts/pf.py deps --json          # which skills/plugins are reused
 
 # load the plugin locally in Claude Code
@@ -140,6 +145,8 @@ claude --plugin-dir .                 # then: /productforge status  (or /product
 ## Anti-patterns
 
 - An agent writing directly into `research/` or `spec/` record files.
+- A hand-written agent brief, or merging a run before `merge --check` (repairs must happen in staging).
+- Any non-agent file (README, notes) in `agents/`.
 - Reporting counts or scores typed by the model instead of read from `pf.py status --json` / `score`.
 - "Linear probably uses Postgres" in any artifact without Tier ≤ 2 evidence.
 - Advancing two stages in one command, or advancing without showing the gate report.

@@ -49,6 +49,7 @@ class MergeReport:
     added: dict[str, int] = field(default_factory=dict)
     deduped: int = 0
     id_map: dict[str, str] = field(default_factory=dict)
+    new_ids: list[str] = field(default_factory=list)  # final IDs allocated by this merge
     files_written: list[str] = field(default_factory=list)
     documents_updated: list[str] = field(default_factory=list)
     conflicts: list[dict[str, str]] = field(default_factory=list)
@@ -60,6 +61,7 @@ class MergeReport:
             "added": self.added,
             "deduped": self.deduped,
             "id_map": self.id_map,
+            "new_ids": self.new_ids,
             "files_written": self.files_written,
             "documents_updated": self.documents_updated,
             "conflicts": self.conflicts,
@@ -339,6 +341,7 @@ def merge(ws: Path, run_id: str) -> MergeReport:
                 next_num[prefix] += 1
                 final = ids.format_id(prefix, next_num[prefix])
                 primaries[final] = sr
+                report.new_ids.append(final)
                 report.added[prefix] = report.added.get(prefix, 0) + 1
                 if key is not None:
                     run_keys[(prefix, key)] = final
@@ -444,3 +447,47 @@ def allocate_next(ws: Path, prefix: str) -> str:
         workspace.save_id_marks(ws, marks)
         workspace.append_history(ws, {"event": "next-id", "id": new_id})
         return new_id
+
+
+def _preflight_ignore(directory: str, names: list[str]) -> set[str]:
+    return {n for n in names if n in (workspace.MERGED, "cache")}
+
+
+def preflight(ws: Path, run_id: str) -> dict[str, Any]:
+    """Merge ``run_id`` into a throw-away copy of the workspace and validate the result.
+
+    Nothing in ``ws`` changes. Returns the would-be merge report and the validator findings
+    that concern this run's records (new or deduped-into) or the files it would write — the
+    input for an agent repair loop *before* anything reaches the canonical files.
+    """
+    import tempfile
+
+    from pflib import validators
+
+    run_dir = workspace.staging_dir(ws, run_id)
+    if not run_dir.is_dir():
+        raise UsageError(f"no staging run {run_id!r}", code="NO_SUCH_RUN")
+    with tempfile.TemporaryDirectory(prefix="pf-preflight-") as tmp:
+        copy = Path(tmp) / "ws"
+        shutil.copytree(ws, copy, ignore=_preflight_ignore)
+        (workspace.pf_dir(copy) / workspace.MERGE_LOCK).unlink(missing_ok=True)
+        try:
+            report = merge(copy, run_id)
+        except MergeError as exc:
+            return {"run_id": run_id, "ok": False, "merge_error": exc.to_dict(), "report": None,
+                    "errors": 1, "warnings": 0, "findings": []}  # fmt: skip
+        touched = set(report.id_map.values())
+        written = set(report.files_written)
+        found = [
+            f
+            for f in validators.run(copy)
+            if f.record_id in touched or (f.record_id is None and f.artifact in written)
+        ]
+    summary = validators.summary(found)
+    return {
+        "run_id": run_id,
+        "ok": summary["errors"] == 0,
+        "merge_error": None,
+        "report": report.to_dict(),
+        **summary,
+    }
