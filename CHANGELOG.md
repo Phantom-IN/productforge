@@ -35,6 +35,12 @@ versions follow [Semantic Versioning](https://semver.org/).
   `claude plugin list`, resolution, pins), `pflib/deps.py` + `pf.py deps` (doctor, consent-gated
   installs, pins, offered), `pf.py delegate` + 7 adapter files, raw-material section in agent briefs,
   `PROVIDER_REPORT_AS_EVIDENCE` finding, SKILL.md Capabilities and Delegated run protocol sections.
+- Phase 06: `pflib/discover.py` (robots-aware reconnaissance: sitemaps incl. gzip/indexes, homepage
+  links, subdomain and well-known-path probes, manual on-site redirects, per-host round-robin cap) +
+  `discover_rules.py`; `pf.py discover` and `pf.py research-plan` (`research.py`: partitions,
+  budgets, coverage, scope advice); `research.max_sources` cap in merge (drops unreferenced new
+  sources); `agents/research-agent.md`; research templates; `references/research-playbook.md`;
+  SKILL.md research flow with delegation of browse/pdf/repo requests.
 
 ### Fixed
 - `agents/README.md` was registered by Claude Code as a bogus `productforge:README` agent; moved to

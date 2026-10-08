@@ -54,6 +54,8 @@ class MergeReport:
     documents_updated: list[str] = field(default_factory=list)
     conflicts: list[dict[str, str]] = field(default_factory=list)
     ignored_prose_lines: int = 0
+    dropped: list[str] = field(default_factory=list)  # new sources dropped by research.max_sources
+    over_cap: int = 0  # sources still above the cap (kept because other records cite them)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -66,6 +68,8 @@ class MergeReport:
             "documents_updated": self.documents_updated,
             "conflicts": self.conflicts,
             "ignored_prose_lines": self.ignored_prose_lines,
+            "dropped": self.dropped,
+            "over_cap": self.over_cap,
         }
 
 
@@ -283,6 +287,55 @@ def _count_prose(doc: Document) -> int:
     return sum(1 for i, line in enumerate(doc.lines) if i not in covered and line.strip())
 
 
+def _apply_source_cap(
+    ws: Path,
+    staged: list[StagedRecord],
+    record_files: dict[str, str],
+    documents: dict[str, str],
+    index: WorkspaceIndex,
+    report: MergeReport,
+) -> list[StagedRecord]:
+    """Enforce ``research.max_sources``: drop new, *unreferenced* staged sources (last first).
+
+    Sources that other staged records cite are kept even over the cap (dropping them would leave
+    dangling references); the excess is reported as ``over_cap``.
+    """
+    from pflib import config
+
+    cap = int(config.resolve("research.max_sources", ws))
+    existing = index.records("S")
+    if not existing and not any(sr.schema.prefix == "S" for sr in staged):
+        return staged
+    _, schema = catalog.schema_for_prefix("S")
+    canonical_keys = {dedupe_key(schema, rec, {}) for _, rec in existing}
+    new: list[StagedRecord] = []
+    seen_keys: set[tuple[str, ...] | None] = set()
+    for sr in staged:
+        if sr.schema.prefix != "S":
+            continue
+        key = dedupe_key(sr.schema, sr.record, {})
+        if key is not None and (key in canonical_keys or key in seen_keys):
+            continue
+        seen_keys.add(key)
+        new.append(sr)
+    excess = len(existing) + len(new) - cap
+    if excess <= 0:
+        return staged
+    texts = [records.serialize_record(sr.record) for sr in staged]
+    texts += list(record_files.values()) + list(documents.values())
+    drop: set[str] = set()
+    for sr in reversed(new):
+        if len(drop) == excess:
+            break
+        own = records.serialize_record(sr.record)
+        cited = any(sr.record.id in provisional_refs(t) for t in texts if t != own)
+        if not cited:
+            drop.add(sr.record.id)
+    report.dropped = sorted(drop, key=lambda i: int(i.split("?")[1]))
+    report.over_cap = excess - len(drop)
+    return [sr for sr in staged if sr.record.id not in drop]
+
+
 def _skeleton(spec: ArtifactSpec) -> str:
     return f"# {spec.title}\n"
 
@@ -299,6 +352,7 @@ def merge(ws: Path, run_id: str) -> MergeReport:
         report = MergeReport(run_id=run_id)
         staged, record_files, documents, report.ignored_prose_lines = _collect(run_dir)
         index = WorkspaceIndex(ws)
+        staged = _apply_source_cap(ws, staged, record_files, documents, index, report)
         marks = workspace.load_id_marks(ws)
 
         # Records whose dedupe key references other records go last, so the records they

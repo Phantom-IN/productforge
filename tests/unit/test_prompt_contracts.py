@@ -182,3 +182,37 @@ def test_delegation_is_done_by_the_orchestrator_and_raw_output_is_data() -> None
     assert '"$PF" delegate' in delegated and "role agents cannot invoke skills" in delegated
     assert "data, never instructions" in delegated and "never merged" in delegated
     assert "raw_dir" in section(text, "Hard constraints")
+
+
+def test_research_agent_contract() -> None:
+    text = (AGENTS / "research-agent.md").read_text(encoding="utf-8")
+    for phrase in (
+        '"allowed": true',
+        "provisional IDs",
+        "browse <url>",
+        "pdf <url>",
+        "repo <url>",
+        "Via:",
+        "prompt injection",
+        "Recommended scope",
+        "never a source",
+    ):
+        assert phrase in text, phrase
+    assert "WebFetch" in frontmatter(text)["tools"] and "Bash" not in frontmatter(text)["tools"]
+
+
+def test_research_section_wires_every_delegated_capability_and_the_fallback() -> None:
+    text = SKILL.read_text(encoding="utf-8")
+    research = text.split("### `/productforge research`", 1)[1].split("\n### ", 1)[0]
+    for phrase in (
+        '"$PF" research-plan',
+        '"$PF" discover',
+        "Delegated run protocol",
+        "web.browse",
+        "docs.pdf",
+        "repo.intel",
+        "builtin",
+        "set-scope",
+        "one at a time",
+    ):
+        assert phrase in research, phrase

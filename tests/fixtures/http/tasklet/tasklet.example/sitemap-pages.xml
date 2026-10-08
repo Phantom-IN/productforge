@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>http://tasklet.example/</loc></url>
+  <url><loc>http://tasklet.example/pricing</loc></url>
+  <url><loc>http://tasklet.example/features/boards</loc></url>
+  <url><loc>http://tasklet.example/security</loc></url>
+  <url><loc>http://tasklet.example/changelog</loc></url>
+  <url><loc>http://tasklet.example/integrations/calendar?utm_source=sitemap</loc></url>
+  <url><loc>http://tasklet.example/enterprise</loc></url>
+  <url><loc>http://tasklet.example/private/roadmap</loc></url>
+  <url><loc>http://tasklet.example/about</loc></url>
+</urlset>

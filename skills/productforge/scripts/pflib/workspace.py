@@ -20,6 +20,7 @@ PF_DIR = ".productforge"
 STAGING = "staging"
 MERGED = "_merged"
 RAW = "raw"  # delegated-provider output inside a run; never merged (§9.4)
+CACHE = "cache"  # .productforge/cache/ (discover results, …)
 RUN_META = ".run.json"
 HISTORY = "history.log"
 IDS_FILE = "ids.json"

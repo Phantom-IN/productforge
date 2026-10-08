@@ -204,8 +204,39 @@ Finish every command with at most 20 lines:
 2. Remember the returned `workspace` path for every later call.
 3. If `needs_rename` is true, mention that `our_name` is a placeholder the user should replace.
 4. Resolve and offer capabilities (**Capabilities** steps 1–3).
-5. Research kick-off is **not available in this build** (Phase 06). Report the workspace, the open
-   stage and the next command, then stop.
+5. Continue with the **research** section below (the first source pass).
+
+### `/productforge research`
+
+Source passes (DISCOVERY). Repeat the command until coverage and the gate are good.
+
+1. `python3.11 "$PF" research-plan --workspace <ws> --json`. If `discovered` is false, first run
+   `python3.11 "$PF" discover <target_url> --workspace <ws> --json` and plan again.
+2. **Scope.** If `recommend_scope` is true and `product-overview.md` has `## Recommended scope`
+   options, ask with AskUserQuestion (those options, plus Other) and record the answer:
+   `python3.11 "$PF" set-scope "<choice>" --accepted --source recommended --workspace <ws> --json`.
+   If `needs_scope` is true but there is no recommendation yet, run only the `official-core`
+   partition first (it fills `## Major areas` and, for large products, `## Recommended scope`),
+   then plan again. A small product may simply be scoped as the whole product (ask the user).
+3. **Partitions.** For every partition with `budget > 0`, in parallel:
+   - `provider` is not `builtin` (only `external` can be): use the **Delegated run protocol** with
+     `delegate <provider> --task "What do independent reviews, tutorials and community threads say
+     about <scope>? Which capabilities do users rely on, and what do they miss?"`, then normalise
+     with the research-agent in the same run;
+   - otherwise brief the research-agent:
+     `python3.11 "$PF" brief --role research-agent --task "Source pass for partition <name>: record
+     up to <budget> new sources, uncovered categories first: <uncovered>." --partition <name>
+     --input research/sources.md --input research/product-overview.md --input <each of caches>
+     --template research/sources.md --template research/product-overview.md
+     --budget "at most <budget> new sources" --workspace <ws> --json`.
+   Spawn them in one message, then preflight, repair and merge each run **one at a time**.
+4. **Research requests** in agent summaries (at most 5 delegations per command): `browse <url>` →
+   `web.browse`, `pdf <url>` → `docs.pdf`, `repo <url>` → `repo.intel`. When that capability resolves
+   to a real provider, run the Delegated run protocol for it and normalise with the research-agent;
+   when it is `builtin`, report the request as unresolved.
+5. Report: merge reports' `dropped`/`over_cap` (source cap), the new `research-plan` coverage
+   (`uncovered_official`), validation, and the next command. Claims, unknowns and surfaces are
+   extracted by the evidence pass, which arrives in Phase 07.
 
 ### `/productforge status`
 
@@ -229,7 +260,7 @@ After dispatch (so refusals and transitions still behave correctly), these comma
 
 | Command | Arrives in |
 |---|---|
-| `research` | Phases 06–07 |
+| `research` (evidence pass: claims, unknowns, surfaces) | Phase 07 |
 | `features` | Phase 08 |
 | `workflows` | Phase 09 |
 | `model` | Phases 10–11 |

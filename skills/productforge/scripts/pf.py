@@ -33,10 +33,13 @@ from pflib import (  # noqa: E402
     __version__,
     brief,
     commands,
+    config,
     deps,
+    discover,
     gates,
     merge,
     metrics,
+    research,
     scaffold,
     state,
     validators,
@@ -288,6 +291,49 @@ def _cmd_delegate(args: argparse.Namespace) -> CommandResult:
     return CommandResult(result.to_dict(), human=result.prompt)
 
 
+def _cmd_discover(args: argparse.Namespace) -> CommandResult:
+    ws = _optional_workspace(args.workspace)
+    target_url, host = scaffold.parse_target(args.url)
+    slug = state.load(ws).product["slug"] if ws else scaffold.slug_from_host(host)
+    max_pages = args.max_pages or int(config.resolve("research.max_pages_per_domain", ws))
+    result = discover.discover(
+        target_url,
+        user_agent=str(config.resolve("research.user_agent", ws)),
+        delay=float(config.resolve("research.request_delay_seconds", ws)),
+        max_pages_per_host=max_pages,
+        slug=slug,
+    )
+    cache = str(discover.write_cache(ws, result)) if ws else None
+    payload = {
+        "host": result.host,
+        "counts": result.counts(),
+        "candidates": len(result.entries),
+        "external_links": len(result.external),
+        "disallowed": result.disallowed,
+        "truncated": result.truncated,
+        "errors": len(result.errors),
+        "requests": result.requests,
+        "probes": result.probes,
+        "cache": cache,
+    }
+    if ws is None:
+        payload["entries"] = result.entries
+        payload["external"] = result.external
+    human = [
+        f"{result.host}: {len(result.entries)} candidate URLs, {result.disallowed} disallowed "
+        f"by robots.txt, {len(result.errors)} errors, {result.requests} requests"
+    ]
+    human += [f"  {cat:20} {n}" for cat, n in result.counts().items()]
+    if cache:
+        human.append(f"cache: {cache}")
+    return CommandResult(payload, human="\n".join(human))
+
+
+def _cmd_research_plan(args: argparse.Namespace) -> dict[str, Any]:
+    ws = workspace.resolve_workspace(args.workspace)
+    return research.plan(ws)
+
+
 def _cmd_set_scope(args: argparse.Namespace) -> dict[str, Any]:
     ws = workspace.resolve_workspace(args.workspace)
     st = scaffold.set_scope(ws, args.text, accepted=args.accepted, source=args.source)
@@ -464,7 +510,13 @@ SUBCOMMANDS: list[tuple[str, str, Callable[[argparse.ArgumentParser], None], Han
         "discover",
         "robots/sitemap/link reconnaissance",
         _add_discover,
-        _not_implemented("discover", "06"),
+        _cmd_discover,
+    ),
+    (
+        "research-plan",
+        "partitions, budgets, coverage and scope advice for research",
+        _add_nothing,
+        _cmd_research_plan,
     ),
     (
         "score",

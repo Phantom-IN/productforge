@@ -411,6 +411,9 @@ CATALOG: tuple[ArtifactSpec, ...] = (
 )
 
 
+# Well-known artifacts other modules read by name.
+OVERVIEW_PATH = "research/product-overview.md"
+
 # Directories every new workspace starts with (``pf.py init``).
 SCAFFOLD_DIRS: tuple[str, ...] = ("research", "spec/decisions", "plans")
 
