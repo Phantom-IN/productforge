@@ -29,14 +29,17 @@ All bookkeeping is done by the deterministic CLI shipped with this skill:
 ```bash
 PF="<base directory of this skill>/scripts/pf.py"
 # plugin installs: ${CLAUDE_PLUGIN_ROOT}/skills/productforge/scripts/pf.py
-python3 "$PF" <subcommand> --json
+python3.11 "$PF" <subcommand> --json
 ```
+
+Always use `python3.11` — never bare `python3`. If `python3.11` is not found, stop and tell the
+user ProductForge needs Python 3.11 (macOS: `brew install python@3.11`).
 
 Never report a number or a state you did not read from `pf.py` output.
 
 ## Commands in this build
 
-- `/productforge status` → run `python3 "$PF" status --json` and relay the result in one or two
+- `/productforge status` → run `python3.11 "$PF" status --json` and relay the result in one or two
   sentences. In this build it reports that no ProductForge workspace was found.
 - Anything else (`/productforge <url>`, `research`, `features`, `workflows`, `model`,
   `competitors`, `scope`, `architect`, `finalize`, `reopen`) → reply that the command is not

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import Callable
+from collections.abc import Callable
 
 import pytest
 
@@ -11,8 +11,20 @@ Cli = Callable[..., tuple[int, str, str]]
 
 # IMPLEMENTATION_PLAN.md §8 — every subcommand must exist in the CLI contract.
 SECTION_8_SUBCOMMANDS = [
-    "init", "status", "check-command", "advance", "reopen", "next-id", "staging",
-    "merge", "validate", "discover", "score", "lint-phases", "trace", "check",
+    "init",
+    "status",
+    "check-command",
+    "advance",
+    "reopen",
+    "next-id",
+    "staging",
+    "merge",
+    "validate",
+    "discover",
+    "score",
+    "lint-phases",
+    "trace",
+    "check",
 ]
 
 NO_WORKSPACE = {"workspace": None, "message": "No ProductForge workspace found"}
@@ -47,8 +59,6 @@ def test_status_human_output(pf_cli: Cli) -> None:
 @pytest.mark.parametrize(
     "argv, phase",
     [
-        (["init", "https://tasklet.example"], "02"),
-        (["merge", "run-1"], "01"),
         (["validate"], "03"),
         (["discover", "https://tasklet.example"], "06"),
         (["score"], "13"),

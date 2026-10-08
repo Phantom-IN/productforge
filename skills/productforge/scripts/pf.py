@@ -1,33 +1,217 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.11
 """ProductForge CLI — the deterministic core behind the ``productforge`` skill.
 
 Contract: IMPLEMENTATION_PLAN.md §8. Every subcommand accepts ``--workspace DIR``
 and ``--json`` (before or after the subcommand name). Exit codes: 0 ok,
 1 check failed, 2 usage error / not implemented.
 
-Standard library only. Run with any Python >= 3.9.
+Standard library only. Requires Python 3.11+; the plugin always invokes it as ``python3.11``.
 """
 
 from __future__ import annotations
 
 import argparse
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
+
+MIN_PYTHON = (3, 11)
+if sys.version_info < MIN_PYTHON:  # keep this file parseable by old interpreters
+    found = f"{sys.version_info[0]}.{sys.version_info[1]}"
+    sys.stderr.write(
+        f"pf.py: ProductForge requires Python 3.11+ (found {found}). "
+        "Run it with python3.11 (macOS: brew install python@3.11).\n"
+    )
+    sys.exit(2)
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from pflib import __version__  # noqa: E402
-from pflib.errors import EXIT_OK, NotImplementedPF, PFError  # noqa: E402
+from dataclasses import dataclass  # noqa: E402
+
+from pflib import (  # noqa: E402
+    __version__,
+    commands,
+    gates,
+    merge,
+    metrics,
+    scaffold,
+    state,
+    workspace,
+)
+from pflib.errors import EXIT_CHECK_FAILED, EXIT_OK, NotImplementedPF, PFError  # noqa: E402
+from pflib.index import WorkspaceIndex  # noqa: E402
 from pflib.io import emit  # noqa: E402
 
 Handler = Callable[[argparse.Namespace], Any]
 
 
-def _cmd_status(args: argparse.Namespace) -> dict[str, Any]:
-    # Real implementation (workspace discovery, counts, gate progress): Phase 02.
-    return {"workspace": None, "message": "No ProductForge workspace found"}
+@dataclass
+class CommandResult:
+    """A handler result with a non-zero exit code and/or custom human-readable text."""
+
+    payload: Any
+    exit_code: int = EXIT_OK
+    human: str | None = None
+
+
+NO_WORKSPACE = {"workspace": None, "message": "No ProductForge workspace found"}
+
+
+def _cmd_init(args: argparse.Namespace) -> dict[str, Any]:
+    ws, st = scaffold.init_workspace(
+        args.url, out=args.out, scope=args.scope, name=args.name, force_adopt=args.force_adopt
+    )
+    return {
+        "workspace": str(ws),
+        "state": st.state.value,
+        "product": st.product["name"],
+        "target_url": st.product["target_url"],
+        "slug": st.product["slug"],
+        "our_name": st.product["our_name"],
+        "needs_rename": st.product["needs_rename"],
+        "scope": st.scope,
+        "next_command": commands.PRIMARY_COMMAND[st.state],
+    }
+
+
+def _status_human(p: dict[str, Any]) -> str:
+    prod, s, conf, gate = p["product"], p["summary"], p["confidence"], p["gate_progress"]
+    rename = " (placeholder — rename needed)" if prod.get("needs_rename") else ""
+    scope = p["scope"]
+    scope_line = f"Scope: {scope['text'] or 'not set'}"
+    if scope["text"] and not scope["accepted"]:
+        scope_line += " (not accepted yet)"
+    stale = f"   Stale: {', '.join(p['stale'])}" if p["stale"] else ""
+    lines = [
+        f"Product discovered: {prod['name']}  ({prod['target_url']})",
+        f"Our working name: {prod['our_name']}{rename}",
+        scope_line,
+        f"Open stage: {p['open_stage']}{stale}",
+        "",
+        f"Research sources discovered: {s['sources']}",
+        f"Major product domains: {s['domains']}",
+        f"Major features identified: {s['features']}",
+        f"Core workflows identified: {s['workflows']}",
+        f"Primary entities identified: {s['entities']}",
+        f"Role boundaries identified: {s['roles']}",
+        f"External integrations identified: {s['integrations']}",
+        "",
+        "Claim confidence: " + " · ".join(f"{k.title()} {v}" for k, v in conf.items()),
+        f"Gate {gate['stage']}: {gate['done']}/{gate['total']} conditions passing"
+        + (" — ready to advance" if gate["passed"] else ""),
+        f"Next command: /productforge {p['next_command']}",
+    ]
+    return "\n".join(lines)
+
+
+def _cmd_status(args: argparse.Namespace) -> Any:
+    if args.workspace is None and workspace.find_workspace(Path.cwd()) is None:
+        return NO_WORKSPACE
+    ws = workspace.resolve_workspace(args.workspace)
+    st = state.load(ws)
+    index = WorkspaceIndex(ws)
+    report = gates.evaluate(ws, st.state.value)
+    done, total = report.progress
+    payload = {
+        "workspace": str(ws),
+        "product": st.product,
+        "scope": st.scope,
+        "open_stage": st.state.value,
+        "stale": st.stale,
+        "summary": metrics.summary(ws, index),
+        "counts": metrics.counts(ws, index),
+        "confidence": metrics.confidence_breakdown(ws, index),
+        "gate_progress": {
+            "stage": report.stage,
+            "passed": report.passed,
+            "done": done,
+            "total": total,
+            "failing": report.failing(),
+        },
+        "next_command": commands.next_command(ws, st, report),
+    }
+    return CommandResult(payload, human=_status_human(payload))
+
+
+def _cmd_check_command(args: argparse.Namespace) -> dict[str, Any]:
+    ws = workspace.resolve_workspace(args.workspace)
+    return commands.check_command(ws, args.cmd).to_dict()
+
+
+def _cmd_advance(args: argparse.Namespace) -> CommandResult:
+    ws = workspace.resolve_workspace(args.workspace)
+    st = state.load(ws)
+    closing = st.state
+    target = state.parse_state(args.to)
+    state.check_transition(st, target)
+    report = gates.evaluate(ws, closing.value)
+    payload: dict[str, Any] = {
+        "from": closing.value,
+        "to": target.value,
+        "passed": report.passed,
+        "transitioned": False,
+        "gate": report.to_dict(),
+    }
+    if not report.passed:
+        payload["message"] = f"{closing.value} gate failing: {', '.join(report.failing())}"
+        return CommandResult(payload, EXIT_CHECK_FAILED)
+    if not args.confirmed:
+        payload["message"] = (
+            "gate passed; show this report to the user and re-run with --confirmed once they agree"
+        )
+        return CommandResult(payload)
+    locks = state.snapshot_locks(ws, closing)
+    st.locks[closing.value] = locks
+    state.transition(st, target, workspace.iso(workspace.utc_now()))
+    state.save(ws, st)
+    workspace.append_history(
+        ws, {"event": "advance", "from": closing.value, "to": target.value, "locked": len(locks)}
+    )
+    payload.update(transitioned=True, open_stage=st.state.value, locked_records=len(locks))
+    return CommandResult(payload)
+
+
+def _cmd_reopen(args: argparse.Namespace) -> dict[str, Any]:
+    ws = workspace.resolve_workspace(args.workspace)
+    st = state.load(ws)
+    previous = st.state.value
+    stage = state.parse_state(args.state)
+    stale = state.reopen(st, stage, args.reason)
+    state.save(ws, st)
+    workspace.append_history(
+        ws,
+        {
+            "event": "reopen",
+            "from": previous,
+            "to": stage.value,
+            "reason": args.reason,
+            "stale": stale,
+        },
+    )
+    return {"open_stage": st.state.value, "stale": stale, "reason": args.reason}
+
+
+def _cmd_set_scope(args: argparse.Namespace) -> dict[str, Any]:
+    ws = workspace.resolve_workspace(args.workspace)
+    st = scaffold.set_scope(ws, args.text, accepted=args.accepted, source=args.source)
+    return {"scope": st.scope}
+
+
+def _cmd_next_id(args: argparse.Namespace) -> dict[str, Any]:
+    ws = workspace.resolve_workspace(args.workspace)
+    return {"id": merge.allocate_next(ws, args.prefix)}
+
+
+def _cmd_staging(args: argparse.Namespace) -> dict[str, Any]:
+    ws = workspace.resolve_workspace(args.workspace)
+    run_id, path = workspace.create_staging_run(ws, args.role)
+    return {"run_id": run_id, "path": str(path)}
+
+
+def _cmd_merge(args: argparse.Namespace) -> dict[str, Any]:
+    ws = workspace.resolve_workspace(args.workspace)
+    return merge.merge(ws, args.run_id).to_dict()
 
 
 def _not_implemented(name: str, phase: str) -> Handler:
@@ -42,6 +226,13 @@ def _add_init(p: argparse.ArgumentParser) -> None:
     p.add_argument("--scope", help="optional scope, e.g. 'issue tracking'")
     p.add_argument("--out", help="output workspace directory (default ./<product-slug>/)")
     p.add_argument("--name", help="working name for OUR product (never the target's name)")
+    p.add_argument("--force-adopt", action="store_true", help="initialise inside a non-empty dir")
+
+
+def _add_set_scope(p: argparse.ArgumentParser) -> None:
+    p.add_argument("text", help="scope, e.g. 'issue tracking'")
+    p.add_argument("--accepted", action="store_true", help="the user accepted this scope")
+    p.add_argument("--source", choices=state.SCOPE_SOURCES, default="user", help="who chose it")
 
 
 def _add_check_command(p: argparse.ArgumentParser) -> None:
@@ -91,26 +282,44 @@ def _add_nothing(p: argparse.ArgumentParser) -> None:
 
 # name, help, argument builder, handler — order mirrors IMPLEMENTATION_PLAN.md §8.
 SUBCOMMANDS: list[tuple[str, str, Callable[[argparse.ArgumentParser], None], Handler]] = [
-    ("init", "create a workspace and open DISCOVERY", _add_init, _not_implemented("init", "02")),
+    ("init", "create a workspace and open DISCOVERY", _add_init, _cmd_init),
     ("status", "counts, open stage, gate progress, next command", _add_nothing, _cmd_status),
-    ("check-command", "is a productforge command allowed now?", _add_check_command,
-     _not_implemented("check-command", "02")),
-    ("advance", "pass the open stage's gate and transition", _add_advance,
-     _not_implemented("advance", "02")),
-    ("reopen", "re-open an earlier stage (feedback loop)", _add_reopen,
-     _not_implemented("reopen", "02")),
-    ("next-id", "allocate one record ID", _add_next_id, _not_implemented("next-id", "01")),
-    ("staging", "manage agent staging runs", _add_staging, _not_implemented("staging", "01")),
-    ("merge", "merge a staging run into canonical files", _add_merge,
-     _not_implemented("merge", "01")),
-    ("validate", "schema, references, confidence and locks", _add_validate,
-     _not_implemented("validate", "03")),
-    ("discover", "robots/sitemap/link reconnaissance", _add_discover,
-     _not_implemented("discover", "06")),
-    ("score", "compute feature priorities and decisions", _add_nothing,
-     _not_implemented("score", "13")),
-    ("lint-phases", "lint generated phase plans", _add_nothing,
-     _not_implemented("lint-phases", "15")),
+    (
+        "check-command",
+        "is a productforge command allowed now?",
+        _add_check_command,
+        _cmd_check_command,
+    ),
+    ("advance", "pass the open stage's gate and transition", _add_advance, _cmd_advance),
+    ("reopen", "re-open an earlier stage (feedback loop)", _add_reopen, _cmd_reopen),
+    ("set-scope", "record the product scope", _add_set_scope, _cmd_set_scope),
+    ("next-id", "allocate one record ID", _add_next_id, _cmd_next_id),
+    ("staging", "manage agent staging runs", _add_staging, _cmd_staging),
+    ("merge", "merge a staging run into canonical files", _add_merge, _cmd_merge),
+    (
+        "validate",
+        "schema, references, confidence and locks",
+        _add_validate,
+        _not_implemented("validate", "03"),
+    ),
+    (
+        "discover",
+        "robots/sitemap/link reconnaissance",
+        _add_discover,
+        _not_implemented("discover", "06"),
+    ),
+    (
+        "score",
+        "compute feature priorities and decisions",
+        _add_nothing,
+        _not_implemented("score", "13"),
+    ),
+    (
+        "lint-phases",
+        "lint generated phase plans",
+        _add_nothing,
+        _not_implemented("lint-phases", "15"),
+    ),
     ("trace", "build the traceability graph", _add_trace, _not_implemented("trace", "16")),
     ("check", "validate + gate + lint + trace", _add_nothing, _not_implemented("check", "03")),
 ]
@@ -121,10 +330,15 @@ def _global_options(parser: argparse.ArgumentParser, suppress: bool) -> None:
     # and `pf.py --json status` both work without the subparser clobbering the value.
     default_ws: Any = argparse.SUPPRESS if suppress else None
     default_json: Any = argparse.SUPPRESS if suppress else False
-    parser.add_argument("--workspace", metavar="DIR", default=default_ws,
-                        help="workspace directory (default: nearest ancestor with .productforge/)")
-    parser.add_argument("--json", action="store_true", default=default_json,
-                        help="machine-readable JSON output")
+    parser.add_argument(
+        "--workspace",
+        metavar="DIR",
+        default=default_ws,
+        help="workspace directory (default: nearest ancestor with .productforge/)",
+    )
+    parser.add_argument(
+        "--json", action="store_true", default=default_json, help="machine-readable JSON output"
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -151,11 +365,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         result = args.handler(args)
     except PFError as exc:
         if args.json:
-            emit({"error": exc.code, "message": exc.message}, as_json=True)
+            emit(exc.to_dict(), as_json=True)
         print(f"pf.py: {exc.message}", file=sys.stderr)
         return exc.exit_code
-    emit(result, as_json=args.json)
-    return EXIT_OK
+    if not isinstance(result, CommandResult):
+        result = CommandResult(result)
+    if result.human is not None and not args.json:
+        print(result.human)
+    else:
+        emit(result.payload, as_json=args.json)
+    return result.exit_code
 
 
 if __name__ == "__main__":

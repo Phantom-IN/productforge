@@ -1,4 +1,5 @@
-PYTHON ?= python3
+# The plugin's interpreter is python3.11 (CLAUDE.md golden rule 9); override with PYTHON=...
+PYTHON ?= python3.11
 SCRIPTS := skills/productforge/scripts
 RUNTIME_PY := $(shell find skills hooks -name '*.py' -not -path '*/__pycache__/*' 2>/dev/null)
 MYPY_TARGETS := $(SCRIPTS)/pf.py $(SCRIPTS)/pflib $(wildcard hooks/*.py)
@@ -16,6 +17,7 @@ test:
 
 lint:
 	$(PYTHON) -m ruff check .
+	$(PYTHON) -m ruff format --check .
 	$(PYTHON) -m mypy $(MYPY_TARGETS)
 
 # Example/fixture validation is added to `check` in Phase 03.

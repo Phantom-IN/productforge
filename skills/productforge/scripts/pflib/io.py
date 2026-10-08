@@ -47,7 +47,8 @@ def _human(obj: Any, indent: int = 0) -> str:
         return "\n".join(lines)
     if isinstance(obj, list):
         return "\n".join(
-            f"{pad}-\n{_human(item, indent + 1)}" if isinstance(item, (dict, list)) and item
+            f"{pad}-\n{_human(item, indent + 1)}"
+            if isinstance(item, (dict, list)) and item
             else f"{pad}- {_scalar(item)}"
             for item in obj
         )

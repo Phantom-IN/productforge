@@ -9,7 +9,7 @@ description = "Turn an existing software product into an evidence-backed, implem
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "Vaibhav Vanage" }]
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 # Runtime is standard-library only (CLAUDE.md golden rule 9). Never add runtime dependencies.
 dependencies = []
 
@@ -30,14 +30,14 @@ addopts = "-ra"
 
 [tool.ruff]
 line-length = 100
-target-version = "py39"
+target-version = "py311"
 extend-exclude = [".dogfood", "examples"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["pflib"]
+known-first-party = ["pf", "pflib"]
 
 [tool.mypy]
 mypy_path = "skills/productforge/scripts"

@@ -5,7 +5,8 @@ in "Setup" and "Everyday loop" work.
 
 ## Prerequisites
 
-- Python **3.9+** (runtime scripts are stdlib-only; CI checks 3.9 and 3.12)
+- Python **3.11** available as `python3.11` (runtime scripts are stdlib-only; CI checks 3.11 and 3.12).
+  macOS: `brew install python@3.11`.
 - Claude Code (CLI or IDE extension) for exercising the plugin
 - `make`, `git`
 - Network access only for `pf.py discover` and real-product dogfooding — tests never use the network
@@ -13,9 +14,9 @@ in "Setup" and "Everyday loop" work.
 ## Setup
 
 ```bash
-python3 -m venv .venv
+python3.11 -m venv .venv
 . .venv/bin/activate
-pip install -U pip             # macOS system Python 3.9 ships a pip too old for editable installs
+pip install -U pip
 pip install -e '.[dev]'        # pytest, ruff, mypy — dev only
 make check                     # should be green on a fresh clone
 ```
@@ -31,23 +32,23 @@ make lint        # ruff + mypy
 make check       # compile + test + lint (fixture/example validation joins in Phase 03/17)
 ```
 
-To check both supported versions locally (as CI does), keep one venv per interpreter and pass it in:
+`make` defaults to `PYTHON=python3.11`. To use a venv or check another version (as CI does with 3.12), pass it in:
 
 ```bash
-/usr/bin/python3 -m venv .venv3.9 && .venv3.9/bin/pip install -U pip && .venv3.9/bin/pip install -e '.[dev]'
-make check PYTHON=.venv3.9/bin/python
+make check PYTHON=.venv/bin/python
+python3.12 -m venv .venv3.12 && .venv3.12/bin/pip install -e '.[dev]' && make check PYTHON=.venv3.12/bin/python
 ```
 
-Run a single test module: `python3 -m pytest tests/unit/test_records.py -q`.
+Run a single test module: `python3.11 -m pytest tests/unit/test_records.py -q`.
 
 ## Using the CLI directly
 
 ```bash
 PF=skills/productforge/scripts/pf.py
-python3 $PF init https://tasklet.example --out /tmp/tasklet --name "Tasklet Alt"
-python3 $PF status --workspace /tmp/tasklet
-python3 $PF validate --workspace /tmp/tasklet --json
-python3 $PF check --workspace examples/tasklet
+python3.11 $PF init https://tasklet.example --out /tmp/tasklet --name "Tasklet Alt"
+python3.11 $PF status --workspace /tmp/tasklet
+python3.11 $PF validate --workspace /tmp/tasklet --json
+python3.11 $PF check --workspace examples/tasklet
 ```
 
 ## Running the plugin in Claude Code
@@ -69,9 +70,9 @@ ProductForge delegates generic work to existing skills (see IMPLEMENTATION_PLAN 
 required — every capability has a built-in fallback — but results improve with providers installed.
 
 ```bash
-python3 skills/productforge/scripts/pf.py deps --json                 # what is detected/resolved
-python3 skills/productforge/scripts/pf.py deps install repo.intel     # prints the install command only
-python3 skills/productforge/scripts/pf.py deps use research.deep builtin   # pin fallback (reproducible runs)
+python3.11 skills/productforge/scripts/pf.py deps --json                 # what is detected/resolved
+python3.11 skills/productforge/scripts/pf.py deps install repo.intel     # prints the install command only
+python3.11 skills/productforge/scripts/pf.py deps use research.deep builtin   # pin fallback (reproducible runs)
 ```
 
 Installs run `claude plugin install <plugin>@<marketplace> --scope project` and only with

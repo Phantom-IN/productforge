@@ -15,9 +15,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Oldest supported runtime and a current one. Runtime scripts are stdlib-only,
-        # so this verifies compatibility; dev tools are installed from `.[dev]`.
-        python-version: ["3.9", "3.12"]
+        # The supported floor (the plugin always runs python3.11) and a newer one.
+        # Runtime scripts are stdlib-only; dev tools are installed from `.[dev]`.
+        python-version: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
 

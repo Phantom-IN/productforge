@@ -7,9 +7,7 @@ absolute import must be either a standard-library module or first-party (``pflib
 from __future__ import annotations
 
 import ast
-import importlib.util
 import sys
-import sysconfig
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -18,37 +16,11 @@ RUNTIME_DIRS = [REPO_ROOT / "skills", REPO_ROOT / "hooks"]
 FIRST_PARTY = {"pflib"}
 
 
-def _stdlib_names() -> set[str]:
-    names = getattr(sys, "stdlib_module_names", None)  # Python >= 3.10
-    if names is not None:
-        return set(names) | set(sys.builtin_module_names)
-    return set(sys.builtin_module_names)
-
-
-_STDLIB = _stdlib_names()
-_STDLIB_DIRS = {
-    str(Path(sysconfig.get_paths()[key]).resolve()) for key in ("stdlib", "platstdlib")
-}
+_STDLIB = set(sys.stdlib_module_names) | set(sys.builtin_module_names)
 
 
 def is_stdlib(module: str) -> bool:
-    top = module.split(".")[0]
-    if top in _STDLIB:
-        return True
-    if hasattr(sys, "stdlib_module_names"):
-        return False
-    # Python 3.9 fallback: resolve the module and require it to live in the stdlib dirs
-    # (not in site-packages). Never imports the module itself.
-    spec = importlib.util.find_spec(top)
-    if spec is None:
-        return False
-    if spec.origin in ("built-in", "frozen"):
-        return True
-    location = spec.origin or next(iter(spec.submodule_search_locations or []), None)
-    if location is None:
-        return False
-    resolved = str(Path(location).resolve())
-    return "site-packages" not in resolved and any(resolved.startswith(d) for d in _STDLIB_DIRS)
+    return module.split(".")[0] in _STDLIB
 
 
 def imports_of(source: str) -> Iterator[tuple[int, str]]:
@@ -70,7 +42,10 @@ def violations(source: str) -> list[tuple[int, str]]:
 
 def runtime_files() -> list[Path]:
     return sorted(
-        p for d in RUNTIME_DIRS if d.exists() for p in d.rglob("*.py")
+        p
+        for d in RUNTIME_DIRS
+        if d.exists()
+        for p in d.rglob("*.py")
         if "__pycache__" not in p.parts
     )
 
