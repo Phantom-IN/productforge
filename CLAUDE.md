@@ -41,7 +41,9 @@ We are building **v1** — phases in [`plans/v1/`](plans/v1/README.md).
    (CLI → `.productforge/config.json` → `DEFAULTS`). New knobs go in the `DEFAULTS` registry and the
    §5.2 table.
 9. **Runtime is stdlib-only, deterministic and offline** — except `pflib/discover.py`, the only module
-   that touches the network (robots-respecting, rate-limited). Python **3.11+**, always invoked as
+   that touches the network (robots-respecting, rate-limited), and `pf.py deps`, which calls the
+   local `claude plugin list` for detection and runs `claude plugin …` installs **only** with
+   `--confirmed` (the skill passes it only after the user agreed). Python **3.11+**, always invoked as
    `python3.11` (skill, hooks, Makefile, docs); `pf.py` exits with a clear error on older interpreters. Dev tools (pytest/ruff/mypy) never imported at runtime.
 10. **Guardrails are absolute (§18).** Public sources only; robots.txt always honoured; no copying of
     proprietary code, brand assets or more than `quotes.max_words` words verbatim; independent
@@ -98,6 +100,8 @@ python3.11 skills/productforge/scripts/pf.py status --workspace /tmp/tl
 python3.11 skills/productforge/scripts/pf.py check-command features --workspace /tmp/tl --json
 python3.11 skills/productforge/scripts/pf.py brief --role research-agent --task "…" --workspace /tmp/tl
 python3.11 skills/productforge/scripts/pf.py merge <run-id> --check --workspace /tmp/tl --json   # preflight
+python3.11 skills/productforge/scripts/pf.py deps --available "anthropic-skills:pdf" --workspace /tmp/tl
+python3.11 skills/productforge/scripts/pf.py delegate anthropic-skills:pdf --task "…" --workspace /tmp/tl
 python3.11 skills/productforge/scripts/pf.py deps --json          # which skills/plugins are reused
 
 # load the plugin locally in Claude Code

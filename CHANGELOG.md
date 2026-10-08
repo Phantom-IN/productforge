@@ -30,6 +30,11 @@ versions follow [Semantic Versioning](https://semver.org/).
   report); `pf.py brief` + `templates/agent-brief.md`; `pf.py merge --check` preflight; merge reports
   list `new_ids`; references `agent-contract.md`, `philosophy.md`, `guardrails.md`; prompt-contract
   tests.
+- Phase 05: capability adapters — `capabilities.json` registry (7 capabilities, built-in/none
+  fallbacks), `pflib/capabilities.py` (validation, detection via skills dirs / installed plugins /
+  `claude plugin list`, resolution, pins), `pflib/deps.py` + `pf.py deps` (doctor, consent-gated
+  installs, pins, offered), `pf.py delegate` + 7 adapter files, raw-material section in agent briefs,
+  `PROVIDER_REPORT_AS_EVIDENCE` finding, SKILL.md Capabilities and Delegated run protocol sections.
 
 ### Fixed
 - `agents/README.md` was registered by Claude Code as a bogus `productforge:README` agent; moved to

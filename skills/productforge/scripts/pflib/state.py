@@ -69,6 +69,8 @@ class WorkspaceState:
     stale: list[str] = field(default_factory=list)
     stages: dict[str, dict[str, str | None]] = field(default_factory=dict)
     locks: dict[str, dict[str, dict[str, Any]]] = field(default_factory=dict)
+    # {"resolved": {capability: {provider, version, resolved_at}}, "offered": [capability]}
+    capabilities: dict[str, Any] = field(default_factory=dict)
     schema_version: int = SCHEMA_VERSION
 
     def to_dict(self) -> dict[str, Any]:
@@ -80,6 +82,7 @@ class WorkspaceState:
             "stale": self.stale,
             "stages": self.stages,
             "locks": self.locks,
+            "capabilities": self.capabilities,
         }
 
     @classmethod
@@ -98,6 +101,7 @@ class WorkspaceState:
             stale=list(data["stale"]),
             stages=data["stages"],
             locks=data["locks"],
+            capabilities=data.get("capabilities", {}),
             schema_version=data["schema_version"],
         )
 
@@ -120,6 +124,8 @@ def validate_dict(data: Any) -> list[str]:
     for key, typ in expected.items():
         if not isinstance(data.get(key), typ):
             problems.append(f"{key} must be a {typ.__name__}")
+    if not isinstance(data.get("capabilities", {}), dict):
+        problems.append("capabilities must be an object")
     if problems:
         return problems
     names = {s.value for s in State}

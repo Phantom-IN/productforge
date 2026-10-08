@@ -22,6 +22,7 @@ from pflib.records import Record
 
 STATES = ("CONFIRMED", "PROBABLE", "INFERRED", "UNKNOWN")
 NON_OBSERVATION_PREFIXES = ("S", "U")
+PROVIDER_REPORT = "provider-report"
 
 
 @dataclass(frozen=True)
@@ -29,6 +30,7 @@ class SourceInfo:
     id: str
     tier: int | None  # None when the source's Tier is malformed
     domain: str
+    category: str = ""
 
 
 @dataclass
@@ -56,7 +58,7 @@ class SourceIndex:
 
 @dataclass(frozen=True)
 class Violation:
-    code: str  # BAD_CONFIDENCE | CONFIDENCE_RULE
+    code: str  # BAD_CONFIDENCE | CONFIDENCE_RULE | PROVIDER_REPORT_AS_EVIDENCE
     message: str
 
 
@@ -78,6 +80,18 @@ def check_record(rec: Record, index: SourceIndex) -> list[Violation]:
     best = f"best evidence: Tier {tiers[0]}" if tiers else "no resolvable source evidence"
     only_tier5 = bool(tiers) and min(tiers) == 5
     cap = " (Tier-5-only evidence caps at INFERRED)" if only_tier5 else ""
+    if (
+        value in ("CONFIRMED", "PROBABLE")
+        and srcs
+        and all(s.category == PROVIDER_REPORT for s in srcs)
+    ):
+        return [
+            Violation(
+                "PROVIDER_REPORT_AS_EVIDENCE",
+                f"{value} rests only on a delegated skill's report; cite the original URLs it "
+                "names as sources (a report alone caps at INFERRED)",
+            )
+        ]
     if value == "CONFIRMED" and not any(t <= 2 for t in tiers):
         return [Violation("CONFIDENCE_RULE", f"CONFIRMED needs a Tier ≤ 2 source; {best}{cap}")]
     if value == "PROBABLE":
@@ -127,6 +141,7 @@ def build_index(
     all_records: list[Record],
     tier_of: Callable[[Record], int | None],
     domain_of: Callable[[Record], str],
+    category_of: Callable[[Record], str] = lambda rec: rec.get("Category").strip(),
 ) -> SourceIndex:
     index = SourceIndex()
     for rec in all_records:
@@ -134,7 +149,9 @@ def build_index(
         if parsed is None:
             continue
         if parsed.prefix == "S":
-            index.sources[rec.id] = SourceInfo(rec.id, tier_of(rec), domain_of(rec))
+            index.sources[rec.id] = SourceInfo(
+                rec.id, tier_of(rec), domain_of(rec), category_of(rec)
+            )
         else:
             index.evidence[rec.id] = records.parse_refs(rec.get("Evidence"))
     return index

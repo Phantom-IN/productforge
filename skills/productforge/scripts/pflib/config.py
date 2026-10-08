@@ -9,6 +9,7 @@ the call site. ``config.json`` stores only non-default overrides.
 
 from __future__ import annotations
 
+import copy
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -66,6 +67,13 @@ DEFAULTS: dict[str, ConfigKey] = {
     "phases.max_tasks": _k(15, "Phase lint: one-session size heuristic (max tasks per phase)"),
     "phases.min_acceptance": _k(3, "Phase lint: minimum acceptance criteria per phase"),
     "agents.max_repair_loops": _k(2, "Validator → agent repair iterations per run"),
+    "capabilities.pins": _k(
+        {}, "Pinned provider per capability, e.g. {'research.deep': 'builtin'}"
+    ),
+    "capabilities.claude_bin": _k(
+        "claude", "Claude Code CLI used for plugin detection and installs"
+    ),
+    "capabilities.install_scope": _k("project", "Default scope for consented plugin installs"),
 }
 
 
@@ -121,8 +129,8 @@ def resolve(key: str, ws: Path | None = None, cli_overrides: dict[str, Any] | No
         return coerce(key, cli_overrides[key])
     overrides = load_overrides(ws)
     if key in overrides:
-        return overrides[key]
-    return spec.default
+        return copy.deepcopy(overrides[key])
+    return copy.deepcopy(spec.default)
 
 
 def write_config(ws: Path, values: dict[str, Any]) -> dict[str, Any]:

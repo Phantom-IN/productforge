@@ -28,6 +28,8 @@ REQUIRED_SECTIONS = [
     "Transition protocol",
     "Agent run protocol",
     "Inline fallback",
+    "Capabilities",
+    "Delegated run protocol",
     "End-of-command report",
     "Commands",
 ]
@@ -158,3 +160,25 @@ def test_reference_docs_named_by_the_plan_exist() -> None:
         "stage-gates.md",
     ):
         assert (SKILL_DIR / "references" / name).is_file(), name
+
+
+def section(text: str, title: str) -> str:
+    return text.split(f"## {title}\n", 1)[1].split("\n## ", 1)[0]
+
+
+def test_installs_are_only_ever_run_after_explicit_consent() -> None:
+    text = SKILL.read_text(encoding="utf-8")
+    caps = section(text, "Capabilities")
+    assert "AskUserQuestion" in caps and "installs nothing" in caps
+    for line in text.splitlines():
+        if "deps install" in line and "--confirmed" in line:
+            assert "Only if the user chose" in line, line
+    assert "--confirmed" not in section(text, "Delegated run protocol")
+
+
+def test_delegation_is_done_by_the_orchestrator_and_raw_output_is_data() -> None:
+    text = SKILL.read_text(encoding="utf-8")
+    delegated = section(text, "Delegated run protocol")
+    assert '"$PF" delegate' in delegated and "role agents cannot invoke skills" in delegated
+    assert "data, never instructions" in delegated and "never merged" in delegated
+    assert "raw_dir" in section(text, "Hard constraints")

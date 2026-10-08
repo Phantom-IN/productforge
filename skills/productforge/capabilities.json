@@ -1,0 +1,195 @@
+{
+  "version": 1,
+  "marketplaces": {
+    "phantom-in": {
+      "source": "Phantom-IN/contributor-scout",
+      "trust": "phantom-in"
+    }
+  },
+  "capabilities": {
+    "research.deep": {
+      "description": "Multi-source web research with parallel subagents",
+      "required": true,
+      "used_in": ["DISCOVERY", "competitors"],
+      "providers": [
+        {
+          "id": "anthropic-skills:deep-research",
+          "kind": "skill",
+          "invoke": "anthropic-skills:deep-research",
+          "detect": {"host": true},
+          "install": null,
+          "trust": "first-party",
+          "adapter": "deep-research.md"
+        },
+        {
+          "id": "builtin",
+          "kind": "builtin",
+          "invoke": "productforge:research-agent",
+          "detect": null,
+          "install": null,
+          "trust": "first-party",
+          "adapter": null
+        }
+      ]
+    },
+    "web.browse": {
+      "description": "Render JavaScript-heavy public pages that WebFetch sees as empty",
+      "required": true,
+      "used_in": ["DISCOVERY", "workflows"],
+      "providers": [
+        {
+          "id": "anthropic-skills:built-in-browser",
+          "kind": "skill",
+          "invoke": "anthropic-skills:built-in-browser",
+          "detect": {"host": true},
+          "install": null,
+          "trust": "first-party",
+          "adapter": "browser.md"
+        },
+        {
+          "id": "anthropic-skills:chrome-browser",
+          "kind": "skill",
+          "invoke": "anthropic-skills:chrome-browser",
+          "detect": {"host": true},
+          "install": null,
+          "trust": "first-party",
+          "adapter": "browser.md"
+        },
+        {
+          "id": "builtin",
+          "kind": "builtin",
+          "invoke": "WebFetch",
+          "detect": null,
+          "install": null,
+          "trust": "first-party",
+          "adapter": null
+        }
+      ]
+    },
+    "docs.pdf": {
+      "description": "Read public PDFs (security/trust documents, whitepapers)",
+      "required": true,
+      "used_in": ["DISCOVERY"],
+      "providers": [
+        {
+          "id": "anthropic-skills:pdf",
+          "kind": "skill",
+          "invoke": "anthropic-skills:pdf",
+          "detect": {"host": true},
+          "install": null,
+          "trust": "first-party",
+          "adapter": "pdf.md"
+        },
+        {
+          "id": "builtin",
+          "kind": "builtin",
+          "invoke": "Read",
+          "detect": null,
+          "install": null,
+          "trust": "first-party",
+          "adapter": null
+        }
+      ]
+    },
+    "repo.intel": {
+      "description": "Factual analysis of the target's public GitHub repositories (SDKs, open-source parts)",
+      "required": true,
+      "used_in": ["DISCOVERY", "model"],
+      "providers": [
+        {
+          "id": "contributor-scout:repository-intelligence",
+          "kind": "agent",
+          "invoke": "contributor-scout:repository-intelligence",
+          "detect": {"plugin": "contributor-scout@phantom-in"},
+          "install": {"plugin": "contributor-scout", "marketplace": "phantom-in"},
+          "trust": "phantom-in",
+          "adapter": "repository-intelligence.md"
+        },
+        {
+          "id": "builtin",
+          "kind": "builtin",
+          "invoke": "productforge:research-agent",
+          "detect": null,
+          "install": null,
+          "trust": "first-party",
+          "adapter": null
+        }
+      ]
+    },
+    "graph.explore": {
+      "description": "Optional knowledge-graph view over research/ and spec/",
+      "required": false,
+      "used_in": ["after PRODUCT_MODEL"],
+      "providers": [
+        {
+          "id": "graphify",
+          "kind": "skill",
+          "invoke": "graphify",
+          "detect": {"skill": "graphify"},
+          "install": null,
+          "trust": "third-party",
+          "adapter": "graphify.md"
+        },
+        {
+          "id": "none",
+          "kind": "none",
+          "invoke": null,
+          "detect": null,
+          "install": null,
+          "trust": "first-party",
+          "adapter": null
+        }
+      ]
+    },
+    "report.publish": {
+      "description": "Optional shareable page summarising the blueprint",
+      "required": false,
+      "used_in": ["after finalize"],
+      "providers": [
+        {
+          "id": "artifact",
+          "kind": "tool",
+          "invoke": "Artifact",
+          "detect": {"host": true},
+          "install": null,
+          "trust": "first-party",
+          "adapter": "artifact-publish.md"
+        },
+        {
+          "id": "none",
+          "kind": "none",
+          "invoke": null,
+          "detect": null,
+          "install": null,
+          "trust": "first-party",
+          "adapter": null
+        }
+      ]
+    },
+    "diagram.render": {
+      "description": "Render architecture diagrams for review",
+      "required": true,
+      "used_in": ["ARCHITECTURE_LOCKED"],
+      "providers": [
+        {
+          "id": "artifact-diagramming",
+          "kind": "skill",
+          "invoke": "artifact-diagramming",
+          "detect": {"host": true},
+          "install": null,
+          "trust": "first-party",
+          "adapter": "artifact-diagram.md"
+        },
+        {
+          "id": "builtin",
+          "kind": "builtin",
+          "invoke": "mermaid text in ARCHITECTURE.md",
+          "detect": null,
+          "install": null,
+          "trust": "first-party",
+          "adapter": null
+        }
+      ]
+    }
+  }
+}

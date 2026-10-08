@@ -40,6 +40,7 @@ CODES: dict[str, tuple[str, str]] = {
     "QUOTE_TOO_LONG": (ERROR, "A verbatim quote is longer than quotes.max_words"),
     "BAD_CONFIDENCE": (ERROR, "Confidence is not CONFIRMED, PROBABLE, INFERRED or UNKNOWN"),
     "CONFIDENCE_RULE": (ERROR, "The cited evidence does not support the stated confidence (§11)"),
+    "PROVIDER_REPORT_AS_EVIDENCE": (ERROR, "A claim above INFERRED rests only on a skill's report"),
     "CONFLICT_ASYMMETRIC": (ERROR, "A conflict is declared on one side only"),
     "CONFLICT_UNRESOLVED": (WARN, "A conflicting pair has no unknown or Resolution explaining it"),
     "BAD_TIER": (ERROR, "Source tier is not an integer 1–5"),

@@ -28,13 +28,16 @@ def pf_cli(tmp_path_factory: pytest.TempPathFactory) -> Callable[..., CliResult]
     """
     default_cwd = tmp_path_factory.mktemp("cli-cwd")
 
-    def run(*args: str, cwd: Path | None = None) -> CliResult:
+    def run(*args: str, cwd: Path | None = None, env: dict[str, str] | None = None) -> CliResult:
+        import os
+
         proc = subprocess.run(
             [sys.executable, str(PF_SCRIPT), *args],
             capture_output=True,
             text=True,
             cwd=str(cwd or default_cwd),
             timeout=60,
+            env={**os.environ, **(env or {})},
         )
         return proc.returncode, proc.stdout, proc.stderr
 
@@ -113,7 +116,13 @@ def read_overlay(path: Path) -> tuple[dict[str, str], str]:
 
 
 def apply_overlay(ws: Path, path: Path) -> str:
-    """Apply an overlay to workspace ``ws``; returns the expected finding code."""
+    """Apply an overlay to workspace ``ws``; returns the expected finding code.
+
+    The body may continue into further files with
+    ``<!-- next target: <path> mode: <mode> -->`` separator lines.
+    """
+    import re
+
     from pflib import records, state
 
     meta, body = read_overlay(path)
@@ -121,16 +130,20 @@ def apply_overlay(ws: Path, path: Path) -> str:
         st = state.load(ws)
         st.locks[meta["lock"]] = state.snapshot_locks(ws, state.State(meta["lock"]))
         state.save(ws, st)
-    target = ws / meta["target"]
-    text = target.read_text(encoding="utf-8")
-    mode, _, record_id = meta["mode"].partition(" ")
-    if mode == "append":
-        text = text.rstrip("\n") + "\n\n" + body
-    else:
-        doc = records.parse_document(text)
-        rec = doc.record(record_id)
-        assert rec is not None, (path, record_id)
-        replacement = [body] if mode == "replace" else []
-        text = "".join(doc.lines[: rec.start] + replacement + doc.lines[rec.end :])
-    target.write_text(text, encoding="utf-8")
+    parts = re.split(r"^<!-- next target: (\S+) mode: (.+?) -->\n", body, flags=re.M)
+    steps = [(meta["target"], meta["mode"], parts[0])]
+    steps += [(parts[i], parts[i + 1], parts[i + 2]) for i in range(1, len(parts), 3)]
+    for target_rel, mode_spec, chunk in steps:
+        target = ws / target_rel
+        text = target.read_text(encoding="utf-8")
+        mode, _, record_id = mode_spec.partition(" ")
+        if mode == "append":
+            text = text.rstrip("\n") + "\n\n" + chunk
+        else:
+            doc = records.parse_document(text)
+            rec = doc.record(record_id)
+            assert rec is not None, (path, record_id)
+            replacement = [chunk] if mode == "replace" else []
+            text = "".join(doc.lines[: rec.start] + replacement + doc.lines[rec.end :])
+        target.write_text(text, encoding="utf-8")
     return meta["expect"]

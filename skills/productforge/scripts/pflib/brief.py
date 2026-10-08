@@ -99,6 +99,7 @@ def render(
     st = state.load(ws)
     repair = False
     findings, findings_text = 0, "none"
+    raw_files: list[str] = []
     if run_id:
         run_dir = workspace.staging_dir(ws, run_id)
         if not run_dir.is_dir():
@@ -106,6 +107,8 @@ def render(
         if _staged_files(run_dir):
             repair = True
             findings, findings_text = _repair_findings(ws, run_id)
+        raw = run_dir / workspace.RAW
+        raw_files = sorted(str(p) for p in raw.rglob("*") if p.is_file()) if raw.is_dir() else []
     else:
         run_id, run_dir = workspace.create_staging_run(ws, role)
 
@@ -139,6 +142,7 @@ def render(
         "templates": _bullets(template_lines),
         "budget": budget or "no explicit budget; stay within the task",
         "validator_findings": findings_text,
+        "raw_material": _bullets(raw_files),
         "contract": str(CONTRACT),
     }
     text = BRIEF_TEMPLATE.read_text(encoding="utf-8")
@@ -148,3 +152,80 @@ def render(
         raise CheckFailed(f"agent-brief.md has unknown placeholders: {leftover}", code="BAD_BRIEF")
     loops = int(config.resolve("agents.max_repair_loops", ws))
     return Brief(run_id, run_dir, repair, findings, text, loops)
+
+
+BRIEF_BLOCK_RE = re.compile(r"^```brief\n(.*?)^```$", re.S | re.M)
+
+
+@dataclass
+class Delegation:
+    run_id: str
+    raw_dir: Path
+    capability: str
+    provider: str
+    kind: str
+    invoke: str | None
+    prompt: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "run_id": self.run_id,
+            "raw_dir": str(self.raw_dir),
+            "capability": self.capability,
+            "provider": self.provider,
+            "kind": self.kind,
+            "invoke": self.invoke,
+            "prompt": self.prompt,
+        }
+
+
+def render_delegation(
+    ws: Path,
+    provider_id: str,
+    questions: str,
+    allowed_urls: list[str] | None = None,
+    run_id: str | None = None,
+) -> Delegation:
+    """Prompt for a delegated provider (§9.4), rendered from its adapter's ```brief block.
+
+    Creates (or reuses) a staging run whose ``raw/`` folder receives the provider's output; the
+    normalising role agent then works in the same run.
+    """
+    from pflib import capabilities
+
+    if not questions.strip():
+        raise UsageError("delegate needs a non-empty --task", code="BAD_BRIEF")
+    reg = capabilities.load_registry()
+    prov = reg.provider(provider_id)
+    cap_id = next(c.id for c in reg.capabilities.values() if c.provider(provider_id) is prov)
+    assert prov.adapter is not None
+    adapter_text = (capabilities.ADAPTERS_DIR / prov.adapter).read_text(encoding="utf-8")
+    block = BRIEF_BLOCK_RE.search(adapter_text)
+    if block is None:
+        raise CheckFailed(f"adapter {prov.adapter} has no ```brief block", code="BAD_ADAPTER")
+    st = state.load(ws)
+    if run_id:
+        run_dir = workspace.staging_dir(ws, run_id)
+        if not run_dir.is_dir():
+            raise UsageError(f"no staging run {run_id!r}", code="NO_SUCH_RUN")
+    else:
+        run_id, run_dir = workspace.create_staging_run(ws, "delegate")
+    raw_dir = run_dir / workspace.RAW
+    raw_dir.mkdir(exist_ok=True)
+    values = {
+        "product_name": st.product["name"],
+        "target_url": st.product["target_url"],
+        "scope": st.scope.get("text") or "the whole product",
+        "questions": questions.strip(),
+        "allowed_urls": ", ".join(allowed_urls) if allowed_urls else "any relevant public page",
+        "raw_dir": str(raw_dir),
+    }
+    prompt = PLACEHOLDER_RE.sub(lambda m: values.get(m.group(1), m.group(0)), block.group(1))
+    leftover = sorted(set(PLACEHOLDER_RE.findall(prompt)))
+    if leftover:
+        raise CheckFailed(f"{prov.adapter} brief has unknown placeholders: {leftover}",
+                          code="BAD_ADAPTER")  # fmt: skip
+    workspace.append_history(ws, {"event": "delegate", "run_id": run_id, "provider": prov.id})
+    return Delegation(
+        run_id, raw_dir, cap_id, prov.id, prov.kind, prov.invoke, prompt.rstrip() + "\n"
+    )

@@ -70,7 +70,7 @@ ProductForge delegates generic work to existing skills (see IMPLEMENTATION_PLAN 
 required — every capability has a built-in fallback — but results improve with providers installed.
 
 ```bash
-python3.11 skills/productforge/scripts/pf.py deps --json                 # what is detected/resolved
+python3.11 skills/productforge/scripts/pf.py deps --available "anthropic-skills:pdf"   # what is detected/resolved
 python3.11 skills/productforge/scripts/pf.py deps install repo.intel     # prints the install command only
 python3.11 skills/productforge/scripts/pf.py deps use research.deep builtin   # pin fallback (reproducible runs)
 ```

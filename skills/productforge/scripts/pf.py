@@ -33,6 +33,7 @@ from pflib import (  # noqa: E402
     __version__,
     brief,
     commands,
+    deps,
     gates,
     merge,
     metrics,
@@ -41,7 +42,13 @@ from pflib import (  # noqa: E402
     validators,
     workspace,
 )
-from pflib.errors import EXIT_CHECK_FAILED, EXIT_OK, NotImplementedPF, PFError  # noqa: E402
+from pflib.errors import (  # noqa: E402
+    EXIT_CHECK_FAILED,
+    EXIT_OK,
+    NotImplementedPF,
+    PFError,
+    UsageError,
+)
 from pflib.index import WorkspaceIndex  # noqa: E402
 from pflib.io import emit  # noqa: E402
 
@@ -132,6 +139,7 @@ def _cmd_status(args: argparse.Namespace) -> Any:
             "failing": report.failing(),
         },
         "next_command": commands.next_command(ws, st, report),
+        "capabilities": st.capabilities,
     }
     return CommandResult(payload, human=_status_human(payload))
 
@@ -228,6 +236,58 @@ def _cmd_check(args: argparse.Namespace) -> CommandResult:
     return CommandResult(payload, code, human="\n".join(human))
 
 
+def _optional_workspace(explicit: str | None) -> Path | None:
+    if explicit:
+        return workspace.resolve_workspace(explicit)
+    return workspace.find_workspace(Path.cwd())
+
+
+def _cmd_deps(args: argparse.Namespace) -> Any:
+    action, rest = args.action, args.args or []
+
+    def need(n: int, usage: str) -> None:
+        if len(rest) != n:
+            raise UsageError(f"usage: pf.py deps {usage}", code="USAGE_ERROR")
+
+    if action == "check":
+        need(0, "check [--available a,b,c]")
+        available = {a.strip() for a in (args.available or "").split(",") if a.strip()}
+        result = deps.check(_optional_workspace(args.workspace), available)
+        lines = [
+            f"{cap:15} → {res['provider']}"
+            + (f" {res['version']}" if res["version"] else "")
+            + (" (pinned)" if res["pinned"] else "")
+            + (f"   installable: {', '.join(res['installable'])}" if res["installable"] else "")
+            + (f"   note: {res['note']}" if res["note"] else "")
+            for cap, res in result["capabilities"].items()
+        ]
+        if result["offer"]:
+            lines.append(f"offer installs for: {', '.join(result['offer'])}")
+        return CommandResult(result, human="\n".join(lines))
+    if action == "install":
+        need(1, "install <capability|provider> [--scope S] [--confirmed] [--ack-third-party]")
+        payload, code = deps.install(
+            _optional_workspace(args.workspace), rest[0], args.scope, args.confirmed,
+            args.ack_third_party,
+        )  # fmt: skip
+        return CommandResult(payload, code)
+    ws = workspace.resolve_workspace(args.workspace)
+    if action == "use":
+        need(2, "use <capability> <provider>")
+        return deps.use(ws, rest[0], rest[1])
+    if not rest:
+        raise UsageError("usage: pf.py deps offered <capability>...", code="USAGE_ERROR")
+    return deps.mark_offered(ws, rest)
+
+
+def _cmd_delegate(args: argparse.Namespace) -> CommandResult:
+    ws = workspace.resolve_workspace(args.workspace)
+    result = brief.render_delegation(
+        ws, args.provider, args.task, allowed_urls=args.allowed_url, run_id=args.run_id
+    )
+    return CommandResult(result.to_dict(), human=result.prompt)
+
+
 def _cmd_set_scope(args: argparse.Namespace) -> dict[str, Any]:
     ws = workspace.resolve_workspace(args.workspace)
     st = scaffold.set_scope(ws, args.text, accepted=args.accepted, source=args.source)
@@ -281,6 +341,29 @@ def _add_init(p: argparse.ArgumentParser) -> None:
     p.add_argument("--out", help="output workspace directory (default ./<product-slug>/)")
     p.add_argument("--name", help="working name for OUR product (never the target's name)")
     p.add_argument("--force-adopt", action="store_true", help="initialise inside a non-empty dir")
+
+
+def _add_deps(p: argparse.ArgumentParser) -> None:
+    p.add_argument(
+        "action", nargs="?", default="check", choices=["check", "install", "use", "offered"],
+        help="check (default) | install <target> | use <capability> <provider> | offered <cap>...",
+    )  # fmt: skip
+    p.add_argument("args", nargs="*", help="arguments of the action")
+    p.add_argument("--available", help="comma list of skills/agents the host session can see")
+    p.add_argument("--scope", help="install scope: project (default), user or local")
+    p.add_argument("--confirmed", action="store_true", help="the user explicitly agreed to install")
+    p.add_argument(
+        "--ack-third-party", action="store_true", help="user accepted a third-party source"
+    )
+
+
+def _add_delegate(p: argparse.ArgumentParser) -> None:
+    p.add_argument("provider", help="provider id from capabilities.json")
+    p.add_argument("--task", required=True, help="the questions the provider must answer")
+    p.add_argument(
+        "--allowed-url", action="append", help="URL or site the provider may use (repeat)"
+    )
+    p.add_argument("--run-id", help="reuse an existing staging run")
 
 
 def _add_set_scope(p: argparse.ArgumentParser) -> None:
@@ -364,6 +447,13 @@ SUBCOMMANDS: list[tuple[str, str, Callable[[argparse.ArgumentParser], None], Han
     ("staging", "manage agent staging runs", _add_staging, _cmd_staging),
     ("merge", "merge a staging run into canonical files", _add_merge, _cmd_merge),
     ("brief", "render the brief for one agent run", _add_brief, _cmd_brief),
+    (
+        "delegate",
+        "render a delegated provider prompt (capability adapters)",
+        _add_delegate,
+        _cmd_delegate,
+    ),
+    ("deps", "detect, install (with consent) or pin capability providers", _add_deps, _cmd_deps),
     (
         "validate",
         "schema, references, confidence and locks",

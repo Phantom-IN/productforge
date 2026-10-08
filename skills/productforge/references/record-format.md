@@ -145,6 +145,7 @@ tolerant: a malformed record yields one finding and the rest of the file is stil
 | `QUOTE_TOO_LONG` | error | A verbatim quote is longer than quotes.max_words |
 | `BAD_CONFIDENCE` | error | Confidence is not CONFIRMED, PROBABLE, INFERRED or UNKNOWN |
 | `CONFIDENCE_RULE` | error | The cited evidence does not support the stated confidence (§11) |
+| `PROVIDER_REPORT_AS_EVIDENCE` | error | A claim above INFERRED rests only on a skill's report |
 | `CONFLICT_ASYMMETRIC` | error | A conflict is declared on one side only |
 | `CONFLICT_UNRESOLVED` | warn | A conflicting pair has no unknown or Resolution explaining it |
 | `BAD_TIER` | error | Source tier is not an integer 1–5 |
