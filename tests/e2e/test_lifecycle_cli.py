@@ -104,6 +104,12 @@ def test_set_scope_cli(pf_cli: Cli, tmp_path: Path) -> None:
 def test_confirmed_advance_snapshots_locks_and_logs(
     new_ws: Path, gate_control: object, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    (new_ws / "research/sources.md").write_text(
+        "### S-001 — Docs\n- URL: https://docs.tasklet.example/a\n"
+        "- Canonical URL: https://docs.tasklet.example/a\n- Category: docs\n- Tier: 1\n"
+        "- Authority: High\n- Relevant area: Tasks\n- Published: unknown\n"
+        "- Last inspected: 2026-10-08\n- Notes:\n"
+    )
     (new_ws / "research/DISCOVERY_LEDGER.md").write_text(
         "### D-001 — a\n- Claim: a\n- Evidence: S-001\n- Confidence: CONFIRMED\n"
         "- Product impact:\n- Engineering impact:\n- Status: active\n"
@@ -120,7 +126,7 @@ def test_confirmed_advance_snapshots_locks_and_logs(
     assert code == 0 and payload["transitioned"] and payload["open_stage"] == "PRODUCT_MODEL"
     st = state.load(new_ws)
     assert st.state == State.PRODUCT_MODEL
-    assert set(st.locks["DISCOVERY"]) == {"D-001"}
+    assert set(st.locks["DISCOVERY"]) == {"D-001", "S-001"}
     assert st.locks["DISCOVERY"]["D-001"]["refs"] == ["S-001"]
     assert workspace.read_history(new_ws)[-1]["event"] == "advance"
 
@@ -152,7 +158,14 @@ def test_random_sequences_never_skip_or_pass_failing_gates(
         gate_control.reset()  # type: ignore[attr-defined]
         gate_fails = rng.random() < 0.4
         if gate_fails:
-            gate_control.fail("G-VALIDATE-CLEAN")  # type: ignore[attr-defined]
+            # one stage-specific (stubbed) condition per stage
+            gate_control.fail(  # type: ignore[attr-defined]
+                "G-DISC-TIER1",
+                "G-PM-FEATURE-EVIDENCE",
+                "G-SC-ALL-SCORED",
+                "G-AR-STACK-COMPLETE",
+                "G-PP-PHASE-LINT",
+            )
         op = rng.choice(["advance", "advance", "advance", "reopen", "status", "check"])
         nxt = before_state.next()
         if nxt is not None and rng.random() < 0.5:

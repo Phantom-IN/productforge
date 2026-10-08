@@ -202,6 +202,31 @@ def _scope_set(ws: Path) -> ConditionResult:
     return ConditionResult(True, f"scope: {scope['text']}")
 
 
+LOCK_CODES = ("LOCK_VIOLATION", "LOCK_DELETED")
+
+
+def validate_clean(stage: str) -> Callable[[Path], ConditionResult]:
+    """No validation errors in the stage's artifacts, and no lock violation anywhere."""
+
+    def check(ws: Path) -> ConditionResult:
+        from pflib import validators
+
+        errors = [
+            f
+            for f in validators.run(ws)
+            if f.severity == validators.ERROR
+            and (validators.owner_stage(f) == stage or f.code in LOCK_CODES)
+        ]
+        if errors:
+            codes = sorted({f.code for f in errors})
+            return ConditionResult(
+                False, f"{len(errors)} validation error(s): {', '.join(codes)} (pf.py validate)"
+            )
+        return ConditionResult(True, "pf.py validate: no errors")
+
+    return check
+
+
 def _register_generic() -> None:
     for stage in EXPECTED:
         register(
@@ -216,6 +241,14 @@ def _register_generic() -> None:
                 "G-NO-UNMERGED-STAGING",
                 "no staging run is waiting to be merged",
                 _no_unmerged_staging,
+            ),
+        )
+        register(
+            stage,
+            GateCondition(
+                "G-VALIDATE-CLEAN",
+                "pf.py validate reports no errors for this stage",
+                validate_clean(stage),
             ),
         )
     register("DISCOVERY", GateCondition("G-SCOPE-SET", "a scope is set and accepted", _scope_set))

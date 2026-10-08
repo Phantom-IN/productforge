@@ -19,6 +19,7 @@ Well-formed (canonical) text round-trips byte-for-byte through
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from pflib import ids
@@ -36,10 +37,13 @@ CELL_SPLIT_RE = re.compile(r"(?<!\\)\|")
 class RecordParseError(CheckFailed):
     code = "PARSE_ERROR"
 
-    def __init__(self, message: str, line: int, path: str | None = None) -> None:
+    def __init__(
+        self, message: str, line: int, path: str | None = None, code: str | None = None
+    ) -> None:
         where = f"{path}:{line}" if path else f"line {line}"
-        super().__init__(f"{where}: {message}", details={"line": line, "path": path})
+        super().__init__(f"{where}: {message}", code=code, details={"line": line, "path": path})
         self.line = line
+        self.reason = message
 
 
 @dataclass
@@ -114,11 +118,22 @@ def _strip_eol(line: str) -> str:
     return line.rstrip("\r\n")
 
 
-def parse_document(text: str, path: str | None = None) -> Document:
+def parse_document(
+    text: str, path: str | None = None, errors: list[RecordParseError] | None = None
+) -> Document:
     """Parse records, tables and section headings from ``text``.
 
-    Raises ``RecordParseError`` (code ``PARSE_ERROR``) for malformed records.
+    Strict by default: raises ``RecordParseError`` (code ``PARSE_ERROR``, ``DUPLICATE_ID`` or
+    ``UNKNOWN_PREFIX``) for malformed records. With an ``errors`` list it is tolerant: each
+    problem is appended there and parsing continues, skipping only the offending line or
+    record (used by validators so one bad record does not hide a whole file).
     """
+
+    def report(err: RecordParseError) -> None:
+        if errors is None:
+            raise err
+        errors.append(err)
+
     lines = text.splitlines(keepends=True)
     doc = Document(text=text, lines=lines, path=path)
     in_fence = False
@@ -135,13 +150,20 @@ def parse_document(text: str, path: str | None = None) -> Document:
             i += 1
             continue
         if ID_LIKE_HEAD_RE.match(line):
-            rec, i = _parse_record(lines, i, path)
+            rec, i = _parse_record(lines, i, path, report)
+            if rec is None:
+                continue
             if rec.id in seen_ids:
-                raise RecordParseError(
-                    f"duplicate record id {rec.id} (first defined on line {seen_ids[rec.id] + 1})",
-                    rec.start + 1,
-                    path,
+                report(
+                    RecordParseError(
+                        f"duplicate record id {rec.id} "
+                        f"(first defined on line {seen_ids[rec.id] + 1})",
+                        rec.start + 1,
+                        path,
+                        code="DUPLICATE_ID",
+                    )
                 )
+                continue
             seen_ids[rec.id] = rec.start
             rec.section = current_section
             doc.records.append(rec)
@@ -167,16 +189,26 @@ def parse_document(text: str, path: str | None = None) -> Document:
     return doc
 
 
-def _parse_record(lines: list[str], i: int, path: str | None) -> tuple[Record, int]:
+def _parse_record(
+    lines: list[str], i: int, path: str | None, report: Callable[[RecordParseError], None]
+) -> tuple[Record | None, int]:
     head = _strip_eol(lines[i])
     m = RECORD_HEAD_RE.match(head)
     if not m:
-        raise RecordParseError(
-            f"malformed record heading {head!r} (expected '### <ID> — <title>')", i + 1, path
+        report(
+            RecordParseError(
+                f"malformed record heading {head!r} (expected '### <ID> — <title>')", i + 1, path
+            )
         )
+        return None, i + 1
     record_id = m.group("id")
-    if ids.parse(record_id, strict=False) is None:
-        raise RecordParseError(f"unknown record prefix in {record_id!r}", i + 1, path)
+    known = ids.parse(record_id, strict=False) is not None
+    if not known:
+        report(
+            RecordParseError(
+                f"unknown record prefix in {record_id!r}", i + 1, path, code="UNKNOWN_PREFIX"
+            )
+        )
     rec = Record(id=record_id, title=m.group("title"), start=i)
     last_key: str | None = None
     j = i + 1
@@ -185,23 +217,29 @@ def _parse_record(lines: list[str], i: int, path: str | None) -> tuple[Record, i
         if line.startswith("- "):
             fm = FIELD_RE.match(line)
             if not fm:
-                raise RecordParseError(f"malformed field line {line!r}", j + 1, path)
-            key = fm.group("key")
-            if key in rec.fields:
-                raise RecordParseError(f"duplicate field {key!r} in {record_id}", j + 1, path)
-            rec.set(key, fm.group("value") or "")
-            last_key = key
+                report(RecordParseError(f"malformed field line {line!r}", j + 1, path))
+                last_key = None
+            elif fm.group("key") in rec.fields:
+                key = fm.group("key")
+                report(RecordParseError(f"duplicate field {key!r} in {record_id}", j + 1, path))
+                last_key = None
+            else:
+                rec.set(fm.group("key"), fm.group("value") or "")
+                last_key = fm.group("key")
         elif line.startswith("  "):
             if last_key is None:
-                raise RecordParseError(
-                    f"continuation line before any field in {record_id}", j + 1, path
+                report(
+                    RecordParseError(
+                        f"continuation line without a field to continue in {record_id}", j + 1, path
+                    )
                 )
-            rec.fields[last_key] += "\n" + line[2:]
+            else:
+                rec.fields[last_key] += "\n" + line[2:]
         else:
             break
         j += 1
     rec.end = j
-    return rec, j
+    return (rec if known else None), j
 
 
 def serialize_record(rec: Record) -> str:

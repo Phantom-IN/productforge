@@ -127,22 +127,42 @@ def test_append_never_lands_inside_a_fence() -> None:
 
 
 @pytest.mark.parametrize(
-    "text, line, fragment",
+    "text, line, fragment, code",
     [
-        ("### D-001 - hyphen not em dash\n", 1, "malformed record heading"),
-        ("# x\n\n### D-001 — ok\n- Claim no colon\n", 4, "malformed field line"),
-        ("### D-001 — ok\n- Claim: a\n- Claim: b\n", 3, "duplicate field"),
-        ("### D-001 — a\n\n### D-001 — b\n", 3, "duplicate record id"),
-        ("### ZZ-001 — unknown\n", 1, "unknown record prefix"),
+        ("### D-001 - hyphen not em dash\n", 1, "malformed record heading", "PARSE_ERROR"),
+        ("# x\n\n### D-001 — ok\n- Claim no colon\n", 4, "malformed field line", "PARSE_ERROR"),
+        ("### D-001 — ok\n- Claim: a\n- Claim: b\n", 3, "duplicate field", "PARSE_ERROR"),
+        ("### D-001 — a\n\n### D-001 — b\n", 3, "duplicate record id", "DUPLICATE_ID"),
+        ("### ZZ-001 — unknown\n", 1, "unknown record prefix", "UNKNOWN_PREFIX"),
     ],
 )
-def test_parse_errors_report_line_numbers(text: str, line: int, fragment: str) -> None:
+def test_parse_errors_report_line_numbers(text: str, line: int, fragment: str, code: str) -> None:
     with pytest.raises(RecordParseError) as info:
         records.parse_document(text, path="research/x.md")
-    assert info.value.code == "PARSE_ERROR"
+    assert info.value.code == code
     assert info.value.line == line
     assert fragment in info.value.message
     assert info.value.message.startswith(f"research/x.md:{line}:")
+
+
+def test_tolerant_mode_collects_errors_and_keeps_good_records() -> None:
+    text = (
+        "### D-001 — good\n- Claim: a\n- bad field line\n- Status: active\n\n"
+        "### D-002 - bad heading\n- Claim: orphan\n\n"
+        "### D-001 — duplicate\n- Claim: b\n\n"
+        "### ZZ-009 — unknown prefix\n- Claim: c\n\n"
+        "### D-003 — also good\n- Claim: d\n"
+    )
+    errors: list[RecordParseError] = []
+    doc = records.parse_document(text, path="x.md", errors=errors)
+    assert [r.id for r in doc.records] == ["D-001", "D-003"]
+    assert doc.records[0].fields == {"Claim": "a", "Status": "active"}
+    assert [(e.code, e.line) for e in errors] == [
+        ("PARSE_ERROR", 3),
+        ("PARSE_ERROR", 6),
+        ("DUPLICATE_ID", 9),
+        ("UNKNOWN_PREFIX", 12),
+    ]
 
 
 def test_parse_refs_known_prefixes_only_and_provisional() -> None:

@@ -29,7 +29,7 @@ There are no environment variables. All knobs live in `skills/productforge/scrip
 ```bash
 make test        # pytest -q
 make lint        # ruff + mypy
-make check       # compile + test + lint (fixture/example validation joins in Phase 03/17)
+make check       # compile + test + lint + fixtures-check (examples join in Phase 17)
 ```
 
 `make` defaults to `PYTHON=python3.11`. To use a venv or check another version (as CI does with 3.12), pass it in:
@@ -85,6 +85,8 @@ Tests fake `$HOME` and never call the real `claude` CLI.
 - `tests/fixtures/workspaces/tasklet/<STATE>/` — a synthetic product ("Tasklet") frozen at each
   lifecycle state. When a phase adds an artifact or gate, extend the snapshot for that state and every
   later one (`make fixtures-check` verifies each snapshot passes `validate` for its state).
+- `tests/fixtures/invalid/<CODE>.md` — one overlay per validator finding code, applied to a copy of
+  the Tasklet DISCOVERY snapshot by `conftest.apply_overlay`; it must produce exactly that code.
 - `tests/fixtures/http/` — canned `robots.txt`, sitemaps and HTML served by a local `http.server`
   in discover tests.
 - Never put real third-party content in fixtures or `examples/`.

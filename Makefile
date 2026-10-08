@@ -4,10 +4,10 @@ SCRIPTS := skills/productforge/scripts
 RUNTIME_PY := $(shell find skills hooks -name '*.py' -not -path '*/__pycache__/*' 2>/dev/null)
 MYPY_TARGETS := $(SCRIPTS)/pf.py $(SCRIPTS)/pflib $(wildcard hooks/*.py)
 
-.PHONY: help compile test lint check clean
+.PHONY: help compile test lint fixtures-check check clean
 
 help:
-	@echo "make compile | test | lint | check | clean"
+	@echo "make compile | test | lint | fixtures-check | check | clean"
 
 compile:
 	$(PYTHON) -m py_compile $(RUNTIME_PY)
@@ -20,8 +20,15 @@ lint:
 	$(PYTHON) -m ruff format --check .
 	$(PYTHON) -m mypy $(MYPY_TARGETS)
 
-# Example/fixture validation is added to `check` in Phase 03.
-check: compile test lint
+# Every synthetic fixture snapshot must validate with zero errors.
+fixtures-check:
+	@for ws in tests/fixtures/workspaces/*/*/; do \
+		echo "validate $$ws"; \
+		$(PYTHON) $(SCRIPTS)/pf.py validate --workspace "$$ws" || exit 1; \
+	done
+
+# examples/tasklet joins in Phase 17.
+check: compile test lint fixtures-check
 
 clean:
 	find . -name '__pycache__' -type d -prune -exec rm -rf {} +

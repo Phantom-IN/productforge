@@ -104,12 +104,14 @@ Agents never edit `research/` or `spec/`. They write into the staging folder of 
   Document artifacts (e.g. `product-overview.md`) merge section by section: a staged `##` section
   replaces the canonical section with the same heading or is appended.
 
-## Finding and error codes
+## Merge and CLI error codes
+
+Returned by `pf.py` commands (exit 1 or 2, JSON `{"error": CODE, ...}`); nothing is written.
 
 | Code | Meaning |
 |---|---|
-| `PARSE_ERROR` | Malformed record heading, field line, continuation, duplicate field or duplicate ID in a file |
-| `DUPLICATE_ID` | The same provisional ID is defined twice in one staging run |
+| `PARSE_ERROR` | A file being merged or read strictly has a malformed record (line number in the message) |
+| `DUPLICATE_ID` | The same provisional ID is defined twice in one staging run, or a record ID twice in a file |
 | `DANGLING_PROVISIONAL` | A provisional reference has no staged definition (merge aborted, nothing written) |
 | `UNKNOWN_PREFIX` | An ID uses a prefix not in the table above |
 | `STAGED_FINAL_ID` | A staged record uses a final ID instead of a provisional one |
@@ -121,5 +123,39 @@ Agents never edit `research/` or `spec/`. They write into the staging folder of 
 | `NO_SUCH_RUN` / `BAD_RUN_ID` / `BAD_ROLE` | Invalid staging run or role name |
 | `NO_WORKSPACE` | No `.productforge/` found at or above the working directory |
 
-Later phases add validator codes (`MISSING_FIELD`, `DANGLING_REF`, `CONFIDENCE_RULE`,
-`LOCK_VIOLATION`, …) to this table.
+## Validator finding codes
+
+Reported by `pf.py validate` / `check` as findings (`error` findings make the command exit 1 and
+fail the stage's `G-VALIDATE-CLEAN` gate condition; `warn` findings are advisory). Validation is
+tolerant: a malformed record yields one finding and the rest of the file is still checked.
+
+| Code | Severity | Meaning |
+|---|---|---|
+| `PARSE_ERROR` | error | Malformed record heading, field line, continuation or duplicate field |
+| `DUPLICATE_ID` | error | The same record ID is defined more than once |
+| `UNKNOWN_PREFIX` | error | A record's prefix is unknown or does not belong in this artifact |
+| `MISSING_FIELD` | error | A required field is absent |
+| `EMPTY_FIELD` | error | A required field is empty (and the schema does not allow it) |
+| `UNKNOWN_FIELD` | warn | A field that is not part of the record's schema |
+| `DANGLING_REF` | error | A reference to an ID that does not exist |
+| `BAD_STATUS` | error | Status is not one of the allowed values (or rejected without Reason) |
+| `SUPERSEDED_TARGET_MISSING` | error | superseded-by targets a missing or other-type record |
+| `PROVISIONAL_ID_IN_CANONICAL` | error | A provisional ID (X-?n) appears in a canonical file |
+| `NEAR_DUPLICATE_TITLE` | warn | Two records of the same type have nearly identical titles |
+| `QUOTE_TOO_LONG` | error | A verbatim quote is longer than quotes.max_words |
+| `BAD_CONFIDENCE` | error | Confidence is not CONFIRMED, PROBABLE, INFERRED or UNKNOWN |
+| `CONFIDENCE_RULE` | error | The cited evidence does not support the stated confidence (§11) |
+| `CONFLICT_ASYMMETRIC` | error | A conflict is declared on one side only |
+| `CONFLICT_UNRESOLVED` | warn | A conflicting pair has no unknown or Resolution explaining it |
+| `BAD_TIER` | error | Source tier is not an integer 1–5 |
+| `BAD_CATEGORY` | error | Source category is not in the taxonomy |
+| `BAD_AUTHORITY` | error | Source authority is not High, Medium or Low |
+| `TIER_RAISED` | error | Tier is better than the category default (only lowering) |
+| `CANONICAL_URL_MISMATCH` | error | Canonical URL is not the canonical form of URL |
+| `DUPLICATE_SOURCE` | error | Two sources share a canonical URL |
+| `LOCK_VIOLATION` | error | A record of a closed stage was modified or lost references |
+| `LOCK_DELETED` | error | A record of a closed stage was deleted |
+
+Every record with a `Confidence` field also accepts optional `Derived from` and `Related unknown`
+reference lists (needed by the INFERRED and UNKNOWN rules — see `confidence-rules.md`). `Reason` is
+accepted on any record and required with `Status: rejected`.

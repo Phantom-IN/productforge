@@ -37,6 +37,7 @@ from pflib import (  # noqa: E402
     metrics,
     scaffold,
     state,
+    validators,
     workspace,
 )
 from pflib.errors import EXIT_CHECK_FAILED, EXIT_OK, NotImplementedPF, PFError  # noqa: E402
@@ -192,6 +193,40 @@ def _cmd_reopen(args: argparse.Namespace) -> dict[str, Any]:
     return {"open_stage": st.state.value, "stale": stale, "reason": args.reason}
 
 
+def _findings_human(result: dict[str, Any]) -> list[str]:
+    lines = [
+        f"{f['severity'].upper():5} {f['code']}  {f['artifact'] or '-'}"
+        + (f" {f['record_id']}" if f["record_id"] else "")
+        + f": {f['message']}"
+        for f in result["findings"]
+    ]
+    lines.append(f"{result['errors']} error(s), {result['warnings']} warning(s)")
+    return lines
+
+
+def _cmd_validate(args: argparse.Namespace) -> CommandResult:
+    ws = workspace.resolve_workspace(args.workspace)
+    stage = state.parse_state(args.stage).value if args.stage else None
+    result = validators.summary(validators.run(ws, stage=stage, artifact=args.artifact))
+    code = EXIT_CHECK_FAILED if result["errors"] else EXIT_OK
+    return CommandResult(result, code, human="\n".join(_findings_human(result)))
+
+
+def _cmd_check(args: argparse.Namespace) -> CommandResult:
+    ws = workspace.resolve_workspace(args.workspace)
+    st = state.load(ws)
+    result = validators.summary(validators.run(ws))
+    report = gates.evaluate(ws, st.state.value)
+    payload = {"validate": result, "gate": report.to_dict()}
+    done, total = report.progress
+    human = _findings_human(result) + [
+        f"Gate {report.stage}: {done}/{total} conditions passing"
+        + ("" if report.passed else f" (failing: {', '.join(report.failing())})")
+    ]
+    code = EXIT_CHECK_FAILED if result["errors"] else EXIT_OK
+    return CommandResult(payload, code, human="\n".join(human))
+
+
 def _cmd_set_scope(args: argparse.Namespace) -> dict[str, Any]:
     ws = workspace.resolve_workspace(args.workspace)
     st = scaffold.set_scope(ws, args.text, accepted=args.accepted, source=args.source)
@@ -300,7 +335,7 @@ SUBCOMMANDS: list[tuple[str, str, Callable[[argparse.ArgumentParser], None], Han
         "validate",
         "schema, references, confidence and locks",
         _add_validate,
-        _not_implemented("validate", "03"),
+        _cmd_validate,
     ),
     (
         "discover",
@@ -321,7 +356,7 @@ SUBCOMMANDS: list[tuple[str, str, Callable[[argparse.ArgumentParser], None], Han
         _not_implemented("lint-phases", "15"),
     ),
     ("trace", "build the traceability graph", _add_trace, _not_implemented("trace", "16")),
-    ("check", "validate + gate + lint + trace", _add_nothing, _not_implemented("check", "03")),
+    ("check", "validate + gate + lint + trace", _add_nothing, _cmd_check),
 ]
 
 

@@ -11,12 +11,11 @@ from datetime import date
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from pflib import catalog, config, stages, state, workspace
+from pflib import catalog, config, stages, state, urls, workspace
 from pflib.errors import UsageError
 from pflib.io import atomic_write_text
 
 TEMPLATES_DIR = Path(__file__).resolve().parent.parent.parent / "templates"
-_MULTI_PART_TLDS = {"co.uk", "org.uk", "ac.uk", "com.au", "co.nz", "co.jp", "co.in", "com.br"}
 GITIGNORE = "staging/\ncache/\nmerge.lock\n"
 
 
@@ -35,7 +34,7 @@ def slug_from_host(host: str) -> str:
     labels = [label for label in host.split(".") if label]
     if labels and labels[0] == "www":
         labels = labels[1:]
-    if len(labels) >= 3 and ".".join(labels[-2:]) in _MULTI_PART_TLDS:
+    if len(labels) >= 3 and ".".join(labels[-2:]) in urls.MULTI_PART_TLDS:
         core = labels[-3]
     elif len(labels) >= 2:
         core = labels[-2]

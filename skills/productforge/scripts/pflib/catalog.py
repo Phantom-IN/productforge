@@ -23,6 +23,7 @@ KIND_RECORDS = "records"
 KIND_RECORD_FILE = "record-file"
 KIND_DOCUMENT = "document"
 
+CONFIDENCE_SUPPORT_FIELDS = ("Derived from", "Related unknown")
 TITLE = "@title"  # dedupe on the record heading title instead of a field
 
 DEDUPE_NORMALISED = "normalised"
@@ -85,7 +86,16 @@ def _rs(prefix: str, required: str, **kw: object) -> RecordSchema:
     for key in ("optional", "ref_fields", "union_fields", "allow_empty", "dedupe"):
         if key in kw:
             kw[key] = split(kw[key])
-    return RecordSchema(prefix, split(required), **kw)  # type: ignore[arg-type]
+    req = split(required)
+    if "Confidence" in req:
+        # §11: INFERRED needs "Derived from", UNKNOWN needs "Related unknown" — so every
+        # confidence-bearing schema accepts both as optional, unioned reference lists.
+        for name in CONFIDENCE_SUPPORT_FIELDS:
+            for key in ("optional", "ref_fields", "union_fields"):
+                current = split(kw.get(key, ()))
+                if name not in current and not (key == "optional" and name in req):
+                    kw[key] = (*current, name)
+    return RecordSchema(prefix, req, **kw)  # type: ignore[arg-type]
 
 
 D, PM, SD, AL, PP = (

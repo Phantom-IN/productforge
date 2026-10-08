@@ -86,3 +86,51 @@ def new_ws(tmp_path: Path) -> Path:
         "https://tasklet.example", out=str(tmp_path / "tl"), scope="task tracking"
     )
     return ws
+
+
+FIXTURES = REPO_ROOT / "tests" / "fixtures"
+TASKLET = FIXTURES / "workspaces" / "tasklet"
+INVALID = FIXTURES / "invalid"
+
+
+@pytest.fixture
+def tasklet_discovery(tmp_path: Path) -> Path:
+    """A writable copy of the Tasklet DISCOVERY fixture workspace."""
+    import shutil
+
+    dest = tmp_path / "tasklet"
+    shutil.copytree(TASKLET / "DISCOVERY", dest)
+    return dest
+
+
+def read_overlay(path: Path) -> tuple[dict[str, str], str]:
+    """Parse an invalid-case overlay: an HTML-comment header of ``key: value`` lines + body."""
+    text = path.read_text(encoding="utf-8")
+    assert text.startswith("<!--\n"), path
+    header, body = text[5:].split("-->\n", 1)
+    meta = dict(line.split(": ", 1) for line in header.strip().splitlines())
+    return meta, body
+
+
+def apply_overlay(ws: Path, path: Path) -> str:
+    """Apply an overlay to workspace ``ws``; returns the expected finding code."""
+    from pflib import records, state
+
+    meta, body = read_overlay(path)
+    if "lock" in meta:
+        st = state.load(ws)
+        st.locks[meta["lock"]] = state.snapshot_locks(ws, state.State(meta["lock"]))
+        state.save(ws, st)
+    target = ws / meta["target"]
+    text = target.read_text(encoding="utf-8")
+    mode, _, record_id = meta["mode"].partition(" ")
+    if mode == "append":
+        text = text.rstrip("\n") + "\n\n" + body
+    else:
+        doc = records.parse_document(text)
+        rec = doc.record(record_id)
+        assert rec is not None, (path, record_id)
+        replacement = [body] if mode == "replace" else []
+        text = "".join(doc.lines[: rec.start] + replacement + doc.lines[rec.end :])
+    target.write_text(text, encoding="utf-8")
+    return meta["expect"]

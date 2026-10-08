@@ -16,7 +16,8 @@ def test_unbuilt_conditions_fail_as_not_built(new_ws: Path) -> None:
     assert by_id["G-SCOPE-SET"].status == gates.STATUS_PASS
     assert by_id["G-DISC-TIER1"].status == gates.STATUS_NOT_BUILT
     assert by_id["G-DISC-TIER1"].detail == "not built yet (Phase 07)"
-    assert report.progress == (3, len(gates.EXPECTED["DISCOVERY"]))
+    assert by_id["G-VALIDATE-CLEAN"].status == gates.STATUS_PASS  # built in Phase 03
+    assert report.progress == (4, len(gates.EXPECTED["DISCOVERY"]))
 
 
 def test_every_stage_declares_generic_conditions() -> None:

@@ -84,7 +84,8 @@ python3.11 -m venv .venv && . .venv/bin/activate && pip install -U pip && pip in
 
 make test          # python3.11 -m pytest -q
 make lint          # ruff check . && mypy pf.py + pflib (+ hooks/*.py once they exist)
-make check         # py_compile runtime + test + lint (fixture/example validation joins in Phase 03/17)
+make check         # py_compile runtime + test + lint + fixtures-check (examples join in Phase 17)
+make fixtures-check  # pf.py validate on every tests/fixtures/workspaces/*/* snapshot
 make check PYTHON=.venv/bin/python      # run against a specific interpreter (default python3.11)
 
 # CLI (from repo root)
@@ -103,9 +104,11 @@ claude --plugin-dir .                 # then: /productforge status  (or /product
 - One `pflib` module per concern; one test module per `pflib` module (`tests/unit/test_<module>.py`).
 - CLI subcommands return JSON with `--json`; human output otherwise. Exit codes: 0 ok, 1 check failed,
   2 usage error.
-- Validator findings are `{code, severity(error|warn), artifact, record_id, message}`; codes are
-  UPPER_SNAKE (`MISSING_FIELD`, `DANGLING_REF`, `CONFIDENCE_RULE`, `LOCK_VIOLATION`, …) and listed in
-  `references/record-format.md`.
+- Validator findings are `{code, severity(error|warn), artifact, record_id, message}`. Every code is
+  declared once in `pflib/validators/__init__.py:CODES`, documented in `references/record-format.md`,
+  and has exactly one `tests/fixtures/invalid/<CODE>.md` overlay — tests enforce all three.
+- Validators never raise on bad content; checks register with `@record_check(prefix)`,
+  `@artifact_check` or `@workspace_check`. Source categories/tiers live only in `pflib/taxonomy.py`.
 - Code style: `ruff format` (line length 100) + `ruff check`; `make lint` enforces both.
 - Record grammar, ID prefixes, staging rules and error codes: `skills/productforge/references/record-format.md`.
   Record schemas (required/ref/union fields, dedupe keys, sections) live only in `pflib/catalog.py`.
@@ -119,6 +122,9 @@ claude --plugin-dir .                 # then: /productforge status  (or /product
 - **New artifact**: add template → add `catalog.py` entry (path, owner stage, prefix, schema,
   dedupe key) → add validator module → add gate condition if needed → fixtures + tests →
   document schema in `references/record-format.md` → update §5.1.
+- **New validator finding code**: add to `CODES` (severity + meaning) → emit via `finding()` → add a
+  `tests/fixtures/invalid/<CODE>.md` overlay (header: `target`, `mode: append|replace <ID>|delete <ID>`,
+  optional `lock: <STAGE>`, `expect`) that yields only that code → add the row to `record-format.md`.
 - **New config knob**: add to `config.py DEFAULTS` with description → §5.2 table → test.
 - **New gate condition**: it is already declared in `gates.EXPECTED` with its phase — implement the
   check and `gates.register(stage, GateCondition(...))` it → pass and fail fixture → keep

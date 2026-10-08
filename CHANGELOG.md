@@ -20,6 +20,11 @@ versions follow [Semantic Versioning](https://semver.org/).
   (append-tolerant snapshots), reopen/stale (`state.py`); declarative gates with not-built
   conditions (`gates.py`); command verdicts (`commands.py`, `pf.py check-command`); `advance`,
   `reopen`; IDEA §6-style `status` (`metrics.py`); `references/stage-gates.md`.
+- Phase 03: validator framework (`pflib/validators/`: generic schema/ref/status/identity/quote,
+  sources, confidence + conflicts, locks) with 24 declared finding codes; mechanical §11 confidence
+  rules with transitive evidence (`confidence.py`); `urls.py`, `taxonomy.py`; tolerant parsing;
+  `pf.py validate` / `check`; `G-VALIDATE-CLEAN` gate condition; Tasklet DISCOVERY fixture + one
+  invalid overlay per code; `references/confidence-rules.md`, `references/source-tiers.md`.
 
 ### Changed
 - `ruff format` is enforced by `make lint`.
