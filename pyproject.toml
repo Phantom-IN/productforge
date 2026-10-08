@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "productforge"
+version = "0.1.0"
+description = "Turn an existing software product into an evidence-backed, implementation-ready engineering blueprint (Claude Code plugin)."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Vaibhav Vanage" }]
+requires-python = ">=3.9"
+# Runtime is standard-library only (CLAUDE.md golden rule 9). Never add runtime dependencies.
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.5", "mypy>=1.10"]
+
+[project.urls]
+Homepage = "https://github.com/Phantom-IN/productforge"
+
+[tool.setuptools]
+# Nothing is installed as a package: the runtime ships inside the plugin tree.
+# The editable install only provides the dev toolchain.
+packages = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+extend-exclude = [".dogfood", "examples"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["pflib"]
+
+[tool.mypy]
+mypy_path = "skills/productforge/scripts"
+explicit_package_bases = true
+warn_unused_configs = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = ["pflib", "pflib.*"]
+strict = true

@@ -1,0 +1,20 @@
+# Python
+.venv*/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ProductForge
+.dogfood/
+**/.productforge/staging/
+**/.productforge/cache/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
