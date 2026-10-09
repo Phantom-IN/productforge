@@ -33,6 +33,7 @@ CODES: dict[str, tuple[str, str]] = {
     "EMPTY_FIELD": (ERROR, "A required field is empty (and the schema does not allow it)"),
     "UNKNOWN_FIELD": (WARN, "A field that is not part of the record's schema"),
     "DANGLING_REF": (ERROR, "A reference to an ID that does not exist"),
+    "WRONG_REF_TYPE": (ERROR, "A reference field cites a record of the wrong type"),
     "BAD_STATUS": (ERROR, "Status is not one of the allowed values (or rejected without Reason)"),
     "SUPERSEDED_TARGET_MISSING": (ERROR, "superseded-by targets a missing or other-type record"),
     "PROVISIONAL_ID_IN_CANONICAL": (ERROR, "A provisional ID (X-?n) appears in a canonical file"),
@@ -173,7 +174,7 @@ def owner_stage(f: Finding) -> str | None:
 
 def run(ws: Path, stage: str | None = None, artifact: str | None = None) -> list[Finding]:
     """All findings for the workspace, optionally limited to one stage or artifact."""
-    from pflib.validators import confidence_checks, generic, locks, sources  # noqa: F401
+    from pflib.validators import confidence_checks, generic, locks, ref_types, sources  # noqa: F401
 
     ctx = Context.load(ws)
     found: list[Finding] = list(ctx.parse_findings)

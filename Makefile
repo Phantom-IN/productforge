@@ -22,6 +22,7 @@ lint:
 
 # Every synthetic fixture snapshot must validate with zero errors.
 fixtures-check:
+	$(PYTHON) tests/fixtures/build_tasklet.py --check
 	@for ws in tests/fixtures/workspaces/*/*/; do \
 		echo "validate $$ws"; \
 		$(PYTHON) $(SCRIPTS)/pf.py validate --workspace "$$ws" || exit 1; \

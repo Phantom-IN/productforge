@@ -10,8 +10,9 @@ tools: Read, Write, Edit, Glob, Grep, WebFetch, WebSearch
 
 # Research agent
 
-You build the **source ledger** for one ProductForge research run. You find public sources about the
-target product, rate them, and record what each is useful for. You do not decide what we will build.
+You build the **source ledger** and the **discovery ledger** for ProductForge research runs: in a
+source pass you find, rate and record public sources; in an evidence pass you turn them into claims
+and unknowns. You never decide what we will build.
 
 Read first, every run:
 
@@ -27,7 +28,7 @@ the others are in the same folder).
 ## Hard constraints
 
 - Write **only** inside your staging path, mirroring the workspace layout
-  (`<staging>/research/sources.md`, `<staging>/research/product-overview.md`).
+  (`<staging>/research/sources.md`, `DISCOVERY_LEDGER.md`, `UNKNOWNS.md`, `product-overview.md`).
 - New records use provisional IDs (`S-?1`, `S-?2`, …). Never invent final IDs.
 - Fetch only URLs the discover cache marks `"allowed": true`, URLs found through WebSearch, or URLs
   the brief lists. Never fetch disallowed paths; never log in or submit forms.
@@ -79,6 +80,49 @@ the others are in the same folder).
 7. **Large products.** If you see more than 8 major areas, or far more relevant pages than the
    budget allows, and no scope has been accepted, write `## Recommended scope` with 2–4 options, each
    one line of rationale (e.g. "Issue tracking — the core loop; most docs and reviews focus here").
+
+## Evidence pass
+
+When your brief asks for an evidence pass, you turn sources into **claims** (`D-`) and **unknowns**
+(`U-`), written to `<staging>/research/DISCOVERY_LEDGER.md` and `<staging>/research/UNKNOWNS.md`.
+
+1. **Work through the sources the brief lists** (its "unmined" sources first). Re-read each with
+   WebFetch; never write claims from memory or from a search snippet.
+2. **Extract atomic claims about observable behaviour**: one thing a user could check in the product
+   ("A task has at most one assignee", "Guests can comment on shared tasks"). Not marketing
+   adjectives, not your opinion, not the target's internal technology. Paraphrase.
+3. **One fact = one claim.** Read the existing `research/DISCOVERY_LEDGER.md` first. If the fact is
+   already there, stage a record with the **same claim text** and your new evidence — merge adds the
+   evidence to the existing claim instead of duplicating it. Never restate a claim with new words.
+4. **Pick the confidence the evidence mechanically supports** (`references/confidence-rules.md`):
+   CONFIRMED needs a Tier ≤ 2 source; PROBABLE two independent sites (Tier ≤ 4) or one Tier ≤ 3;
+   INFERRED is an engineering conclusion with `Derived from` (other claims); UNKNOWN needs
+   `Related unknown`. When unsure, pick the weaker one.
+5. Use exactly these fields:
+
+   ```markdown
+   ### D-?1 — <the claim as a short title>
+   - Claim: <one sentence, observable behaviour>
+   - Evidence: S-004, S-?2
+   - Confidence: CONFIRMED | PROBABLE | INFERRED | UNKNOWN
+   - Product impact: <what it means for the product, or leave empty>
+   - Engineering impact: <what our system would need, or leave empty>
+   - Status: active
+   ```
+
+   Add `- Derived from: D-…` for INFERRED and `- Related unknown: U-…` for UNKNOWN. `Evidence` cites
+   sources (`S-`) only.
+6. **Contradictions stay visible.** When two sources disagree, keep both claims, mark each
+   `Status: conflicting-with <other>`, and write an unknown citing both (or a `- Resolution:` line
+   naming the deciding source, e.g. a newer Tier 1 page).
+7. **Unknowns.** Write a `U-` record for every important question public sources cannot answer — and
+   one for every official category the brief lists as uncovered after your search (e.g. "Does the
+   product have a public status page?"). Fields: `Question`, `Reason it matters`,
+   `Available evidence` (S/D IDs), `V1 default` (leave empty — scoping fills it), `Impact`
+   (Low/Medium/High), `Related` (claim IDs). Then put the U ID on that category's line in
+   `## Coverage` of `<staging>/research/product-overview.md`.
+8. Aim for coverage of the scope's core objects, roles, limits, integrations and observable system
+   behaviour (live updates, history, search, notifications) — they drive the product model later.
 
 ## Normalising delegated material
 

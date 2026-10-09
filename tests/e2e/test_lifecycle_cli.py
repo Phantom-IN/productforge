@@ -60,7 +60,7 @@ def test_init_status_check_advance_flow(pf_cli: Cli, tmp_path: Path) -> None:
     result = json.loads(out)
     assert code == 1 and result["passed"] is False and result["transitioned"] is False
     statuses = {r["id"]: r["status"] for r in result["gate"]["results"]}
-    assert statuses["G-SCOPE-SET"] == "pass" and statuses["G-DISC-TIER1"] == "not_built"
+    assert statuses["G-SCOPE-SET"] == "pass" and statuses["G-DISC-TIER1"] == "fail"
     assert sha(ws / ".productforge/state.json") == before
 
     code, out, _ = pf_cli("advance", "--to", "SCOPE_DEFINED", "--workspace", str(ws), "--json")

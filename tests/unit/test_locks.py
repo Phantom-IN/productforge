@@ -24,9 +24,10 @@ def test_advancing_the_fixture_locks_every_discovery_record(
 ) -> None:
     advance(tasklet_discovery, gate_control, capsys)
     locked = state.load(tasklet_discovery).locks["DISCOVERY"]
-    assert len([i for i in locked if i.startswith("S-")]) == 16
-    assert len([i for i in locked if i.startswith("D-")]) == 18
-    assert len([i for i in locked if i.startswith("U-")]) == 3
+    assert len([i for i in locked if i.startswith("S-")]) == 20
+    assert len([i for i in locked if i.startswith("D-")]) == 44
+    assert len([i for i in locked if i.startswith("U-")]) == 8
+    assert len([i for i in locked if i.startswith("PS-")]) == 7
     assert codes(tasklet_discovery) == []
 
 
@@ -57,7 +58,7 @@ def test_appending_records_and_evidence_is_allowed_but_removal_is_not(
         "- Status: active\n"
     )
     report = merge.merge(tasklet_discovery, run_id)
-    assert report.id_map == {"D-?1": "D-001", "D-?2": "D-019"}  # evidence union + append
+    assert report.id_map == {"D-?1": "D-001", "D-?2": "D-045"}  # evidence union + append
     assert codes(tasklet_discovery) == []
     ledger = tasklet_discovery / "research/DISCOVERY_LEDGER.md"
     assert "- Evidence: S-001, S-002\n" in ledger.read_text()

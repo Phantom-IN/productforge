@@ -38,7 +38,7 @@ def test_brief_renders_workspace_values(tasklet_discovery: Path) -> None:
         role="research-agent",
         task="Collect official docs.",
         partition="official-docs",
-        inputs=["research/sources.md", "research/product-overview.md"],
+        inputs=["research/sources.md", "research/FEATURE_MATRIX.md"],
         templates=["agent-brief.md"],
         budget="at most 10 sources",
     )
@@ -53,7 +53,7 @@ def test_brief_renders_workspace_values(tasklet_discovery: Path) -> None:
         str(brief.CONTRACT),
         "Open stage: DISCOVERY",
         f"{tasklet_discovery / 'research/sources.md'}\n",
-        "product-overview.md (does not exist yet)",
+        "FEATURE_MATRIX.md (does not exist yet)",
         "Collect official docs.",
     ):
         assert expected in b.text, expected
@@ -87,8 +87,8 @@ def test_preflight_reports_findings_without_touching_the_workspace(tasklet_disco
     result = merge.preflight(tasklet_discovery, run_id)
     assert result["ok"] is False and result["errors"] == 1
     (f,) = result["findings"]
-    assert f["code"] == "CONFIDENCE_RULE" and f["record_id"] == "D-019"
-    assert result["report"]["new_ids"] == ["D-019"]
+    assert f["code"] == "CONFIDENCE_RULE" and f["record_id"] == "D-045"
+    assert result["report"]["new_ids"] == ["D-045"]
     assert tree_hash(tasklet_discovery) == before
     assert workspace.staging_dir(tasklet_discovery, run_id).is_dir()  # still pending
 
@@ -98,7 +98,7 @@ def test_repair_brief_lists_findings_in_provisional_ids(tasklet_discovery: Path)
     b = brief.render(tasklet_discovery, role="research-agent", task="Fix it.", run_id=run_id)
     assert b.repair and b.findings == 1 and b.run_id == run_id
     assert "- ERROR CONFIDENCE_RULE D-?1: D-?1: CONFIRMED needs a Tier ≤ 2 source" in b.text
-    assert "D-019" not in b.text
+    assert "D-045" not in b.text
     stage(tasklet_discovery, run_id, GOOD_CLAIM)  # the agent fixes its staged file
     assert merge.preflight(tasklet_discovery, run_id)["ok"] is True
     fixed = brief.render(tasklet_discovery, role="research-agent", task="Fix it.", run_id=run_id)

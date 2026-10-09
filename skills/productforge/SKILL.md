@@ -208,35 +208,48 @@ Finish every command with at most 20 lines:
 
 ### `/productforge research`
 
-Source passes (DISCOVERY). Repeat the command until coverage and the gate are good.
+DISCOVERY: sources → claims and unknowns → surfaces, until the DISCOVERY gate passes. Each repeat
+targets what the gate still lacks: sources/Tier 1/coverage → source pass; claims/overview → evidence
+pass; surfaces → surface pass.
 
-1. `python3.11 "$PF" research-plan --workspace <ws> --json`. If `discovered` is false, first run
-   `python3.11 "$PF" discover <target_url> --workspace <ws> --json` and plan again.
+1. **Plan.** `python3.11 "$PF" research-plan --workspace <ws> --json`. If `discovered` is false,
+   first run `python3.11 "$PF" discover <target_url> --workspace <ws> --json` and plan again.
 2. **Scope.** If `recommend_scope` is true and `product-overview.md` has `## Recommended scope`
    options, ask with AskUserQuestion (those options, plus Other) and record the answer:
    `python3.11 "$PF" set-scope "<choice>" --accepted --source recommended --workspace <ws> --json`.
-   If `needs_scope` is true but there is no recommendation yet, run only the `official-core`
-   partition first (it fills `## Major areas` and, for large products, `## Recommended scope`),
-   then plan again. A small product may simply be scoped as the whole product (ask the user).
-3. **Partitions.** For every partition with `budget > 0`, in parallel:
-   - `provider` is not `builtin` (only `external` can be): use the **Delegated run protocol** with
+   If `needs_scope` is true but there is no recommendation yet, run only the `official-core` source
+   pass first, then plan again. A small product may simply be scoped as the whole product (ask).
+3. **Source pass** (when `sources` < the gate minimum, or `uncovered_official` is not empty, and
+   `remaining_budget > 0`). For every partition with `budget > 0`, in parallel:
+   - `provider` is not `builtin` (only `external` can be): **Delegated run protocol** with
      `delegate <provider> --task "What do independent reviews, tutorials and community threads say
      about <scope>? Which capabilities do users rely on, and what do they miss?"`, then normalise
      with the research-agent in the same run;
-   - otherwise brief the research-agent:
-     `python3.11 "$PF" brief --role research-agent --task "Source pass for partition <name>: record
-     up to <budget> new sources, uncovered categories first: <uncovered>." --partition <name>
-     --input research/sources.md --input research/product-overview.md --input <each of caches>
-     --template research/sources.md --template research/product-overview.md
+   - otherwise `python3.11 "$PF" brief --role research-agent --task "Source pass for partition
+     <name>: record up to <budget> new sources, uncovered categories first: <uncovered>."
+     --partition <name> --input research/sources.md --input research/product-overview.md
+     --input <each of caches> --template research/sources.md --template research/product-overview.md
      --budget "at most <budget> new sources" --workspace <ws> --json`.
-   Spawn them in one message, then preflight, repair and merge each run **one at a time**.
-4. **Research requests** in agent summaries (at most 5 delegations per command): `browse <url>` →
+   Spawn them in one message; then preflight, repair and merge each run **one at a time**.
+4. **Evidence pass** (plan again first). For each partition with `unmined` sources, in parallel (at
+   most 3): `brief --role research-agent --task "Evidence pass: extract claims and unknowns from
+   <unmined IDs>. Uncovered official categories to explain with unknowns: <uncovered_official>."
+   --partition <name> --input research/sources.md --input research/DISCOVERY_LEDGER.md
+   --input research/UNKNOWNS.md --input research/product-overview.md
+   --template research/DISCOVERY_LEDGER.md --template research/UNKNOWNS.md`. Preflight, repair,
+   merge one at a time.
+5. **Surface pass** when `surfaces` is 0 or claims were merged in this command: one product-analyst
+   run — `brief --role product-analyst --task "Surface pass: map every visible product surface from
+   the claims and sources." --input research/DISCOVERY_LEDGER.md --input research/sources.md
+   --input research/product-surfaces.md --input research/UNKNOWNS.md
+   --template research/product-surfaces.md`. Preflight, repair, merge.
+6. **Research requests** in agent summaries (at most 5 delegations per command): `browse <url>` →
    `web.browse`, `pdf <url>` → `docs.pdf`, `repo <url>` → `repo.intel`. When that capability resolves
    to a real provider, run the Delegated run protocol for it and normalise with the research-agent;
    when it is `builtin`, report the request as unresolved.
-5. Report: merge reports' `dropped`/`over_cap` (source cap), the new `research-plan` coverage
-   (`uncovered_official`), validation, and the next command. Claims, unknowns and surfaces are
-   extracted by the evidence pass, which arrives in Phase 07.
+7. **Gate.** `python3.11 "$PF" check --workspace <ws> --json`: report the DISCOVERY gate as a compact
+   table plus merge reports' `dropped`/`over_cap`. If the gate passes, the next command is
+   `/productforge features` (it asks before closing DISCOVERY); otherwise `/productforge research`.
 
 ### `/productforge status`
 
@@ -260,7 +273,6 @@ After dispatch (so refusals and transitions still behave correctly), these comma
 
 | Command | Arrives in |
 |---|---|
-| `research` (evidence pass: claims, unknowns, surfaces) | Phase 07 |
 | `features` | Phase 08 |
 | `workflows` | Phase 09 |
 | `model` | Phases 10–11 |

@@ -116,6 +116,20 @@ advanced on checks that do not exist yet. Condition statuses: `pass`, `fail`, `n
 | `G-PP-TRACE-CLEAN` | pf.py trace reports no errors | Phase 16 |
 | `G-PP-TRACEABILITY-RENDERED` | TRACEABILITY.md matches a fresh render | Phase 16 |
 
+## How the DISCOVERY conditions are measured
+
+| Condition | Passes when |
+|---|---|
+| `G-DISC-MIN-SOURCES` | `research/sources.md` holds ≥ `research.min_sources_gate` (15) sources |
+| `G-DISC-TIER1` | at least one source has `Tier: 1` |
+| `G-DISC-COVERAGE` | every official category (`taxonomy.OFFICIAL`) has a source with that `Category`, or its line in `product-overview.md` `## Coverage` cites an existing `U-` record |
+| `G-DISC-OVERVIEW` | `Product`, `One-line description`, `Target users`, `Category`, `Pricing model` and `Major areas` are non-empty and not the template placeholder |
+| `G-DISC-SURFACES` | at least one `PS-` record |
+| `G-DISC-MIN-CLAIMS` | ≥ `research.min_claims_gate` (40) *active* claims (not superseded or rejected) |
+
+Both thresholds are config knobs (`.productforge/config.json`), e.g. lower `research.min_claims_gate`
+for a deliberately tiny product — the gate report always shows the numbers.
+
 ## Scope
 
 DISCOVERY cannot close without an accepted scope (`G-SCOPE-SET`). `/productforge <url> --scope "…"`

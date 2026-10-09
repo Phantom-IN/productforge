@@ -58,7 +58,7 @@ def test_check_combines_validate_and_gate(pf_cli: Cli, tmp_path: Path) -> None:
     payload = json.loads(out)
     assert code == 0 and payload["validate"]["errors"] == 0
     gate = {r["id"]: r["status"] for r in payload["gate"]["results"]}
-    assert gate["G-VALIDATE-CLEAN"] == "pass" and gate["G-DISC-TIER1"] == "not_built"
+    assert gate["G-VALIDATE-CLEAN"] == "pass" and gate["G-DISC-TIER1"] == "pass"
     apply_overlay(ws, INVALID / "DANGLING_REF.md")
     code, out, _ = pf_cli("check", "--workspace", str(ws))
     assert code == 1 and "G-VALIDATE-CLEAN" in out

@@ -9,15 +9,19 @@ from pflib.errors import CheckFailed
 
 
 def test_unbuilt_conditions_fail_as_not_built(new_ws: Path) -> None:
-    report = gates.evaluate(new_ws, "DISCOVERY")
-    assert not report.passed
+    report = gates.evaluate(new_ws, "PRODUCT_MODEL")
     by_id = {r.id: r for r in report.results}
-    assert by_id["G-STATE-FILE-VALID"].status == gates.STATUS_PASS
-    assert by_id["G-SCOPE-SET"].status == gates.STATUS_PASS
-    assert by_id["G-DISC-TIER1"].status == gates.STATUS_NOT_BUILT
-    assert by_id["G-DISC-TIER1"].detail == "not built yet (Phase 07)"
-    assert by_id["G-VALIDATE-CLEAN"].status == gates.STATUS_PASS  # built in Phase 03
-    assert report.progress == (4, len(gates.EXPECTED["DISCOVERY"]))
+    assert by_id["G-PM-SURFACE-FEATURES"].status == gates.STATUS_NOT_BUILT
+    assert by_id["G-PM-SURFACE-FEATURES"].detail == "not built yet (Phase 11)"
+    assert not report.passed
+
+
+def test_discovery_conditions_are_all_built(new_ws: Path) -> None:
+    report = gates.evaluate(new_ws, "DISCOVERY")
+    assert all(r.status in (gates.STATUS_PASS, gates.STATUS_FAIL) for r in report.results)
+    by_id = {r.id: r for r in report.results}
+    assert by_id["G-SCOPE-SET"].passed and by_id["G-STATE-FILE-VALID"].passed
+    assert not by_id["G-DISC-TIER1"].passed and not report.passed
 
 
 def test_every_stage_declares_generic_conditions() -> None:

@@ -45,6 +45,19 @@ def confidence_breakdown(ws: Path, index: WorkspaceIndex | None = None) -> dict[
     return out
 
 
+INACTIVE_STATUS_PREFIXES = ("superseded-by", "rejected")
+
+
+def active_claims(ws: Path, index: WorkspaceIndex | None = None) -> list[str]:
+    """IDs of D records that are neither superseded nor rejected."""
+    index = index or WorkspaceIndex(ws)
+    return [
+        rec.id
+        for _, rec in index.records("D")
+        if not rec.get("Status").strip().startswith(INACTIVE_STATUS_PREFIXES)
+    ]
+
+
 def domains(ws: Path, index: WorkspaceIndex | None = None) -> int:
     """Distinct feature domains."""
     index = index or WorkspaceIndex(ws)

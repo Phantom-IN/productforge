@@ -147,7 +147,20 @@ def register(stage: str, condition: GateCondition) -> None:
     REGISTRY[stage][condition.id] = condition
 
 
+# Modules that register stage-specific conditions; imported lazily on first evaluation so they
+# can depend on anything (validators, research, …) without import cycles.
+CONDITION_MODULES = ("pflib.conditions_discovery",)
+
+
+def load_conditions() -> None:
+    import importlib
+
+    for name in CONDITION_MODULES:
+        importlib.import_module(name)
+
+
 def evaluate(ws: Path, stage: str) -> GateReport:
+    load_conditions()
     report = GateReport(stage=stage)
     for cid, description, phase in EXPECTED.get(stage, []):
         cond = REGISTRY.get(stage, {}).get(cid)

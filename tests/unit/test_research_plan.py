@@ -47,9 +47,10 @@ def entry(url: str, category: str | None, allowed: bool = True) -> dict:
 def test_plan_on_fixture_without_discovery(tasklet_discovery: Path) -> None:
     plan = research.plan(tasklet_discovery)
     assert plan["discovered"] is False and plan["caches"] == []
-    assert plan["sources"] == 16 and plan["remaining_budget"] == 64
+    assert plan["sources"] == 20 and plan["remaining_budget"] == 60
     assert plan["covered"]["docs"] == ["S-001", "S-002", "S-016"]
-    assert "integrations" in plan["uncovered_official"]
+    assert "official-repo" in plan["uncovered_official"]  # explained by U-004, not a source
+    assert "integrations" not in plan["uncovered_official"]
     assert "docs" not in plan["uncovered_official"]
     assert plan["needs_scope"] is False and plan["recommend_scope"] is False
 
@@ -72,7 +73,7 @@ def test_plan_counts_only_new_allowed_candidates(tasklet_discovery: Path) -> Non
     assert parts["official-docs"]["candidates"] == 2  # labels + official repo link
     assert parts["official-core"]["candidates"] == 1
     assert parts["official-docs"]["budget"] == 2 and parts["official-core"]["budget"] == 1
-    assert parts["external"]["budget"] == 64 - 3
+    assert parts["external"]["budget"] == 60 - 3
     assert plan["caches"] == [".productforge/cache/discover/tasklet.example.json"]
 
 
@@ -105,3 +106,15 @@ def edit_state(tasklet_discovery: Path) -> Callable[..., None]:
         state.save(tasklet_discovery, st)
 
     return edit
+
+
+def test_unmined_sources_and_evidence_counts(tasklet_discovery: Path) -> None:
+    plan = research.plan(tasklet_discovery)
+    parts = {p["name"]: p for p in plan["partitions"]}
+    # every fixture source is already cited by at least one claim
+    assert parts["official-core"]["unmined"] == []
+    assert parts["external"]["unmined"] == []
+    assert plan["claims"] == 42 and plan["min_claims_gate"] == 40 and plan["surfaces"] == 7
+    ledger = tasklet_discovery / "research/DISCOVERY_LEDGER.md"
+    ledger.write_text(ledger.read_text().replace("- Evidence: S-019\n", "- Evidence: S-017\n"))
+    assert research.plan(tasklet_discovery)["partitions"][1]["unmined"] == ["S-019"]

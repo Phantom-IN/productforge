@@ -45,7 +45,9 @@ def pf_cli(tmp_path_factory: pytest.TempPathFactory) -> Callable[..., CliResult]
 
 
 class GateControl:
-    """Stand-in implementations for every declared-but-unbuilt gate condition.
+    """Stand-ins for every stage-specific gate condition (built or not), so lifecycle tests do
+    not depend on each phase's content rules. The generic conditions (state file, staging,
+    validation) stay real.
 
     ``outcomes[condition_id] = False`` makes that condition fail; everything else passes.
     """
@@ -66,10 +68,12 @@ def gate_control(monkeypatch: pytest.MonkeyPatch) -> GateControl:
     from pflib import gates
 
     control = GateControl()
+    gates.load_conditions()
+    real = {"G-STATE-FILE-VALID", "G-NO-UNMERGED-STAGING", "G-VALIDATE-CLEAN"}
     for stage, declared in gates.EXPECTED.items():
         table = dict(gates.REGISTRY[stage])
         for cid, description, _phase in declared:
-            if cid not in table:
+            if cid not in real:
 
                 def check(ws: Path, cid: str = cid) -> gates.ConditionResult:
                     ok = control.outcomes.get(cid, True)

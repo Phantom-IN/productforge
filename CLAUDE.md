@@ -138,7 +138,8 @@ claude --plugin-dir .                 # then: /productforge status  (or /product
   optional `lock: <STAGE>`, `expect`) that yields only that code → add the row to `record-format.md`.
 - **New config knob**: add to `config.py DEFAULTS` with description → §5.2 table → test.
 - **New gate condition**: it is already declared in `gates.EXPECTED` with its phase — implement the
-  check and `gates.register(stage, GateCondition(...))` it → pass and fail fixture → keep
+  check in a `pflib/conditions_<stage>.py` module listed in `gates.CONDITION_MODULES` (loaded lazily)
+  and `gates.register(stage, GateCondition(...))` it → pass and fail fixture → keep
   `references/stage-gates.md` in sync (a test enforces it). Tests use the `gate_control` fixture for
   conditions owned by other phases.
 - **New delegated capability/provider**: add to `capabilities.json` (ordered providers, builtin last,

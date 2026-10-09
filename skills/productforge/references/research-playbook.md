@@ -53,6 +53,20 @@ PROBABLE claims). Skip SEO listicles that only repeat marketing copy.
 across partitions (about 45% docs, 25% core, 30% external; official partitions never get more than
 their candidates). Merge drops new, unreferenced sources over the cap and reports them.
 
+## Claim granularity
+
+A claim is **one observable behaviour a user could check** in the product.
+
+| Too coarse | Right size | Too fine / not a claim |
+|---|---|---|
+| "Tasklet has great task management" | "A task has at most one assignee" | "The assign button is blue" |
+| "Rich integrations" | "Due dates can be synced to an external calendar" | "Integrations are delightful" |
+| "Enterprise-ready security" | "Data is encrypted at rest" | "They probably use AES on Postgres" (internals — never) |
+
+Write one claim per behaviour, even when one page states many. Prefer the wording of the strongest
+source, paraphrased. Engineering consequences ("needs a multi-entity search index") are separate
+`INFERRED` claims `Derived from` the observation.
+
 ## Stale or contradictory material
 
 - Prefer the newest official page; lower the tier of pages marked legacy/deprecated and say why.

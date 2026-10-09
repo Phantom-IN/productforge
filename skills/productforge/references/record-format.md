@@ -138,6 +138,7 @@ tolerant: a malformed record yields one finding and the rest of the file is stil
 | `EMPTY_FIELD` | error | A required field is empty (and the schema does not allow it) |
 | `UNKNOWN_FIELD` | warn | A field that is not part of the record's schema |
 | `DANGLING_REF` | error | A reference to an ID that does not exist |
+| `WRONG_REF_TYPE` | error | A reference field cites a record of the wrong type |
 | `BAD_STATUS` | error | Status is not one of the allowed values (or rejected without Reason) |
 | `SUPERSEDED_TARGET_MISSING` | error | superseded-by targets a missing or other-type record |
 | `PROVISIONAL_ID_IN_CANONICAL` | error | A provisional ID (X-?n) appears in a canonical file |

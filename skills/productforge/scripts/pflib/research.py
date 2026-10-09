@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from pflib import catalog, config, discover, records, state, taxonomy
+from pflib import catalog, config, discover, metrics, records, state, taxonomy
 from pflib.index import WorkspaceIndex
 
 # Parallel research partitions (§9.3). Every taxonomy category except the two "never a real
@@ -80,6 +80,10 @@ def plan(ws: Path) -> dict[str, Any]:
     st = state.load(ws)
     index = WorkspaceIndex(ws)
     known = {rec.get("Canonical URL").strip() for _, rec in index.records("S")}
+    cited = {
+        ref for _, rec in index.records("D") for ref in records.parse_refs(rec.get("Evidence"))
+    }
+    category_of = {rec.id: rec.get("Category").strip() for _, rec in index.records("S")}
     cov = coverage(ws, index)
     max_sources = int(config.resolve("research.max_sources", ws))
     sources = sum(len(v) for v in cov.values())
@@ -113,6 +117,11 @@ def plan(ws: Path) -> dict[str, Any]:
             "name": name,
             "categories": list(PARTITIONS[name]),
             "uncovered": [c for c in PARTITIONS[name] if not cov[c]],
+            "unmined": sorted(
+                sid
+                for sid, cat in category_of.items()
+                if cat in PARTITIONS[name] and sid not in cited
+            ),
             "candidates": counts[name],
             "budget": budget[name],
             "provider": deep if name == "external" else "builtin",
@@ -130,6 +139,9 @@ def plan(ws: Path) -> dict[str, Any]:
         "uncovered_official": [c for c in taxonomy.OFFICIAL if not cov[c]],
         "partitions": partitions,
         "major_areas": len(areas),
+        "claims": len(metrics.active_claims(ws, index)),
+        "min_claims_gate": int(config.resolve("research.min_claims_gate", ws)),
+        "surfaces": len(index.records("PS")),
         "scope": st.scope,
         "recommend_scope": (not scope_ok) and bool(reasons),
         "scope_reasons": reasons,

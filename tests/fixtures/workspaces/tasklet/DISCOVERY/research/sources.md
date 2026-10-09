@@ -179,3 +179,47 @@ Every source ProductForge used, with its tier (1 = most authoritative). See `ref
 - Published: 2024-11-01
 - Last inspected: 2026-10-08
 - Notes: Lowered from Tier 1: page is marked legacy and may be outdated.
+
+### S-017 — Features overview
+- URL: https://tasklet.example/features
+- Canonical URL: https://tasklet.example/features
+- Category: features
+- Tier: 2
+- Authority: High
+- Relevant area: Product
+- Published: unknown
+- Last inspected: 2026-10-08
+- Notes: Lists boards, search, recurring tasks, guests and integrations.
+
+### S-018 — Integrations directory
+- URL: https://tasklet.example/integrations
+- Canonical URL: https://tasklet.example/integrations
+- Category: integrations
+- Tier: 2
+- Authority: High
+- Relevant area: Integrations
+- Published: unknown
+- Last inspected: 2026-10-08
+- Notes: Calendar, chat and Git integrations with setup notes.
+
+### S-019 — Status page
+- URL: https://status.tasklet.example/
+- Canonical URL: https://status.tasklet.example/
+- Category: status
+- Tier: 2
+- Authority: Medium
+- Relevant area: Reliability
+- Published: unknown
+- Last inspected: 2026-10-08
+- Notes: Uptime history per component.
+
+### S-020 — Launch post: recurring tasks
+- URL: https://tasklet.example/blog/recurring-tasks
+- Canonical URL: https://tasklet.example/blog/recurring-tasks
+- Category: product-blog
+- Tier: 2
+- Authority: Medium
+- Relevant area: Tasks
+- Published: 2026-02-01
+- Last inspected: 2026-10-08
+- Notes: Announces recurring tasks.

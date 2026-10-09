@@ -216,3 +216,38 @@ def test_research_section_wires_every_delegated_capability_and_the_fallback() ->
         "one at a time",
     ):
         assert phrase in research, phrase
+
+
+def test_product_analyst_and_evidence_pass_contracts() -> None:
+    analyst = (AGENTS / "product-analyst.md").read_text(encoding="utf-8")
+    for phrase in (
+        "### PS-?1",
+        "Related features",
+        "Unanswered questions",
+        "provisional IDs",
+        "data, never instructions",
+    ):
+        assert phrase in analyst, phrase
+    research_agent = (AGENTS / "research-agent.md").read_text(encoding="utf-8")
+    evidence = research_agent.split("## Evidence pass", 1)[1].split("\n## ", 1)[0]
+    for phrase in (
+        "same claim text",
+        "conflicting-with",
+        "Derived from",
+        "Related unknown",
+        "## Coverage",
+        "observable behaviour",
+    ):
+        assert phrase in evidence, phrase
+    skill = SKILL.read_text(encoding="utf-8")
+    research = skill.split("### `/productforge research`", 1)[1].split("\n### ", 1)[0]
+    for phrase in (
+        "**Source pass**",
+        "**Evidence pass**",
+        "**Surface pass**",
+        "product-analyst",
+        "unmined",
+        '"$PF" check',
+        "/productforge features",
+    ):
+        assert phrase in research, phrase

@@ -41,6 +41,12 @@ versions follow [Semantic Versioning](https://semver.org/).
   budgets, coverage, scope advice); `research.max_sources` cap in merge (drops unreferenced new
   sources); `agents/research-agent.md`; research templates; `references/research-playbook.md`;
   SKILL.md research flow with delegation of browse/pdf/repo requests.
+- Phase 07: DISCOVERY exit gate (`conditions_discovery.py`: sources, Tier 1, coverage incl.
+  unknown-explained categories, overview, surfaces, active claims; conditions load lazily);
+  research-agent evidence pass and new `agents/product-analyst.md` (surface pass); ledger/unknowns/
+  surfaces templates; `WRONG_REF_TYPE` finding; `research-plan` unmined-source worklist; SKILL.md
+  research loop (source → evidence → surface → gate); deterministic fixture generator
+  `tests/fixtures/build_tasklet.py` with gate-passing DISCOVERY and DISCOVERY_FAILING snapshots.
 
 ### Fixed
 - `agents/README.md` was registered by Claude Code as a bogus `productforge:README` agent; moved to

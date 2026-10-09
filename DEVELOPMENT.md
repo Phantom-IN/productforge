@@ -83,7 +83,9 @@ Tests fake `$HOME` and never call the real `claude` CLI.
 ## Fixtures
 
 - `tests/fixtures/workspaces/tasklet/<STATE>/` — a synthetic product ("Tasklet") frozen at each
-  lifecycle state. When a phase adds an artifact or gate, extend the snapshot for that state and every
+  lifecycle state, **generated** by `python3.11 tests/fixtures/build_tasklet.py` (edit the generator,
+  never the snapshots; `make fixtures-check` fails if they drift). Existing records must stay
+  byte-identical — append new ones. When a phase adds an artifact or gate, extend the snapshot for that state and every
   later one (`make fixtures-check` verifies each snapshot passes `validate` for its state).
 - `tests/fixtures/invalid/<CODE>.md` — one overlay per validator finding code, applied to a copy of
   the Tasklet DISCOVERY snapshot by `conftest.apply_overlay`; it must produce exactly that code.
