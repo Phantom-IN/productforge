@@ -56,6 +56,11 @@ CODES: dict[str, tuple[str, str]] = {
     "TARGET_IMPL_UNSUPPORTED": (ERROR, "Target implementation is stated without evidence"),
     "REQUIREMENT_NOT_MEASURABLE": (WARN, "Our requirement has no measurable element"),
     "TECH_ASSERTION_IN_OBSERVATION": (WARN, "An observation names a technology no evidence states"),
+    "BAD_FEATURE_SIGNAL": (ERROR, "A feature signal's Feature or Competitors do not fit its kind"),
+    "TABLE_STAKES_UNDERSUPPORTED": (ERROR, "A table-stakes signal names fewer than 2 competitors"),
+    "COMPLAINT_SOURCE_TIER": (ERROR, "Competitor complaints do not cite Tier 3–4 sources"),
+    "COMPETITOR_SOURCE_AS_EVIDENCE": (ERROR, "A target record cites a competitor's source"),
+    "COMPETITOR_OVER_BUDGET": (WARN, "A competitor has more sources than competitors.max_sources"),
     "BAD_STATUS": (ERROR, "Status is not one of the allowed values (or rejected without Reason)"),
     "SUPERSEDED_TARGET_MISSING": (ERROR, "superseded-by targets a missing or other-type record"),
     "PROVISIONAL_ID_IN_CANONICAL": (ERROR, "A provisional ID (X-?n) appears in a canonical file"),
@@ -197,6 +202,7 @@ def owner_stage(f: Finding) -> str | None:
 def run(ws: Path, stage: str | None = None, artifact: str | None = None) -> list[Finding]:
     """All findings for the workspace, optionally limited to one stage or artifact."""
     from pflib.validators import (  # noqa: F401
+        competitors,
         confidence_checks,
         domain,
         features,

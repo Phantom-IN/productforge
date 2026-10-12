@@ -223,3 +223,91 @@ Every source ProductForge used, with its tier (1 = most authoritative). See `ref
 - Published: 2026-02-01
 - Last inspected: 2026-10-08
 - Notes: Announces recurring tasks.
+
+### S-021 — Tasklet vs Taskmate vs Doable for small teams
+- URL: https://compare.example/tasklet-taskmate-doable
+- Canonical URL: https://compare.example/tasklet-taskmate-doable
+- Category: comparison-articles
+- Tier: 3
+- Authority: Medium
+- Relevant area: Category
+- Published: 2026-05-02
+- Last inspected: 2026-10-08
+- Notes: Compares three small-team task trackers.
+
+### S-022 — Listwise alternatives: five task trackers compared
+- URL: https://roundups.example/listwise-alternatives
+- Canonical URL: https://roundups.example/listwise-alternatives
+- Category: comparison-articles
+- Tier: 3
+- Authority: Medium
+- Relevant area: Category
+- Published: 2026-06-11
+- Last inspected: 2026-10-08
+- Notes: Roundup of task trackers.
+
+### S-023 — Taskmate homepage
+- URL: https://taskmate.example/
+- Canonical URL: https://taskmate.example/
+- Category: homepage
+- Tier: 2
+- Authority: Medium
+- Relevant area: competitor:C-01
+- Published: unknown
+- Last inspected: 2026-10-08
+- Notes: Competitor homepage.
+
+### S-024 — Taskmate pricing
+- URL: https://taskmate.example/pricing
+- Canonical URL: https://taskmate.example/pricing
+- Category: pricing
+- Tier: 2
+- Authority: High
+- Relevant area: competitor:C-01
+- Published: unknown
+- Last inspected: 2026-10-08
+- Notes: Competitor plans.
+
+### S-025 — Doable features
+- URL: https://doable.example/features
+- Canonical URL: https://doable.example/features
+- Category: features
+- Tier: 2
+- Authority: High
+- Relevant area: competitor:C-02
+- Published: unknown
+- Last inspected: 2026-10-08
+- Notes: Competitor feature list.
+
+### S-026 — Doable reviews
+- URL: https://reviews.example/doable
+- Canonical URL: https://reviews.example/doable
+- Category: review-sites
+- Tier: 3
+- Authority: Medium
+- Relevant area: competitor:C-02
+- Published: 2026-04-20
+- Last inspected: 2026-10-08
+- Notes: User reviews of Doable.
+
+### S-027 — Listwise homepage
+- URL: https://listwise.example/
+- Canonical URL: https://listwise.example/
+- Category: homepage
+- Tier: 2
+- Authority: Medium
+- Relevant area: competitor:C-03
+- Published: unknown
+- Last inspected: 2026-10-08
+- Notes: Competitor homepage.
+
+### S-028 — Forum thread on Listwise sync
+- URL: https://community.example/t/listwise-sync
+- Canonical URL: https://community.example/t/listwise-sync
+- Category: forums
+- Tier: 4
+- Authority: Low
+- Relevant area: competitor:C-03
+- Published: 2026-03-15
+- Last inspected: 2026-10-08
+- Notes: Users discuss sync problems.

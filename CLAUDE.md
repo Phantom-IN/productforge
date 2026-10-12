@@ -105,6 +105,7 @@ python3.11 skills/productforge/scripts/pf.py discover https://tasklet.example --
 python3.11 skills/productforge/scripts/pf.py research-plan --workspace /tmp/tl --json
 python3.11 skills/productforge/scripts/pf.py feature-plan --workspace /tmp/tl --json
 python3.11 skills/productforge/scripts/pf.py workflow-candidates --workspace /tmp/tl --json
+python3.11 skills/productforge/scripts/pf.py competitor-candidates --workspace /tmp/tl --json
 python3.11 skills/productforge/scripts/pf.py deps --available "anthropic-skills:pdf" --workspace /tmp/tl
 python3.11 skills/productforge/scripts/pf.py delegate anthropic-skills:pdf --task "…" --workspace /tmp/tl
 python3.11 skills/productforge/scripts/pf.py deps --json          # which skills/plugins are reused

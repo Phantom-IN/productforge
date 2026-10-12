@@ -201,6 +201,50 @@ def inference_regions(index: WorkspaceIndex) -> dict[str, str]:
     return {"areas": "\n".join(areas) + "\n", "workflow-coverage": "\n".join(rows) + "\n"}
 
 
+def competitor_regions(index: WorkspaceIndex) -> dict[str, str]:
+    from pflib import competitors, domain
+
+    comps = domain.active(index, "C")
+    signals = competitors.active_signals(index)
+    if not comps:
+        return {"landscape": "_No competitors yet._\n", "signals": "_No feature signals yet._\n",
+                "absent": "_None recorded._\n"}  # fmt: skip
+    offered = competitors.offers(index)
+    stakes = {f: offered[f] for f in competitors.table_stakes(index)}
+    rows = ["| C | Name | Positioning | Pricing | Table-stakes overlaps |", "|---|---|---|---|---|"]
+    for c in comps:
+        overlaps = sum(1 for members in stakes.values() if c.id in members)
+        cells = [c.id, c.get("Name") or c.title, c.get("Positioning"), c.get("Pricing model"),
+                 str(overlaps)]  # fmt: skip
+        rows.append("| " + " | ".join(_cell(x) for x in cells) + " |")
+    diffs = competitors.competitors_by_feature(index, "differentiator")
+    features = {f.id: f for f in domain.active(index, "F")}
+    sig_rows = ["| F | Feature | Offered by | Table stakes | Differentiator |",
+                "|---|---|---|---|---|"]  # fmt: skip
+    for fid in sorted(set(offered) | set(diffs)):
+        f = features.get(fid)
+        name = (f.get("Feature").strip() or f.title) if f else "—"
+        n = len(offered.get(fid, ()))
+        if len(comps) < competitors.TABLE_STAKES_MIN:
+            verdict = "— (1 competitor)"  # table stakes and rarity need ≥ 2 researched
+        else:
+            verdict = "yes" if fid in stakes else ("rare" if n == 1 else "no")
+        counts = [n, verdict, len(diffs.get(fid, ()))]
+        sig_rows.append("| " + " | ".join(_cell(x) for x in [fid, name, *map(str, counts)]) + " |")
+    absent = [s for s in signals if s.get("Signal").strip() == competitors.ABSENT]
+    absent_rows = ["| Capability | Competitors | Signal |", "|---|---|---|"]
+    for s in absent:
+        absent_rows.append(
+            f"| {_cell(s.get('Feature'))} | {_cell(s.get('Competitors'))} | {s.id} |"
+        )
+    return {
+        "landscape": "\n".join(rows) + "\n",
+        "signals": ("\n".join(sig_rows) if len(sig_rows) > 2 else "_No feature signals yet._")
+        + "\n",
+        "absent": ("\n".join(absent_rows) if absent else "_None recorded._") + "\n",
+    }
+
+
 RENDERERS: dict[str, Renderer] = {
     FEATURE_MATRIX: Renderer(feature_regions, {"hierarchy": "## Hierarchy", "matrix": "## Matrix"}),
     SURFACES: Renderer(surface_regions, {"surface-features": "## Surface → features"}),
@@ -211,6 +255,14 @@ RENDERERS: dict[str, Renderer] = {
     ),
     catalog.PERMISSIONS_PATH: Renderer(permission_regions, {"permissions": "## Matrix"}),
     catalog.INTEGRATIONS_PATH: Renderer(integration_regions, {"integrations": "## Summary"}),
+    catalog.COMPETITORS_PATH: Renderer(
+        competitor_regions,
+        {
+            "landscape": "## Landscape",
+            "signals": "## Signals by feature",
+            "absent": "## Missing in target",
+        },
+    ),
     catalog.INFERENCE_PATH: Renderer(
         inference_regions,
         {"areas": "## Requirement areas", "workflow-coverage": "## Workflow coverage"},

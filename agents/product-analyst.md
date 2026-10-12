@@ -131,6 +131,51 @@ integrations directory, docs, API and webhook docs, marketplace listings (via th
 - "Not documented" is a valid value; if it matters (e.g. webhook signing), add a U record.
 - Never name the target's internal technology (queues, SDKs it uses internally).
 
+## Competitor pass
+
+When the brief names **one competitor** (always a name the user confirmed — never add one yourself),
+describe it shallowly: what category it shows, not a second discovery. Budget: **at most 10
+sources** per competitor.
+
+1. **Sources.** Its homepage, features and pricing pages (the brief lists what `pf.py discover`
+   found; fetch only robots-allowed pages) plus 1–3 reviews or community threads (WebSearch). Write
+   them to `<staging>/research/sources.md` as usual, with `Relevant area: competitor:C-?1`.
+2. **Competitor record** in `<staging>/research/COMPETITORS.md` under `## Records`:
+
+```markdown
+### C-?1 — <name>
+- Name: <name>
+- URL: <homepage>
+- Positioning: <one line, paraphrased>
+- Target users: <who it is for>
+- Pricing model: <free tier, per seat, …>
+- Table-stakes features: <F IDs of the target's features this competitor clearly offers — scripts
+  count them across competitors: offered by ≥ 2 = table stakes, by 1 = rare>
+- Differentiators: <what it markets as its edge>
+- Common complaints: <paraphrased, each citing a Tier 3–4 review/forum source (S-?n)>
+- Evidence: <its S IDs>
+- Confidence: CONFIRMED | PROBABLE | INFERRED | UNKNOWN
+```
+
+3. **Feature signals** under `## Feature signals` — only the judgment calls, each with evidence:
+
+```markdown
+### FS-?1 — <feature name> is <signal>
+- Feature: <one F ID — or, for absent-in-target, the capability's name>
+- Signal: table-stakes | differentiator | rare | absent-in-target
+- Competitors: <C IDs>
+- Evidence: <S IDs>
+- Notes:
+```
+
+- `differentiator`: the competitor markets this target feature as its edge.
+- `absent-in-target`: a capability competitors offer that the target lacks — informational only.
+- Do not write `table-stakes`/`rare` signals in a one-competitor run (table stakes need ≥ 2
+  competitors, which no single run sees); the `Table-stakes features` list is enough.
+- Only signal what the competitor's own pages or reviews show. **Never edit `F-` records** and never
+  cite a competitor source in a claim about the target (`COMPETITOR_SOURCE_AS_EVIDENCE`).
+- Paraphrase; quotes ≤ 25 words; no copied marketing copy, no brand assets.
+
 ## Amendments (dedupe pass, late conflicts)
 
 Only when the brief asks for it. To retire a near-duplicate, keep the better-evidenced record and

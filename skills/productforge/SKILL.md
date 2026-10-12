@@ -15,16 +15,14 @@ allowed-tools: Read, Glob, Grep, Bash, Write, Edit, WebFetch, WebSearch, TodoWri
 
 ## Purpose
 
-ProductForge turns an existing software product into an evidence-backed, implementation-ready
-engineering blueprint. It researches public sources, reconstructs the product (surfaces, features,
-workflows, domain model, permissions) while keeping facts separate from inference, reduces it to a
-realistic MVP, designs an **independent** architecture, and generates a phase-wise plan that a fresh
-Claude Code session can execute with `execute phase 00`.
+ProductForge turns a public software product into an evidence-backed engineering blueprint: it
+researches public sources, reconstructs the product with facts kept apart from inference, reduces it
+to a realistic MVP, designs an **independent** architecture, and writes a phase-wise build plan.
 
 It is **not** a website cloner — read `references/philosophy.md` when unsure how to behave.
 
-> **Build status:** the orchestrator, workspace lifecycle and validation are live. Research and the
-> later stages arrive in Phases 06–15; their commands say so and stop.
+> **Build status:** DISCOVERY and PRODUCT_MODEL are live; `scope`, `architect` and `finalize`
+> arrive in Phases 13–15 and say so.
 
 ## Hard constraints
 
@@ -265,10 +263,8 @@ pass; surfaces → surface pass.
    the claims and sources." --input research/DISCOVERY_LEDGER.md --input research/sources.md
    --input research/product-surfaces.md --input research/UNKNOWNS.md
    --template research/product-surfaces.md`. Preflight, repair, merge.
-7. **Research requests** in agent summaries (at most 5 delegations per command): `browse <url>` →
-   `web.browse`, `pdf <url>` → `docs.pdf`, `repo <url>` → `repo.intel`. When that capability resolves
-   to a real provider, run the Delegated run protocol for it and normalise with the research-agent;
-   when it is `builtin`, report the request as unresolved.
+7. **Research requests** per the Agent run protocol (`web.browse`, `docs.pdf`, `repo.intel`; at
+   most 5 delegations per command).
 8. **Gate.** `python3.11 "$PF" check --workspace <ws> --json`: report the DISCOVERY gate as a compact
    table plus merge reports' `dropped`/`over_cap`. If the gate passes, the next command is
    `/productforge features` (it asks before closing DISCOVERY); otherwise `/productforge research`.
@@ -321,8 +317,7 @@ is rendered by merge.
    --input research/sources.md --input research/product-surfaces.md --input research/UNKNOWNS.md
    --template research/workflow.md`. Spawn the batch in one message; preflight, repair and merge
    one at a time; then the next batch.
-4. **Research requests** `browse <url>` → `web.browse` via the Delegated run protocol, then a repair
-   brief for the same ux-analyst run with the raw text listed.
+4. **Research requests** per the Agent run protocol.
 5. Report: workflows per domain, the observed vs implied step counts (from the index in
    `research/README.md`), validation, and the next command (`/productforge model`).
 
@@ -361,6 +356,28 @@ records exist** (counts from `pf.py status --json`) unless the user asks to redo
    warnings for the user to review. If the gate passes the next command is `/productforge scope`
    (it asks before closing PRODUCT_MODEL); otherwise the command each failing condition names.
 
+### `/productforge competitors`
+
+Optional, PRODUCT_MODEL: a shallow category lens in `research/COMPETITORS.md` (`C-`, `FS-`).
+Skipping it is fine — scoring treats missing signals as neutral.
+
+1. **Candidates.** `python3.11 "$PF" competitor-candidates --workspace <ws> --json` (names from
+   comparison/review source titles, capped by `competitors.max`). **Never research a competitor the
+   user has not confirmed** or add names yourself: ask with AskUserQuestion (multi-select + Other).
+   No answer — or no AskUserQuestion — means list the candidates and stop.
+2. **Per competitor**, in batches of at most 3: `python3.11 "$PF" discover <its homepage>
+   --max-pages 20 --workspace <ws>` (only when the user gave or confirmed its URL; otherwise the
+   analyst finds it), then `brief --role product-analyst --task "Competitor pass for <name>: at most
+   10 sources." --partition "<name>" --input research/FEATURE_MATRIX.md --input
+   research/COMPETITORS.md --input research/sources.md --template research/COMPETITORS.md
+   --template research/sources.md`. If `research.deep` resolves to a real provider, delegate one
+   pass per competitor (positioning, features, pricing, complaints) first. Preflight, repair, merge.
+   Research requests count toward the competitor's `competitors.max_sources` budget: once it is
+   spent, report them instead of running a targeted pass.
+3. Report the generated landscape and the table-stakes, rare and differentiator counts (from
+   `research/COMPETITORS.md`), plus validation. Next: `/productforge scope` once the PRODUCT_MODEL
+   gate passes.
+
 ### `/productforge status`
 
 Run `python3.11 "$PF" status --workspace <ws> --json` (omit `--workspace` if unknown). With no
@@ -378,12 +395,5 @@ stage, stale stages, the IDEA-style counts, claim confidence, gate progress and 
 
 ### Stage commands not yet available
 
-After dispatch (so refusals and transitions still behave correctly), these commands say
-"not available in this build" and stop:
-
-| Command | Arrives in |
-|---|---|
-| `competitors` | Phase 12 |
-| `scope` | Phase 13 |
-| `architect` | Phase 14 |
-| `finalize` | Phase 15 |
+After dispatch (so refusals and transitions still behave correctly), these say "not available in
+this build" and stop: `scope` (Phase 13), `architect` (Phase 14), `finalize` (Phase 15).

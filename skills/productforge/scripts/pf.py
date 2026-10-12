@@ -33,6 +33,7 @@ from pflib import (  # noqa: E402
     __version__,
     brief,
     commands,
+    competitors,
     config,
     deps,
     discover,
@@ -353,6 +354,11 @@ def _cmd_workflow_candidates(args: argparse.Namespace) -> dict[str, Any]:
     return workflows.candidates(ws)
 
 
+def _cmd_competitor_candidates(args: argparse.Namespace) -> dict[str, Any]:
+    ws = workspace.resolve_workspace(args.workspace)
+    return competitors.candidates(ws)
+
+
 def _cmd_render(args: argparse.Namespace) -> dict[str, Any]:
     ws = workspace.resolve_workspace(args.workspace)
     return {"rendered": render.render_all(ws, only=args.artifact)}
@@ -573,6 +579,12 @@ SUBCOMMANDS: list[tuple[str, str, Callable[[argparse.ArgumentParser], None], Han
         "propose workflows to reconstruct (deterministic)",
         _add_nothing,
         _cmd_workflow_candidates,
+    ),
+    (
+        "competitor-candidates",
+        "competitor names found in comparison/review sources (users confirm)",
+        _add_nothing,
+        _cmd_competitor_candidates,
     ),
     (
         "score",

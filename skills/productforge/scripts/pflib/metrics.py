@@ -60,6 +60,14 @@ def domains(ws: Path, index: WorkspaceIndex | None = None) -> int:
     )
 
 
+def table_stakes(ws: Path, index: WorkspaceIndex | None = None) -> dict[str, int]:
+    """F ID → number of competitors offering it, for table-stakes features (≥ 2 competitors).
+    Phase 13 scoring reads it; features without competitor data are absent, i.e. neutral."""
+    from pflib import competitors
+
+    return competitors.table_stakes(index or WorkspaceIndex(ws))
+
+
 def summary(ws: Path, index: WorkspaceIndex | None = None) -> dict[str, int]:
     index = index or WorkspaceIndex(ws)
     per_prefix = counts(ws, index)

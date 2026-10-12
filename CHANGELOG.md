@@ -79,6 +79,14 @@ versions follow [Semantic Versioning](https://semver.org/).
   pass; `agents/systems-architect.md` (inference pass); SKILL.md `model` with skip-if-done passes;
   `references/product-model-playbook.md`; gate-passing PRODUCT_MODEL fixture (6 integrations, 15
   inferences) and `PRODUCT_MODEL_FAILING`.
+- Phase 12: optional competitive research — `research/COMPETITORS.md` template with generated
+  landscape, signals-by-feature and missing-in-target views; `pf.py competitor-candidates`
+  (evidence-derived names, user confirms); table stakes counted by scripts from competitor offers
+  (`competitors.offers`, `metrics.table_stakes`), FS signals for judgment calls; validators
+  (`BAD_FEATURE_SIGNAL`, `TABLE_STAKES_UNDERSUPPORTED`, `COMPLAINT_SOURCE_TIER`,
+  `COMPETITOR_SOURCE_AS_EVIDENCE`); product-analyst competitor pass; SKILL.md `competitors`; three
+  synthetic competitors in the Tasklet fixture; `competitors.max_sources` budget
+  (`COMPETITOR_OVER_BUDGET`, warn).
 
 ### Fixed
 - Briefing more runs than `agents.max_pending_runs` is refused (`RUN_LIMIT`); `pf.py staging list` /

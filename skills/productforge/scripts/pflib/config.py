@@ -59,6 +59,7 @@ DEFAULTS: dict[str, ConfigKey] = {
     "research.min_claims_gate": _k(40, "DISCOVERY exit requires at least this many active claims"),
     "model.max_workflows": _k(25, "Workflow reconstruction cap"),
     "competitors.max": _k(5, "Competitor pass cap"),
+    "competitors.max_sources": _k(10, "Source budget per competitor (warned above it)"),
     "quotes.max_words": _k(25, "Maximum verbatim quote length from any source"),
     **{
         f"scope.weights.{name}": _k(weight, f"Prioritisation weight: {label}")

@@ -61,7 +61,7 @@ def test_round_trip_appends_to_the_closed_stage(tasklet_product_model: Path) -> 
     assert state.load(ws).locks["DISCOVERY"]  # DISCOVERY is closed and locked
     report = merge.merge(ws, stage(ws, "research-agent", NEW_EVIDENCE))
     claim = report.id_map["D-?1"]
-    assert sorted(report.new_ids) == [claim, report.id_map["S-?1"]] == ["D-045", "S-021"]
+    assert sorted(report.new_ids) == [claim, report.id_map["S-?1"]] == ["D-045", "S-029"]
     assert validators.run(ws) == []  # no LOCK_VIOLATION: new records are appends
     # the requesting role runs again and resolves the unknown cell with the new claim
     pm = ws / "spec/PERMISSIONS_MATRIX.md"

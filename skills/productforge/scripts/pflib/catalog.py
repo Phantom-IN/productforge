@@ -313,8 +313,8 @@ CATALOG: tuple[ArtifactSpec, ...] = (
                 "C",
                 "Name, URL, Positioning, Target users, Pricing model, Table-stakes features, "
                 "Differentiators, Common complaints, Evidence, Confidence",
-                ref_fields="Table-stakes features, Evidence",
-                union_fields="Evidence",
+                ref_fields="Table-stakes features, Common complaints, Evidence",
+                union_fields="Table-stakes features, Evidence",  # a re-run adds offered features
                 dedupe="URL",
                 dedupe_mode=DEDUPE_HOST,
             ),
@@ -420,6 +420,7 @@ DOMAIN_MODEL_PATH = "spec/DOMAIN_MODEL.md"
 PERMISSIONS_PATH = "spec/PERMISSIONS_MATRIX.md"
 INTEGRATIONS_PATH = "spec/INTEGRATIONS.md"
 INFERENCE_PATH = "research/architecture-inference.md"
+COMPETITORS_PATH = "research/COMPETITORS.md"
 
 # Closed value sets per (prefix, field), checked by validators (BAD_ENUM).
 ENUMS: dict[tuple[str, str], tuple[str, ...]] = {
@@ -431,6 +432,7 @@ ENUMS: dict[tuple[str, str], tuple[str, ...]] = {
     ("I", "Direction"): ("inbound", "outbound", "bidirectional"),
     ("I", "Provider category"): ("scm", "chat", "calendar", "identity", "storage", "email",
                                  "analytics", "payments", "webhooks", "api", "other"),
+    ("FS", "Signal"): ("table-stakes", "differentiator", "rare", "absent-in-target"),
     ("A", "Area"): ("realtime", "async", "search", "storage", "files", "authn", "authz", "tenancy",
                     "integrations", "notifications", "audit", "offline", "performance",
                     "availability", "security", "observability", "other"),

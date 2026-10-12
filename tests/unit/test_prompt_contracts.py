@@ -392,3 +392,35 @@ def test_systems_architect_and_integration_pass() -> None:
         assert phrase in integration, phrase
     playbook = (REFERENCES / "product-model-playbook.md").read_text(encoding="utf-8")
     assert len(playbook.splitlines()) < 300 and "TARGET_IMPL_UNSUPPORTED" in playbook
+
+
+def test_competitor_pass_and_section() -> None:
+    analyst = (AGENTS / "product-analyst.md").read_text(encoding="utf-8")
+    comp = " ".join(analyst.split("## Competitor pass", 1)[1].split("\n## ", 1)[0].split())
+    for phrase in (
+        "never add one yourself",
+        "at most 10 sources",
+        "Relevant area: competitor:C-?1",
+        "Tier 3–4",
+        "Never edit `F-` records",
+        "COMPETITOR_SOURCE_AS_EVIDENCE",
+        "absent-in-target",
+        "Do not write `table-stakes`/`rare` signals",
+    ):
+        assert phrase in comp, phrase
+    text = SKILL.read_text(encoding="utf-8")
+    section = " ".join(
+        text.split("### `/productforge competitors`", 1)[1].split("\n### ", 1)[0].split()
+    )
+    for phrase in (
+        '"$PF" competitor-candidates',
+        "Never research a competitor the user has not confirmed",
+        "AskUserQuestion",
+        "batches of at most 3",
+        "--max-pages 20",
+        "--template research/COMPETITORS.md",
+        "research.deep",
+        "neutral",
+    ):
+        assert phrase in section, phrase
+    assert "`competitors`" not in text.split("### Stage commands not yet available", 1)[1]

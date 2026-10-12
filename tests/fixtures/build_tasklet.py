@@ -657,6 +657,56 @@ INFERENCES = [
 ]  # fmt: skip
 
 
+# ---- Phase 12: competitors (synthetic, on .example domains; appended after the DISCOVERY lock)
+COMPETITOR_SOURCES = [
+    ("S-021", "Tasklet vs Taskmate vs Doable for small teams", "https://compare.example/tasklet-taskmate-doable", "comparison-articles", 3, "Medium", "Category", "2026-05-02", "Compares three small-team task trackers."),
+    ("S-022", "Listwise alternatives: five task trackers compared", "https://roundups.example/listwise-alternatives", "comparison-articles", 3, "Medium", "Category", "2026-06-11", "Roundup of task trackers."),
+    ("S-023", "Taskmate homepage", "https://taskmate.example/", "homepage", 2, "Medium", "competitor:C-01", "unknown", "Competitor homepage."),
+    ("S-024", "Taskmate pricing", "https://taskmate.example/pricing", "pricing", 2, "High", "competitor:C-01", "unknown", "Competitor plans."),
+    ("S-025", "Doable features", "https://doable.example/features", "features", 2, "High", "competitor:C-02", "unknown", "Competitor feature list."),
+    ("S-026", "Doable reviews", "https://reviews.example/doable", "review-sites", 3, "Medium", "competitor:C-02", "2026-04-20", "User reviews of Doable."),
+    ("S-027", "Listwise homepage", "https://listwise.example/", "homepage", 2, "Medium", "competitor:C-03", "unknown", "Competitor homepage."),
+    ("S-028", "Forum thread on Listwise sync", "https://community.example/t/listwise-sync", "forums", 4, "Low", "competitor:C-03", "2026-03-15", "Users discuss sync problems."),
+]  # fmt: skip
+
+
+def comp(i: int, name: str, url: str, positioning: str, users: str, pricing: str, stakes: str,
+         diffs: str, complaints: str, ev: str) -> str:  # fmt: skip
+    return (
+        f"\n### C-{i:02d} — {name}\n- Name: {name}\n- URL: {url}\n- Positioning: {positioning}\n"
+        f"- Target users: {users}\n- Pricing model: {pricing}\n- Table-stakes features: {stakes}\n"
+        f"- Differentiators: {diffs}\n- Common complaints: {complaints}\n- Evidence: {ev}\n"
+        f"- Confidence: CONFIRMED\n"
+    )
+
+
+COMPETITORS = [
+    comp(1, "Taskmate", "https://taskmate.example/", "Task lists with built-in time tracking", "Freelancers and small agencies",
+         "Free tier; per-seat paid plans", "F-001, F-008, F-014", "Time tracking on every task", "Setup is slow for new teams (S-021)", "S-023, S-024"),
+    comp(2, "Doable", "https://doable.example/", "Fast search across everything a team tracks", "Small product teams",
+         "Per-seat subscription", "F-001, F-008, F-014", "Search across tasks, files and comments", "Mobile app lags behind the web app (S-026)", "S-025"),
+    comp(3, "Listwise", "https://listwise.example/", "Lists first, with developer integrations", "Engineering teams",
+         "Free for small teams; paid add-ons", "F-001, F-014", "Links commits and pull requests to tasks", "Sync between devices is unreliable (S-028)", "S-027"),
+]  # fmt: skip
+
+
+def signal(i: int, feature: str, kind: str, comps: str, ev: str, notes: str = "",
+           name: str = "") -> str:  # fmt: skip
+    return (
+        f"\n### FS-{i:03d} — {name or feature} is {kind}\n- Feature: {feature}\n- Signal: {kind}\n"
+        f"- Competitors: {comps}\n- Evidence: {ev}\n- Notes:{' ' + notes if notes else ''}\n"
+    )
+
+
+SIGNALS = [
+    signal(1, "F-001", "table-stakes", "C-01, C-02, C-03", "S-023, S-025, S-027", name="Tasks"),
+    signal(2, "F-019", "differentiator", "C-02", "S-025", "Doable markets search as its edge",
+           name="Global search"),
+    signal(3, "F-030", "rare", "C-03", "S-027", name="Git commit linking"),
+    signal(4, "Time tracking", "absent-in-target", "C-01", "S-023", "Taskmate's headline feature"),
+]  # fmt: skip
+
+
 def spec_file(name: str, sections: dict[str, str]) -> str:
     """A template (``spec/`` unless a folder is given) with record blocks under the headings."""
     rel = name if "/" in name else f"spec/{name}"
@@ -736,6 +786,14 @@ def product_model(discovery: dict[str, str], failing: bool = False) -> dict[str,
             )
         extra["research/architecture-inference.md"] = spec_file(
             "research/architecture-inference.md", {"## Records": "".join(inferences)}
+        )
+        extra["research/sources.md"] = (
+            files["research/sources.md"]
+            + sources_md(COMPETITOR_SOURCES).split("\n## Records\n", 1)[1]
+        )
+        extra["research/COMPETITORS.md"] = spec_file(
+            "research/COMPETITORS.md",
+            {"## Records": "".join(COMPETITORS), "## Feature signals": "".join(SIGNALS)},
         )
         for rel, text in extra.items():
             (ws / rel).parent.mkdir(parents=True, exist_ok=True)
