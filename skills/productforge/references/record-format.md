@@ -200,6 +200,9 @@ tolerant: a malformed record yields one finding and the rest of the file is stil
 | `LIMITED_WITHOUT_MEANS` | error | A 'Limited' permission cell without 'Limited means' |
 | `ENTITY_WITHOUT_PERMISSIONS` | error | A mutable entity has no permission rules |
 | `DUPLICATE_PERMISSION_RULE` | error | Two active permission rules for one resource and action |
+| `TARGET_IMPL_UNSUPPORTED` | error | Target implementation is stated without evidence |
+| `REQUIREMENT_NOT_MEASURABLE` | warn | Our requirement has no measurable element |
+| `TECH_ASSERTION_IN_OBSERVATION` | warn | An observation names a technology no evidence states |
 | `BAD_STATUS` | error | Status is not one of the allowed values (or rejected without Reason) |
 | `SUPERSEDED_TARGET_MISSING` | error | superseded-by targets a missing or other-type record |
 | `PROVISIONAL_ID_IN_CANONICAL` | error | A provisional ID (X-?n) appears in a canonical file |

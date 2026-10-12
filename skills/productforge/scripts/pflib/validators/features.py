@@ -21,14 +21,15 @@ def enums(ctx: Context, loc: Loc) -> list[Finding]:
     return out
 
 
-@record_check("F")
+@record_check()
 def reserved_fields(ctx: Context, loc: Loc) -> list[Finding]:
-    found = [k for k in loc.record.order if k in catalog.RESERVED_FIELDS.get("F", ())]
+    assert loc.schema is not None
+    fields, why = catalog.RESERVED_FIELDS.get(loc.schema.prefix, ((), ""))
+    found = [k for k in loc.record.order if k in fields]
     if not found:
         return []
     return [finding("FIELD_NOT_YET_ALLOWED", loc.rel, loc.record.id,
-                    f"{loc.record.id} carries {', '.join(found)}: scoring belongs in SC score "
-                    "cards during SCOPE_DEFINED, not on features")]  # fmt: skip
+                    f"{loc.record.id} carries {', '.join(found)}: {why}")]  # fmt: skip
 
 
 def _parent(rec: records.Record) -> str | None:

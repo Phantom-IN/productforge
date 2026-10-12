@@ -324,29 +324,42 @@ is rendered by merge.
 4. **Research requests** `browse <url>` → `web.browse` via the Delegated run protocol, then a repair
    brief for the same ux-analyst run with the raw text listed.
 5. Report: workflows per domain, the observed vs implied step counts (from the index in
-   `research/README.md`), validation, and the next command (`/productforge model`, Phase 10).
+   `research/README.md`), validation, and the next command (`/productforge model`).
 
 ### `/productforge model`
 
-PRODUCT_MODEL, part 1: the target's reconstructed domain model `spec/DOMAIN_MODEL.md` (`E-`) and
-`spec/PERMISSIONS_MATRIX.md` (roles `RL-`, rules `PR-`). Merge renders the relationship tree, the
-identity table and the permissions matrix. Integrations and architecture inference (part 2) and the
-PRODUCT_MODEL gate arrive in Phase 11 — say so in the report.
+PRODUCT_MODEL: the target's domain model (`spec/DOMAIN_MODEL.md`, `E-`), permissions
+(`spec/PERMISSIONS_MATRIX.md`, `RL-`/`PR-`), integrations (`spec/INTEGRATIONS.md`, `I-`) and
+architecture inference (`research/architecture-inference.md`, `A-`). Merge renders every view.
+Read `references/product-model-playbook.md`. Run the passes in order, **skipping a pass whose
+records exist** (counts from `pf.py status --json`) unless the user asks to redo it:
 
-1. **Domain pass**, one domain-architect run: `brief --role domain-architect --task "Domain and
-   permissions pass: reconstruct the entities, roles and permission rules." --input
-   research/FEATURE_MATRIX.md --input research/workflows --input research/DISCOVERY_LEDGER.md
+1. **Domain pass** (when `entities` is 0), one domain-architect run: `brief --role domain-architect
+   --task "Domain and permissions pass: reconstruct the entities, roles and permission rules."
+   --input research/FEATURE_MATRIX.md --input research/workflows --input research/DISCOVERY_LEDGER.md
    --input research/UNKNOWNS.md --input research/sources.md --input spec/DOMAIN_MODEL.md --input
    spec/PERMISSIONS_MATRIX.md --template spec/DOMAIN_MODEL.md --template spec/PERMISSIONS_MATRIX.md`.
    When `feature-plan` reports `over_soft_cap`, split it: a core run (tenancy, users, memberships,
    roles) first, then one run per domain (`--partition "<domain>"`, the core entities listed in the
    task) in batches of at most `agents.max_pending_runs`.
-2. Preflight, repair and merge per the Agent run protocol; then its **research requests** (the
-   domain architect has no network, so missing evidence always arrives this way).
-3. Report from `pf.py status --json`: `entities`, `roles`, `permission_rules`,
-   `unknown_permission_cells`, `missing_permission_cells`; the first lines of the generated
-   relationship tree (its root should be the tenancy entity); validation findings. Next command:
-   `/productforge model` again after Phase 11 for part 2.
+2. **Integration pass** (when `integrations` is 0), one product-analyst run: `brief --role
+   product-analyst --task "Integration pass: one I record per provider or mechanism."
+   --input research/DISCOVERY_LEDGER.md --input research/sources.md --input research/FEATURE_MATRIX.md
+   --input spec/INTEGRATIONS.md --input research/UNKNOWNS.md --template spec/INTEGRATIONS.md`.
+3. **Inference pass** (when `inferences` is 0, or the gate's `G-PM-INFERENCE-COMPLETE` names
+   uncovered workflows — then the task lists them), one systems-architect run: `brief --role
+   systems-architect --task "Inference pass: …" --input research/workflows --input
+   spec/DOMAIN_MODEL.md --input spec/PERMISSIONS_MATRIX.md --input spec/INTEGRATIONS.md --input
+   research/DISCOVERY_LEDGER.md --input research/sources.md --input
+   research/architecture-inference.md --template research/architecture-inference.md`.
+4. After each run: preflight, repair and merge per the Agent run protocol; then its **research
+   requests** (these agents have no network, so missing evidence always arrives this way).
+5. **Gate.** `python3.11 "$PF" check --workspace <ws> --json`: report the PRODUCT_MODEL gate as a
+   compact table — **never advance here**. Also report `entities`, `roles`, `permission_rules`,
+   `unknown_permission_cells`, `integrations`, `inferences` from `pf.py status --json`, the root of
+   the relationship tree, and any `TECH_ASSERTION_IN_OBSERVATION` / `REQUIREMENT_NOT_MEASURABLE`
+   warnings for the user to review. If the gate passes the next command is `/productforge scope`
+   (it asks before closing PRODUCT_MODEL); otherwise the command each failing condition names.
 
 ### `/productforge status`
 

@@ -52,6 +52,7 @@ def test_skill_and_contract_document_research_requests() -> None:
     ):
         assert phrase in protocol, phrase
     model = skill.split("### `/productforge model`", 1)[1].split("\n### ", 1)[0]
+    model = " ".join(model.split())
     assert "research requests" in model and "no network" in model
 
 

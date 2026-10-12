@@ -28,6 +28,11 @@ REF_TYPES: dict[tuple[str, str], tuple[str, ...]] = {
     ("PR", "Grants"): ("RL",),
     ("PR", "Evidence"): ("S", "D"),
     ("PR", "Related unknown"): ("U",),
+    ("I", "Evidence"): ("S", "D"),
+    ("I", "Related unknown"): ("U",),
+    ("A", "Evidence"): ("S", "D"),
+    ("A", "Derived from"): ("W", "D", "F", "E", "I", "PR"),
+    ("A", "Related unknown"): ("U",),
 }
 
 

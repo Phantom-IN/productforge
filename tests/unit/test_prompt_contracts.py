@@ -14,6 +14,7 @@ REPO = Path(__file__).resolve().parents[2]
 SKILL_DIR = REPO / "skills" / "productforge"
 SKILL = SKILL_DIR / "SKILL.md"
 AGENTS = REPO / "agents"
+REFERENCES = SKILL_DIR / "references"
 CONTRACT = SKILL_DIR / "references" / "agent-contract.md"
 SUMMARY_LINE = (
     "RUN <run-id> · ROLE <role> · WROTE <files> · RECORDS <prefix:n,…> · "
@@ -344,14 +345,50 @@ def test_domain_architect_and_model_section() -> None:
         assert phrase in agent, phrase
     text = SKILL.read_text(encoding="utf-8")
     model = text.split("### `/productforge model`", 1)[1].split("\n### ", 1)[0]
+    model = " ".join(model.split())  # commands wrap across lines
     for phrase in (
         "--role domain-architect",
         "--template spec/DOMAIN_MODEL.md",
         "--template spec/PERMISSIONS_MATRIX.md",
         "unknown_permission_cells",
         "over_soft_cap",
-        "Phase 11",
+        "never advance here",
+        "--role product-analyst",
+        "--role systems-architect",
+        "--template spec/INTEGRATIONS.md",
+        "--template research/architecture-inference.md",
+        "skipping a pass whose",
     ):
         assert phrase in model, phrase
     stubs = text.split("### Stage commands not yet available", 1)[1]
     assert "| `model` |" not in stubs
+
+
+def test_systems_architect_and_integration_pass() -> None:
+    agent = (AGENTS / "systems-architect.md").read_text(encoding="utf-8")
+    tools = frontmatter(agent)["tools"]
+    assert "Bash" not in tools and "WebFetch" not in tools
+    for phrase in (
+        "Target implementation: UNKNOWN",
+        "Never propose a technology",
+        "No network",
+        "Tier ≤ 2",
+        "measurable",
+        "Derived from",
+        "repo.intel",
+        "Do not write `Proposed implementation`",
+        "## Design pass",
+    ):
+        assert phrase in agent, phrase
+    analyst = (AGENTS / "product-analyst.md").read_text(encoding="utf-8")
+    integration = analyst.split("## Integration pass", 1)[1].split("\n## ", 1)[0]
+    for phrase in (
+        "spec/INTEGRATIONS.md",
+        "Direction: inbound | outbound | bidirectional",
+        "Not documented",
+        "webhooks",
+        "single\nsign-on",
+    ):
+        assert phrase in integration, phrase
+    playbook = (REFERENCES / "product-model-playbook.md").read_text(encoding="utf-8")
+    assert len(playbook.splitlines()) < 300 and "TARGET_IMPL_UNSUPPORTED" in playbook

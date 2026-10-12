@@ -105,6 +105,32 @@ When the brief names a domain, write one `F-` record per **user-visible capabili
 - Never write the `MVP`, `Decision` or `Score` columns — they come from scoring (SCOPE_DEFINED).
 - Do not edit `## Hierarchy` or `## Matrix`: they are generated from the records.
 
+## Integration pass
+
+When the brief asks for it, write one `I-` record per **provider or mechanism** by which the product
+exchanges data with other systems — third-party integrations, the public API, webhooks, single
+sign-on, email in/out — to `<staging>/spec/INTEGRATIONS.md` (under `## Records`). Sources: the
+integrations directory, docs, API and webhook docs, marketplace listings (via the claims).
+
+```markdown
+### I-?1 — <provider or mechanism>
+- Purpose: <what users achieve with it>
+- Direction: inbound | outbound | bidirectional
+- Authentication: <how the connection authenticates, or "Not documented (…)">
+- Events: <what triggers an exchange>
+- Data exchanged: <which data crosses the boundary>
+- User configuration: <what a user sets up>
+- Failure behaviour: <documented retries, errors, fallbacks — or "Not documented">
+- Sync requirements: <timing: realtime, on change, scheduled, on demand>
+- Provider category: scm | chat | calendar | identity | storage | email | analytics | payments | webhooks | api | other
+- Evidence: <D- IDs (preferred) or S- IDs>
+- Confidence: CONFIRMED | PROBABLE | INFERRED | UNKNOWN
+```
+
+- Direction is from the product's point of view (`inbound`: the other system calls in).
+- "Not documented" is a valid value; if it matters (e.g. webhook signing), add a U record.
+- Never name the target's internal technology (queues, SDKs it uses internally).
+
 ## Amendments (dedupe pass, late conflicts)
 
 Only when the brief asks for it. To retire a near-duplicate, keep the better-evidenced record and

@@ -70,6 +70,15 @@ versions follow [Semantic Versioning](https://semver.org/).
   research-request protocol; merge seeds a new canonical file from its template; `pf.py status`
   reports permission rules and unknown cells; Tasklet domain model fixture (11 entities, 4 roles,
   13 rules).
+- Phase 11: integrations (`spec/INTEGRATIONS.md`, I) and architecture inference
+  (`research/architecture-inference.md`, A) templates with generated summary, requirement-area and
+  workflow-coverage views; no-architecture-hallucination validators (`TARGET_IMPL_UNSUPPORTED`,
+  `REQUIREMENT_NOT_MEASURABLE` (warn), `TECH_ASSERTION_IN_OBSERVATION` (warn), `pflib/tech_terms.py`);
+  reserved fields per record type (A `Proposed implementation`); the PRODUCT_MODEL gate
+  (`pflib/conditions_product_model.py`, all seven `G-PM-*` conditions); product-analyst integration
+  pass; `agents/systems-architect.md` (inference pass); SKILL.md `model` with skip-if-done passes;
+  `references/product-model-playbook.md`; gate-passing PRODUCT_MODEL fixture (6 integrations, 15
+  inferences) and `PRODUCT_MODEL_FAILING`.
 
 ### Fixed
 - Briefing more runs than `agents.max_pending_runs` is refused (`RUN_LIMIT`); `pf.py staging list` /

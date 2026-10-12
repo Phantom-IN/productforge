@@ -38,7 +38,7 @@ def schema_fields(ctx: Context, loc: Loc) -> list[Finding]:
         elif not rec.fields[key].strip() and key not in loc.schema.allow_empty:
             out.append(finding("EMPTY_FIELD", loc.rel, rec.id, f"{rec.id} has an empty {key!r}"))
     allowed = set(loc.schema.fields) | set(GENERIC_OPTIONAL)
-    allowed |= set(catalog.RESERVED_FIELDS.get(loc.schema.prefix, ()))  # reported by features.py
+    allowed |= set(catalog.RESERVED_FIELDS.get(loc.schema.prefix, ((), ""))[0])  # features.py
     for key in rec.order:
         if key not in allowed:
             out.append(

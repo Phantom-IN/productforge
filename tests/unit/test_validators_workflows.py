@@ -68,7 +68,10 @@ def test_no_system_steps_is_a_warning_unless_none_is_declared(tasklet_product_mo
     text = p.read_text()
     lines = [ln for ln in text.splitlines() if "[implied-system]" not in ln]
     p.write_text("\n".join(lines) + "\n")
-    assert render.render_all(tasklet_product_model) == ["research/README.md"]  # index is stale
+    assert render.render_all(tasklet_product_model) == [  # workflow views are stale
+        "research/README.md",
+        "research/architecture-inference.md",
+    ]
     found = validators.run(tasklet_product_model)
     assert [(f.code, f.severity) for f in found] == [("NO_SYSTEM_STEPS", "warn")]
     body = p.read_text()

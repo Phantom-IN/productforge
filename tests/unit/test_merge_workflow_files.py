@@ -46,7 +46,8 @@ def test_new_workflow_is_named_rewritten_and_indexed(tasklet_product_model: Path
     uid = report.id_map["U-?1"]
     assert text.startswith("### W-009 — Export a board!\n") and f"- {uid}\n" in text
     assert "W-?" not in text and "U-?" not in text
-    assert report.rendered == ["research/README.md"]
+    # the workflow index and the inference coverage table both list workflows
+    assert report.rendered == ["research/README.md", "research/architecture-inference.md"]
     index = render.regions((ws / "research/README.md").read_text())["workflows"]
     assert "| W-009 | Export a board! | Member | F-008 | PROBABLE | 1 |" in index
     assert validators.run(ws) == []

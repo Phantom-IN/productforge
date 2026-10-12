@@ -17,6 +17,7 @@ Existing records must stay byte-identical (lock/overlay tests depend on them): a
 from __future__ import annotations
 
 import json
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -585,10 +586,82 @@ RULES = [
 ]  # fmt: skip
 
 
+# ---- Phase 11: integrations and architecture inference
+def integ(i: int, title: str, purpose: str, direction: str, auth: str, events: str, data: str,
+          config: str, failure: str, sync: str, ev: str, category: str, conf: str = "CONFIRMED") -> str:  # fmt: skip
+    return (
+        f"\n### I-{i:02d} — {title}\n- Purpose: {purpose}\n- Direction: {direction}\n"
+        f"- Authentication: {auth}\n- Events: {events}\n- Data exchanged: {data}\n"
+        f"- User configuration: {config}\n- Failure behaviour: {failure}\n"
+        f"- Sync requirements: {sync}\n- Provider category: {category}\n- Evidence: {ev}\n"
+        f"- Confidence: {conf}\n"
+    )
+
+
+INTEGRATIONS = [
+    integ(1, "Public REST API", "Read and change tasks and projects from other programs", "inbound", "Personal access tokens", "none — request and response",
+          "Tasks and projects", "A member creates a personal access token", "Not documented", "List endpoints page with cursors", "D-003, D-030, D-032", "api"),
+    integ(2, "Webhooks", "Tell other systems when tasks change", "outbound", "Not documented (signing is not described)", "Task changes",
+          "The changed task", "Not documented", "Not documented; delivery needs retries", "Near-realtime after each change", "D-031", "webhooks"),
+    integ(3, "Calendar sync", "Show task due dates in an external calendar", "outbound", "Not documented (account connection)", "Due-date changes",
+          "Due dates and task titles", "A member connects a calendar", "Not documented", "Due-date changes follow the task", "D-033", "calendar"),
+    integ(4, "Chat notifications", "Post task updates to chat channels", "outbound", "Not documented (workspace connection)", "Task updates",
+          "Task summaries", "Choose the channel to post to", "Not documented", "Posted after each update", "D-034", "chat"),
+    integ(5, "Git commit linking", "Close tasks from commit messages", "inbound", "Not documented (repository connection)", "Pushed commits that reference a task",
+          "Commit references to tasks", "Connect a repository", "Not documented", "On each push", "D-035", "scm"),
+    integ(6, "Google sign-in", "Sign in with a Google account", "inbound", "Google account (single sign-on)", "Sign-in",
+          "Account email and name", "None — offered on the sign-in page", "Fall back to an emailed sign-in link", "At each sign-in", "D-029", "identity"),
+]  # fmt: skip
+
+
+def infer(i: int, title: str, area: str, obs: str, ev: str, impl: str, req: str, derived: str,
+          conf: str = "CONFIRMED") -> str:  # fmt: skip
+    return (
+        f"\n### A-{i:03d} — {title}\n- Area: {area}\n- Observation: {obs}\n- Evidence: {ev}\n"
+        f"- Confidence: {conf}\n- Engineering implication: {impl}\n- Target implementation: UNKNOWN\n"
+        f"- Our requirement: {req}\n- Derived from: {derived}\n"
+    )
+
+
+INFERENCES = [
+    infer(1, "Task changes reach other users live", "realtime", "Edits by one user appear for others without a reload", "D-007",
+          "The server pushes changes to connected clients", "Task changes must be visible to other connected clients within 2 s", "W-001, W-007, F-009, D-007"),
+    infer(2, "One search spans tasks and projects", "search", "One search box finds both tasks and projects", "D-036",
+          "A combined index over several entity types", "Search must return tasks and projects together; a new task must be searchable within 5 s", "W-004, F-019, D-043"),
+    infer(3, "Assignment notifies the assignee", "notifications", "Members are notified in-app when a task is assigned to them", "D-019",
+          "Notifications are produced from task events", "A new assignee must get an in-app notification within 5 s", "W-002, W-001, F-016"),
+    infer(4, "Every task keeps its history", "audit", "Each task shows a history of its changes", "D-012",
+          "An append-only activity log per task", "Every task change must append an activity entry that is never edited", "W-001, W-007, F-010, E-11"),
+    infer(5, "Guests see only what is shared with them", "authz", "Guests can comment only on tasks shared with them", "D-004",
+          "Every read and write is checked against the actor's role", "Every request must be authorized by workspace role; a guest must never read an unshared task", "W-005, W-003, PR-007, PR-010"),
+    infer(6, "The workspace bounds all data", "tenancy", "Members and projects belong to a workspace", "D-025",
+          "Every record carries its workspace", "Every record must belong to exactly one workspace; no query may cross workspaces", "W-003, E-01"),
+    infer(7, "Webhooks report task changes", "integrations", "External systems can be notified when tasks change", "D-031",
+          "Outbound delivery that survives receiver outages", "Each webhook delivery must be retried at least 3 times with backoff", "I-02, F-027"),
+    infer(8, "Due dates sync to calendars", "integrations", "Due dates can be synced to an external calendar", "D-033",
+          "A connected-account sync that follows task changes", "A due-date change must reach the connected calendar within 5 minutes", "W-006, I-03, F-028"),
+    infer(9, "Daily digests are scheduled", "async", "Members can opt into a daily email digest", "D-020",
+          "A scheduler runs per-member jobs", "The digest job must run once per day for every opted-in member", "F-017, D-020"),
+    infer(10, "Files attach to tasks", "files", "Members can attach files to a task", "D-039",
+          "Durable file storage with the task's access rules", "Attachments must be stored durably and served only to members who may read the task", "F-006, E-08"),
+    infer(11, "Customer data is encrypted at rest", "security", "The security overview says data is encrypted at rest", "D-016",
+          "Every store that holds customer data encrypts it", "Customer data must be encrypted at rest in every store", "D-016"),
+    infer(12, "Archive is reversible", "storage", "Archived projects disappear from boards and can be restored", "D-022",
+          "Archive is a state, not a delete", "Archiving must never delete tasks; restore must return the project and its tasks unchanged", "W-008, E-04"),
+    infer(13, "Commits close tasks", "integrations", "Git commits that reference a task can close it", "D-035",
+          "Inbound events from a repository host change task state", "A commit referencing a task must close it within 1 minute of the push being received", "I-05, F-030"),
+    infer(14, "Two sign-in methods", "authn", "Users sign in with an emailed link or a Google account", "D-029",
+          "Passwordless links plus an external identity provider", "Sign-in must accept one-time emailed links and Google accounts; a link must expire after first use", "I-06, F-024, W-003"),
+    infer(15, "API lists page with cursors", "performance", "API list endpoints are paginated with cursors", "D-032",
+          "Stable cursors over changing lists", "Every API list endpoint must page with cursors, at most 100 items per page", "I-01, F-025"),
+]  # fmt: skip
+
+
 def spec_file(name: str, sections: dict[str, str]) -> str:
-    """A spec/ template with record blocks appended under the given headings."""
+    """A template (``spec/`` unless a folder is given) with record blocks under the headings."""
+    rel = name if "/" in name else f"spec/{name}"
     text = (
-        Path(__file__).resolve().parents[2] / f"skills/productforge/templates/spec/{name}"
+        Path(__file__).resolve().parents[2] / f"skills/productforge/templates/{rel}"
     ).read_text()
     text = text.replace("{{product_name}}", "Tasklet").replace(
         "{{target_url}}", "https://tasklet.example"
@@ -613,14 +686,20 @@ def feature_matrix() -> str:
     return head + "## Domains\n" + DOMAINS + "\n## Hierarchy" + rest + "".join(FEATURES)
 
 
-def product_model(discovery: dict[str, str]) -> dict[str, str]:
-    """DISCOVERY advanced to PRODUCT_MODEL with real lock snapshots and rendered views."""
+def product_model(discovery: dict[str, str], failing: bool = False) -> dict[str, str]:
+    """DISCOVERY advanced to PRODUCT_MODEL with real lock snapshots and rendered views.
+
+    ``failing``: no integrations, no Integrations & API workflow (W-006) and W-008 uncovered by
+    inferences — the gate fails exactly G-PM-WORKFLOW-PER-DOMAIN, -INTEGRATIONS-COMPLETE and
+    -INFERENCE-COMPLETE while validation stays clean.
+    """
     from pflib import render, state
 
     files = dict(discovery)
     files["research/FEATURE_MATRIX.md"] = feature_matrix()
     for rel, body in WORKFLOWS:
-        files[rel] = body
+        if not (failing and "/W-006-" in rel):
+            files[rel] = body
     readme = (
         Path(__file__).resolve().parents[2]
         / "skills/productforge/templates/research/research-README.md"
@@ -645,6 +724,19 @@ def product_model(discovery: dict[str, str]) -> dict[str, str]:
                 "PERMISSIONS_MATRIX.md", {"## Roles": "".join(ROLES), "## Rules": "".join(RULES)}
             ),
         }
+        inferences = INFERENCES
+        if failing:
+            dropped = ("W-006", "W-008")
+            inferences = [
+                re.sub(r"I-\d\d, ", "", a) for a in INFERENCES if not any(w in a for w in dropped)
+            ]
+        else:
+            extra["spec/INTEGRATIONS.md"] = spec_file(
+                "INTEGRATIONS.md", {"## Records": "".join(INTEGRATIONS)}
+            )
+        extra["research/architecture-inference.md"] = spec_file(
+            "research/architecture-inference.md", {"## Records": "".join(inferences)}
+        )
         for rel, text in extra.items():
             (ws / rel).parent.mkdir(parents=True, exist_ok=True)
             (ws / rel).write_text(text, encoding="utf-8")
@@ -680,7 +772,12 @@ def snapshots() -> dict[str, dict[str, str]]:
         UNKNOWNS_HEAD + UNKNOWNS + NEW_UNKNOWNS.split("\n### U-008")[0] + "\n"
     )
     failing["research/product-surfaces.md"] = SURFACES_HEAD + SURFACES[0]
-    return {"DISCOVERY": full, "DISCOVERY_FAILING": failing, "PRODUCT_MODEL": product_model(full)}
+    return {
+        "DISCOVERY": full,
+        "DISCOVERY_FAILING": failing,
+        "PRODUCT_MODEL": product_model(full),
+        "PRODUCT_MODEL_FAILING": product_model(full, failing=True),
+    }
 
 
 def main(argv: list[str]) -> int:

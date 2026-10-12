@@ -69,6 +69,18 @@ def parse_steps(text: str) -> tuple[list[Step], list[str]]:
     return steps, bad
 
 
+def requirements_surfaced(text: str) -> list[str]:
+    """Bullet lines under ``## Engineering requirements surfaced`` (``none`` means none)."""
+    body = records.parse_document(text).section_text("Engineering requirements surfaced") or ""
+    items = [ln[2:].strip() for ln in body.splitlines() if ln.startswith("- ")]
+    return [i for i in items if i and i.lower() != "none"]
+
+
+def has_system_steps(text: str) -> bool:
+    steps, _ = parse_steps(text)
+    return any(s.tag == "implied-system" for s in steps)
+
+
 # ------------------------------------------------------------------------- candidates
 
 # feature-name keyword → action verb for a candidate workflow

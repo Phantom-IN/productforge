@@ -156,6 +156,51 @@ def permission_regions(index: WorkspaceIndex) -> dict[str, str]:
     return {"permissions": "\n".join(rows) + "\n"}
 
 
+def integration_regions(index: WorkspaceIndex) -> dict[str, str]:
+    from pflib import domain
+
+    integrations = domain.active(index, "I")
+    if not integrations:
+        return {"integrations": "_No integrations yet._\n"}
+    rows = [
+        "| I | Provider | Direction | Auth | Events | Confidence |",
+        "|---|---|---|---|---|---|",
+    ]
+    for i in integrations:
+        cells = [i.id, i.title, i.get("Direction"), i.get("Authentication"), i.get("Events"),
+                 i.get("Confidence")]  # fmt: skip
+        rows.append("| " + " | ".join(_cell(c) for c in cells) + " |")
+    return {"integrations": "\n".join(rows) + "\n"}
+
+
+def inference_regions(index: WorkspaceIndex) -> dict[str, str]:
+    from pflib import domain, workflows
+
+    inferences = domain.active(index, "A")
+    if not inferences:
+        return {"areas": "_No inferences yet._\n", "workflow-coverage": "_No inferences yet._\n"}
+    by_area: dict[str, list[records.Record]] = {}
+    for a in inferences:
+        by_area.setdefault(a.get("Area").strip() or "(no area)", []).append(a)
+    areas = []
+    for area in sorted(by_area):
+        areas.append(f"- **{area}**")
+        areas.extend(f"  - {a.id} {_cell(a.title)}" for a in by_area[area])
+    rows = ["| W | Workflow | Implied system steps | Requirements surfaced | A refs |",
+            "|---|---|---|---|---|"]  # fmt: skip
+    for rel, w in sorted(index.records("W"), key=lambda x: x[1].id):
+        if not records.is_active(w):
+            continue
+        text = index.document(rel).text
+        steps, _ = workflows.parse_steps(text)
+        implied = sum(1 for s in steps if s.tag == "implied-system")
+        surfaced = workflows.requirements_surfaced(text)
+        refs = [a.id for a in inferences if w.id in records.parse_refs(a.get("Derived from"))]
+        cells = [w.id, w.title, str(implied), str(len(surfaced)), ", ".join(refs)]
+        rows.append("| " + " | ".join(_cell(c) for c in cells) + " |")
+    return {"areas": "\n".join(areas) + "\n", "workflow-coverage": "\n".join(rows) + "\n"}
+
+
 RENDERERS: dict[str, Renderer] = {
     FEATURE_MATRIX: Renderer(feature_regions, {"hierarchy": "## Hierarchy", "matrix": "## Matrix"}),
     SURFACES: Renderer(surface_regions, {"surface-features": "## Surface → features"}),
@@ -165,6 +210,11 @@ RENDERERS: dict[str, Renderer] = {
         {"relationship-tree": "## Relationship tree", "identity": "## Identity decisions"},
     ),
     catalog.PERMISSIONS_PATH: Renderer(permission_regions, {"permissions": "## Matrix"}),
+    catalog.INTEGRATIONS_PATH: Renderer(integration_regions, {"integrations": "## Summary"}),
+    catalog.INFERENCE_PATH: Renderer(
+        inference_regions,
+        {"areas": "## Requirement areas", "workflow-coverage": "## Workflow coverage"},
+    ),
 }
 assert all(catalog.spec_for_path(rel) is not None for rel in RENDERERS)
 

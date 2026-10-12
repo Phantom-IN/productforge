@@ -418,6 +418,8 @@ SURFACES_PATH = "research/product-surfaces.md"
 RESEARCH_README_PATH = "research/README.md"
 DOMAIN_MODEL_PATH = "spec/DOMAIN_MODEL.md"
 PERMISSIONS_PATH = "spec/PERMISSIONS_MATRIX.md"
+INTEGRATIONS_PATH = "spec/INTEGRATIONS.md"
+INFERENCE_PATH = "research/architecture-inference.md"
 
 # Closed value sets per (prefix, field), checked by validators (BAD_ENUM).
 ENUMS: dict[tuple[str, str], tuple[str, ...]] = {
@@ -426,12 +428,24 @@ ENUMS: dict[tuple[str, str], tuple[str, ...]] = {
     ("U", "Impact"): ("Low", "Medium", "High"),
     ("E", "Stable after creation"): ("yes", "no", "unknown"),
     ("RL", "Scope"): ("workspace", "team", "resource", "system"),
-}
+    ("I", "Direction"): ("inbound", "outbound", "bidirectional"),
+    ("I", "Provider category"): ("scm", "chat", "calendar", "identity", "storage", "email",
+                                 "analytics", "payments", "webhooks", "api", "other"),
+    ("A", "Area"): ("realtime", "async", "search", "storage", "files", "authn", "authz", "tenancy",
+                    "integrations", "notifications", "audit", "offline", "performance",
+                    "availability", "security", "observability", "other"),
+}  # fmt: skip
 
-# Fields that must never appear on a record type (FIELD_NOT_YET_ALLOWED): scoring lives in SC
-# score cards during SCOPE_DEFINED, and FEATURE_MATRIX columns are rendered from them.
-RESERVED_FIELDS: dict[str, tuple[str, ...]] = {
-    "F": ("MVP", "Decision", "Score", "Scores", "Override reason", "Override decision"),
+# Fields that must not appear on a record type (FIELD_NOT_YET_ALLOWED), with the reason.
+RESERVED_FIELDS: dict[str, tuple[tuple[str, ...], str]] = {
+    "F": (
+        ("MVP", "Decision", "Score", "Scores", "Override reason", "Override decision"),
+        "scoring belongs in SC score cards during SCOPE_DEFINED, not on features",
+    ),
+    "A": (
+        ("Proposed implementation",),
+        "our implementation is proposed in AP records during ARCHITECTURE_LOCKED",
+    ),
 }
 
 # Directories every new workspace starts with (``pf.py init``).

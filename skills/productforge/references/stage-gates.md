@@ -130,6 +130,21 @@ advanced on checks that do not exist yet. Condition statuses: `pass`, `fail`, `n
 Both thresholds are config knobs (`.productforge/config.json`), e.g. lower `research.min_claims_gate`
 for a deliberately tiny product — the gate report always shows the numbers.
 
+## How the PRODUCT_MODEL conditions are measured
+
+| Condition | Passes when |
+|---|---|
+| `G-PM-SURFACE-FEATURES` | every active `PS` is cited by an active feature's `Surface` |
+| `G-PM-FEATURE-EVIDENCE` | every active `F` has `Evidence` or `Derived from` |
+| `G-PM-WORKFLOW-PER-DOMAIN` | every domain with ≥ 3 active features has a workflow citing one of them |
+| `G-PM-ENTITY-COMPLETE` | ≥ 1 entity, and no entity has a missing/empty field, bad relationship or deletion kind |
+| `G-PM-PERMISSIONS-COVERAGE` | ≥ 1 role and rule, and no missing cell, unexplained `?`/`Limited`, bad grant, duplicate rule or mutable entity without a rule |
+| `G-PM-INTEGRATIONS-COMPLETE` | ≥ 1 integration, each with a valid `Direction` and an `Authentication` |
+| `G-PM-INFERENCE-COMPLETE` | ≥ 1 inference, each with Observation, Confidence, Engineering implication and Our requirement; every workflow with `[implied-system]` steps is cited by an `A` record's `Derived from` |
+
+`/productforge model` reports this gate but never advances; `/productforge scope` asks before
+closing PRODUCT_MODEL.
+
 ## Scope
 
 DISCOVERY cannot close without an accepted scope (`G-SCOPE-SET`). `/productforge <url> --scope "…"`
