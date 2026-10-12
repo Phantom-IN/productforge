@@ -373,3 +373,55 @@ def normalise_text(value: str) -> str:
     """Dedupe form of free text: lowercase, punctuation → space, stopwords dropped."""
     words = _NON_ALNUM_RE.sub(" ", value.lower()).split()
     return " ".join(w for w in words if w not in _STOPWORDS)
+
+
+AMEND_HEAD_RE = re.compile(r"^### AMEND (?P<id>[A-Z]{1,3}-\d+)\s*$")
+AMENDABLE_FIELDS = ("Status", "Reason", "Resolution")
+INACTIVE_STATUS_PREFIXES = ("superseded-by", "rejected")
+
+
+def is_active(rec: Record) -> bool:
+    """False for superseded or rejected records (they stay in the file, out of every view)."""
+    return not rec.get("Status").strip().startswith(INACTIVE_STATUS_PREFIXES)
+
+
+@dataclass
+class Amendment:
+    """A staged change to an existing record: ``### AMEND D-218`` + field lines."""
+
+    target: str
+    fields: dict[str, str]
+    line: int  # 1-based line of the heading in the staged file
+    start: int  # 0-based span in the staged file
+    end: int
+
+
+def parse_amendments(text: str, path: str | None = None) -> list[Amendment]:
+    """Amendment blocks in a staged file (outside code fences)."""
+    lines = text.splitlines()
+    out: list[Amendment] = []
+    in_fence = False
+    i = 0
+    while i < len(lines):
+        if FENCE_RE.match(lines[i]):
+            in_fence = not in_fence
+        m = None if in_fence else AMEND_HEAD_RE.match(lines[i])
+        if not m:
+            i += 1
+            continue
+        fields: dict[str, str] = {}
+        j = i + 1
+        last: str | None = None
+        while j < len(lines) and (lines[j].startswith("- ") or lines[j].startswith("  ")):
+            fm = FIELD_RE.match(lines[j])
+            if fm:
+                last = fm.group("key")
+                fields[last] = fm.group("value") or ""
+            elif lines[j].startswith("  ") and last is not None:
+                fields[last] += "\n" + lines[j][2:]
+            else:
+                raise RecordParseError(f"malformed amendment line {lines[j]!r}", j + 1, path)
+            j += 1
+        out.append(Amendment(m.group("id"), fields, i + 1, i, j))
+        i = j
+    return out

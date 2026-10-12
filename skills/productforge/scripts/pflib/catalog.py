@@ -413,6 +413,22 @@ CATALOG: tuple[ArtifactSpec, ...] = (
 
 # Well-known artifacts other modules read by name.
 OVERVIEW_PATH = "research/product-overview.md"
+FEATURE_MATRIX_PATH = "research/FEATURE_MATRIX.md"
+SURFACES_PATH = "research/product-surfaces.md"
+RESEARCH_README_PATH = "research/README.md"
+
+# Closed value sets per (prefix, field), checked by validators (BAD_ENUM).
+ENUMS: dict[tuple[str, str], tuple[str, ...]] = {
+    ("F", "Complexity"): ("Low", "Medium", "High"),
+    ("F", "Plan tier"): ("all", "paid", "enterprise", "unknown"),
+    ("U", "Impact"): ("Low", "Medium", "High"),
+}
+
+# Fields that must never appear on a record type (FIELD_NOT_YET_ALLOWED): scoring lives in SC
+# score cards during SCOPE_DEFINED, and FEATURE_MATRIX columns are rendered from them.
+RESERVED_FIELDS: dict[str, tuple[str, ...]] = {
+    "F": ("MVP", "Decision", "Score", "Scores", "Override reason", "Override decision"),
+}
 
 # Directories every new workspace starts with (``pf.py init``).
 SCAFFOLD_DIRS: tuple[str, ...] = ("research", "spec/decisions", "plans")

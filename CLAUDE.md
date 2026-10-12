@@ -34,7 +34,8 @@ We are building **v1** — phases in [`plans/v1/`](plans/v1/README.md).
 5. **Agents write staging; only `pf.py merge` writes canonical record files.** Agents use provisional
    IDs (`D-?3`); merge dedupes, allocates and rewrites references.
 6. **Closed stages are append-only.** Modifying a locked record is a `LOCK_VIOLATION`; changes go
-   through `pf.py reopen <stage> --reason`, which marks later stages stale.
+   through `pf.py reopen <stage> --reason`, which marks later stages stale. In the open stage, the
+   only change to an existing record is an amendment (Status/Reason/Resolution, logged).
 7. **Scripts do arithmetic.** Scores, counts, funnels, gate verdicts come from `pf.py`. The model never
    hand-computes a score or a count it reports.
 8. **Nothing hardcoded.** Artifact paths come from `pflib/catalog.py`; knobs from `pflib/config.py`
@@ -102,6 +103,8 @@ python3.11 skills/productforge/scripts/pf.py brief --role research-agent --task 
 python3.11 skills/productforge/scripts/pf.py merge <run-id> --check --workspace /tmp/tl --json   # preflight
 python3.11 skills/productforge/scripts/pf.py discover https://tasklet.example --workspace /tmp/tl   # network: robots-aware, polite
 python3.11 skills/productforge/scripts/pf.py research-plan --workspace /tmp/tl --json
+python3.11 skills/productforge/scripts/pf.py feature-plan --workspace /tmp/tl --json
+python3.11 skills/productforge/scripts/pf.py workflow-candidates --workspace /tmp/tl --json
 python3.11 skills/productforge/scripts/pf.py deps --available "anthropic-skills:pdf" --workspace /tmp/tl
 python3.11 skills/productforge/scripts/pf.py delegate anthropic-skills:pdf --task "…" --workspace /tmp/tl
 python3.11 skills/productforge/scripts/pf.py deps --json          # which skills/plugins are reused
@@ -125,7 +128,11 @@ claude --plugin-dir .                 # then: /productforge status  (or /product
   Record schemas (required/ref/union fields, dedupe keys, sections) live only in `pflib/catalog.py`.
 - Templates use `{{placeholder}}` tokens only; no logic in templates.
 - References files are single-topic and < ~300 lines; SKILL.md < ~400 lines; agents < ~250 lines.
-- Markdown artifacts: records per §6.2; matrices under `## Matrix`.
+- Markdown artifacts: records per §6.2; matrices under `## Matrix`. Tables/trees that are views over
+  records live in generated regions (`<!-- pf:generated:start <name> -->` … `end`), rebuilt by
+  `pflib/render.py` on every merge; register new views in `render.RENDERERS`.
+- Existing records change only through **amendments** (`### AMEND <ID>`: `Status`/`Reason`/
+  `Resolution` + `Why`, open stage only) — see `references/record-format.md`.
 - Writing style in generated artifacts: paraphrase, cite IDs, no marketing language.
 
 ## Extension recipes

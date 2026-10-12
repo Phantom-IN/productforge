@@ -6,7 +6,7 @@ import difflib
 import re
 from itertools import combinations
 
-from pflib import ids, records
+from pflib import catalog, ids, records
 from pflib.records import Document
 from pflib.validators import (
     Context,
@@ -18,7 +18,9 @@ from pflib.validators import (
     workspace_check,
 )
 
-GENERIC_OPTIONAL = ("Reason",)  # allowed on any record (required with Status: rejected)
+# Allowed on any record: the amendable fields (Status, Reason — required with Status: rejected —
+# and Resolution), so every record type can be superseded, rejected or marked conflicting.
+GENERIC_OPTIONAL = ("Status", "Reason", "Resolution")
 STATUS_GENERIC = ("active", "rejected")
 STATUS_ADR = ("accepted", "global")
 NEAR_DUP_RATIO = 0.92
@@ -36,6 +38,7 @@ def schema_fields(ctx: Context, loc: Loc) -> list[Finding]:
         elif not rec.fields[key].strip() and key not in loc.schema.allow_empty:
             out.append(finding("EMPTY_FIELD", loc.rel, rec.id, f"{rec.id} has an empty {key!r}"))
     allowed = set(loc.schema.fields) | set(GENERIC_OPTIONAL)
+    allowed |= set(catalog.RESERVED_FIELDS.get(loc.schema.prefix, ()))  # reported by features.py
     for key in rec.order:
         if key not in allowed:
             out.append(
@@ -155,7 +158,7 @@ def near_duplicate_titles(ctx: Context) -> list[Finding]:
     out: list[Finding] = []
     by_prefix: dict[str, list[Loc]] = {}
     for loc in ctx.records():
-        if loc.schema is not None:
+        if loc.schema is not None and records.is_active(loc.record):  # superseded = resolved
             by_prefix.setdefault(loc.schema.prefix, []).append(loc)
     for locs in by_prefix.values():
         normed = [(loc, records.normalise_text(loc.record.title)) for loc in locs]

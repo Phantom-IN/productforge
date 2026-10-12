@@ -113,6 +113,11 @@ The command belongs to the next stage, so the open stage must close first.
 
 Stage sections delegate work to role agents (`agents/*.md`) through this loop:
 
+0. **Resume first.** Every command starts with `python3.11 "$PF" staging list --workspace <ws> --json`.
+   Runs left over from an interrupted session are finished before any new work: preflight each;
+   merge those that pass; repair those that fail (step 4, with the run's own role); discard runs that
+   staged nothing (`staging discard <run-id> --reason "…"`). `pf.py brief` refuses new runs while
+   `agents.max_pending_runs` are unmerged (`RUN_LIMIT`).
 1. **Brief.** `python3.11 "$PF" brief --role <role> --task "<task>" [--partition <p>]
    [--input <workspace file>]… [--template <template>]… [--budget "<budget>"] --workspace <ws> --json`
    → `run_id`, `staging_path`, `brief`, `max_repair_loops`. Never write a brief by hand.
@@ -130,8 +135,9 @@ Stage sections delegate work to role agents (`agents/*.md`) through this loop:
    end-of-command report.
 
 - **Parallel runs** only for the partitions a stage section defines (e.g. research by source
-  category, features by domain): brief each partition separately, spawn them in one message, then
-  preflight and merge **one at a time** in run order.
+  category, features by domain), and only as many as the section allows: brief **only the runs you
+  are about to spawn** (never brief a later batch early), spawn them in one message, then preflight
+  and merge **one at a time** in run order before briefing the next batch.
 - **Research requests** listed by an agent are collected and reported to the user.
 
 ## Inline fallback
@@ -238,18 +244,75 @@ pass; surfaces → surface pass.
    --input research/UNKNOWNS.md --input research/product-overview.md
    --template research/DISCOVERY_LEDGER.md --template research/UNKNOWNS.md`. Preflight, repair,
    merge one at a time.
-5. **Surface pass** when `surfaces` is 0 or claims were merged in this command: one product-analyst
+5. **Dedupe pass.** If `pf.py validate` reports `NEAR_DUPLICATE_TITLE` warnings for claims, brief one
+   research-agent run: `--task "Dedupe pass: for each near-duplicate pair below, keep the better-
+   evidenced claim and supersede the other with an amendment (see Amendments): <warnings>"
+   --input research/DISCOVERY_LEDGER.md`. Preflight, repair, merge.
+6. **Surface pass** when `surfaces` is 0 or claims were merged in this command: one product-analyst
    run — `brief --role product-analyst --task "Surface pass: map every visible product surface from
    the claims and sources." --input research/DISCOVERY_LEDGER.md --input research/sources.md
    --input research/product-surfaces.md --input research/UNKNOWNS.md
    --template research/product-surfaces.md`. Preflight, repair, merge.
-6. **Research requests** in agent summaries (at most 5 delegations per command): `browse <url>` →
+7. **Research requests** in agent summaries (at most 5 delegations per command): `browse <url>` →
    `web.browse`, `pdf <url>` → `docs.pdf`, `repo <url>` → `repo.intel`. When that capability resolves
    to a real provider, run the Delegated run protocol for it and normalise with the research-agent;
    when it is `builtin`, report the request as unresolved.
-7. **Gate.** `python3.11 "$PF" check --workspace <ws> --json`: report the DISCOVERY gate as a compact
+8. **Gate.** `python3.11 "$PF" check --workspace <ws> --json`: report the DISCOVERY gate as a compact
    table plus merge reports' `dropped`/`over_cap`. If the gate passes, the next command is
    `/productforge features` (it asks before closing DISCOVERY); otherwise `/productforge research`.
+
+### `/productforge features`
+
+PRODUCT_MODEL: the feature hierarchy in `research/FEATURE_MATRIX.md`. Views (`## Hierarchy`,
+`## Matrix`, the surfaces' `## Surface → features`) are rendered by merge — never by hand.
+
+1. **Plan.** `python3.11 "$PF" feature-plan --workspace <ws> --json`.
+2. **Domain split** when `domains` is empty (or the user asks to redo it): one product-analyst run —
+   `brief --role product-analyst --task "Domain split: propose 4-10 non-overlapping domains for
+   <scope> in a ## Domains section." --input research/product-surfaces.md
+   --input research/product-overview.md --input research/DISCOVERY_LEDGER.md
+   --template research/FEATURE_MATRIX.md`. Preflight, repair, merge. Show the domains and ask with
+   AskUserQuestion: "Use these domains" or Other (their changes). On changes, re-run the domain
+   split with the user's instruction in the task. Without AskUserQuestion, continue and list the
+   domains in the report so the user can rerun.
+3. **Feature passes**, in batches of at most `max_parallel` domains from `empty_domains` (brief only
+   the current batch): `brief --role product-analyst --task "Feature pass for domain <name>:
+   record every user-visible capability in this domain (hierarchy at most 3 levels)." --partition
+   "<name>" --input research/DISCOVERY_LEDGER.md --input research/sources.md
+   --input research/product-surfaces.md --input research/FEATURE_MATRIX.md
+   --input research/UNKNOWNS.md --template research/FEATURE_MATRIX.md --budget "at most
+   <per_domain_budget> features; group minor capabilities as sub-features"`. Spawn the batch in one
+   message; preflight, repair and merge each run one at a time; then brief the next batch.
+4. **Coverage.** Plan again. If `surfaces_without_features` is not empty, one product-analyst run
+   mapping features for those surfaces; report `features_in_unlisted_domains` if any.
+5. **Dedupe pass** if `pf.py validate` shows `NEAR_DUPLICATE_TITLE` warnings for features: one
+   product-analyst run with the warnings and the instruction to supersede the weaker feature by
+   amendment. Preflight, repair, merge.
+6. Report features per domain (`feature-plan`), surfaces without features, validation, and the next
+   command (`/productforge workflows`, Phase 09).
+
+### `/productforge workflows`
+
+PRODUCT_MODEL: core user workflows in `research/workflows/`, each separating `[observed]` steps (with
+evidence) from `[implied-system]` steps (what our system must do). The index in `research/README.md`
+is rendered by merge.
+
+1. **Candidates.** `python3.11 "$PF" workflow-candidates --workspace <ws> --json` — deterministic
+   proposals from the feature matrix, at least one per domain, capped by `model.max_workflows`.
+2. **Trim.** Show the candidates grouped by domain and ask with AskUserQuestion: "Use all
+   (Recommended)", "Only one per domain", or Other (the user's list). Without AskUserQuestion, use
+   all and list them in the report.
+3. **Workflow passes**, one ux-analyst run per domain, in batches of at most
+   `agents.max_pending_runs` (brief only the current batch): `brief --role ux-analyst --task
+   "Workflow pass for domain <name>: reconstruct these workflows: <names and their F IDs>."
+   --partition "<name>" --input research/FEATURE_MATRIX.md --input research/DISCOVERY_LEDGER.md
+   --input research/sources.md --input research/product-surfaces.md --input research/UNKNOWNS.md
+   --template research/workflow.md`. Spawn the batch in one message; preflight, repair and merge
+   one at a time; then the next batch.
+4. **Research requests** `browse <url>` → `web.browse` via the Delegated run protocol, then a repair
+   brief for the same ux-analyst run with the raw text listed.
+5. Report: workflows per domain, the observed vs implied step counts (from the index in
+   `research/README.md`), validation, and the next command (`/productforge model`, Phase 10).
 
 ### `/productforge status`
 
@@ -273,8 +336,6 @@ After dispatch (so refusals and transitions still behave correctly), these comma
 
 | Command | Arrives in |
 |---|---|
-| `features` | Phase 08 |
-| `workflows` | Phase 09 |
 | `model` | Phases 10–11 |
 | `competitors` | Phase 12 |
 | `scope` | Phase 13 |

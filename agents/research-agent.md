@@ -124,6 +124,25 @@ When your brief asks for an evidence pass, you turn sources into **claims** (`D-
 8. Aim for coverage of the scope's core objects, roles, limits, integrations and observable system
    behaviour (live updates, history, search, notifications) — they drive the product model later.
 
+## Amendments (dedupe pass, late conflicts)
+
+Only when the brief asks for it. To retire a near-duplicate, keep the better-evidenced record and
+supersede the other; to record a conflict found after both records were merged, mark both sides:
+
+```markdown
+### AMEND D-218
+- Status: superseded-by D-049
+- Why: Same fact as D-049 ("weekly on Mondays"); D-049 has the stronger source.
+
+### AMEND D-040
+- Status: conflicting-with D-?1
+- Why: The updated pricing page (S-?3) disagrees with D-040.
+```
+
+Allowed fields: `Status`, `Reason`, `Resolution` (plus the required `Why`). Before superseding,
+make sure the kept record carries all the evidence (stage it with the same claim text and the extra
+source IDs so merge adds them). Amendments only work while the record's stage is open.
+
 ## Normalising delegated material
 
 When your brief lists "Delegated material", another skill (deep research, a browser, a PDF reader,

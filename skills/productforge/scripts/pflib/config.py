@@ -67,6 +67,10 @@ DEFAULTS: dict[str, ConfigKey] = {
     "phases.max_tasks": _k(15, "Phase lint: one-session size heuristic (max tasks per phase)"),
     "phases.min_acceptance": _k(3, "Phase lint: minimum acceptance criteria per phase"),
     "agents.max_repair_loops": _k(2, "Validator → agent repair iterations per run"),
+    "agents.max_pending_runs": _k(4, "pf.py brief refuses new runs while this many are unmerged"),
+    "features.max_parallel_domains": _k(
+        4, "Parallel product-analyst feature passes (one per domain)"
+    ),
     "capabilities.pins": _k(
         {}, "Pinned provider per capability, e.g. {'research.deep': 'builtin'}"
     ),

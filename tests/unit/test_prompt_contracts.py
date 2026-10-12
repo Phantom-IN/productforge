@@ -251,3 +251,77 @@ def test_product_analyst_and_evidence_pass_contracts() -> None:
         "/productforge features",
     ):
         assert phrase in research, phrase
+
+
+def test_features_section_and_amendment_rules() -> None:
+    text = SKILL.read_text(encoding="utf-8")
+    feats = text.split("### `/productforge features`", 1)[1].split("\n### ", 1)[0]
+    for phrase in (
+        '"$PF" feature-plan',
+        "Domain split",
+        "Feature passes",
+        "empty_domains",
+        "max_parallel",
+        "per_domain_budget",
+        "surfaces_without_features",
+        "Dedupe pass",
+        "amendment",
+    ):
+        assert phrase in feats, phrase
+    research = text.split("### `/productforge research`", 1)[1].split("\n### ", 1)[0]
+    assert "Dedupe pass" in research and "NEAR_DUPLICATE_TITLE" in research
+    contract = CONTRACT.read_text(encoding="utf-8")
+    assert "### AMEND <final ID>" in contract and "one\n   exception" in contract
+    for agent in ("research-agent.md", "product-analyst.md"):
+        body = (AGENTS / agent).read_text(encoding="utf-8")
+        assert "## Amendments" in body and "- Why:" in body, agent
+    analyst = (AGENTS / "product-analyst.md").read_text(encoding="utf-8")
+    for phrase in (
+        "## Domain split",
+        "## Feature pass",
+        "at most **3 levels**",
+        "Plan tier",
+        "Never write the `MVP`",
+    ):
+        assert phrase in analyst, phrase
+
+
+def test_resume_and_batching_rules() -> None:
+    text = SKILL.read_text(encoding="utf-8")
+    protocol = section(text, "Agent run protocol")
+    for phrase in (
+        '"$PF" staging list',
+        "staging discard",
+        "RUN_LIMIT",
+        "brief **only the runs you",
+        "before briefing the next batch",
+    ):
+        assert phrase in protocol, phrase
+
+
+def test_ux_analyst_and_workflows_section() -> None:
+    agent = (AGENTS / "ux-analyst.md").read_text(encoding="utf-8")
+    for phrase in (
+        "[observed]",
+        "[implied-system]",
+        "authorize",
+        "search index",
+        "realtime event",
+        "notify",
+        "enqueue a job",
+        "Never invent UI details",
+        "at least half",
+        "browse <url>",
+    ):
+        assert phrase in agent, phrase
+    assert "Bash" not in frontmatter(agent)["tools"]
+    text = SKILL.read_text(encoding="utf-8")
+    flows = text.split("### `/productforge workflows`", 1)[1].split("\n### ", 1)[0]
+    for phrase in (
+        '"$PF" workflow-candidates',
+        "AskUserQuestion",
+        "ux-analyst",
+        "research/workflow.md",
+        "brief only the current batch",
+    ):
+        assert phrase in flows, phrase

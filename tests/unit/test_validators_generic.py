@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 
 import pytest
-from conftest import INVALID, TASKLET, apply_overlay
+from conftest import INVALID, TASKLET, apply_overlay, copy_snapshot, read_overlay
 
 from pflib import validators
 
@@ -22,10 +22,12 @@ def test_fixture_snapshots_have_no_findings(snapshot: Path) -> None:
 
 
 @pytest.mark.parametrize("case", CASES, ids=lambda p: p.stem)
-def test_each_invalid_case_yields_exactly_its_code(tasklet_discovery: Path, case: Path) -> None:
-    expected = apply_overlay(tasklet_discovery, case)
+def test_each_invalid_case_yields_exactly_its_code(tmp_path: Path, case: Path) -> None:
+    meta, _ = read_overlay(case)
+    ws = copy_snapshot(meta.get("base", "DISCOVERY"), tmp_path / "ws")
+    expected = apply_overlay(ws, case)
     assert expected == case.stem
-    found = validators.run(tasklet_discovery)
+    found = validators.run(ws)
     assert found, f"{case.name} produced no findings"
     assert {f.code for f in found} == {expected}, [f.to_dict() for f in found]
     assert all(f.severity == validators.CODES[expected][0] for f in found)

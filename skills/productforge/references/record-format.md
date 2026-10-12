@@ -122,6 +122,29 @@ Returned by `pf.py` commands (exit 1 or 2, JSON `{"error": CODE, ...}`); nothing
 | `ALREADY_MERGED` | The run was merged before |
 | `NO_SUCH_RUN` / `BAD_RUN_ID` / `BAD_ROLE` | Invalid staging run or role name |
 | `NO_WORKSPACE` | No `.productforge/` found at or above the working directory |
+| `AMEND_TARGET_MISSING` / `AMEND_LOCKED` / `AMEND_FIELD_NOT_ALLOWED` / `AMEND_NO_REASON` | An amendment was refused (see Amendments) |
+
+## Amendments
+
+The only way to change an existing record. A staged block
+
+```markdown
+### AMEND D-218
+- Status: superseded-by D-049
+- Why: Same fact as D-049.
+```
+
+sets `Status`, `Reason` and/or `Resolution` (nothing else) on a record of the **open** stage; `Why`
+is required and is written to `history.log`, not to the record. Merge refuses amendments, writing
+nothing, with `AMEND_TARGET_MISSING`, `AMEND_LOCKED` (closed stage — `pf.py reopen`),
+`AMEND_FIELD_NOT_ALLOWED` or `AMEND_NO_REASON`. Provisional IDs in values are rewritten.
+
+## Generated regions
+
+Tables and trees that are views over records live between `<!-- pf:generated:start <name> -->` and
+`<!-- pf:generated:end -->`. `pf.py render` (and every merge) rebuilds them; never edit inside the
+markers (`GENERATED_REGION_EDITED`). Prose sections without records in a records file (e.g.
+`## Domains` in `FEATURE_MATRIX.md`) are merged section by section like documents.
 
 ## Validator finding codes
 
@@ -139,6 +162,16 @@ tolerant: a malformed record yields one finding and the rest of the file is stil
 | `UNKNOWN_FIELD` | warn | A field that is not part of the record's schema |
 | `DANGLING_REF` | error | A reference to an ID that does not exist |
 | `WRONG_REF_TYPE` | error | A reference field cites a record of the wrong type |
+| `BAD_ENUM` | error | A field holds a value outside its closed set |
+| `FIELD_NOT_YET_ALLOWED` | error | A field that does not belong on this record type yet |
+| `PARENT_DOMAIN_MISMATCH` | error | A feature's parent is in a different domain |
+| `PARENT_CYCLE` | error | Features form a parent cycle |
+| `GENERATED_REGION_EDITED` | error | A generated region differs from a fresh render |
+| `BAD_STEPS` | error | A workflow has no numbered steps, or they are not numbered 1..n |
+| `BAD_STEP_TAG` | error | A workflow step lacks an [observed] or [implied-system] tag |
+| `OBSERVED_STEP_NO_EVIDENCE` | error | An [observed] workflow step cites no S-/D- evidence |
+| `NO_SYSTEM_STEPS` | warn | A workflow lists no [implied-system] steps |
+| `WORKFLOW_CONFIDENCE` | error | A CONFIRMED workflow's observed steps lack Tier ≤ 2 evidence |
 | `BAD_STATUS` | error | Status is not one of the allowed values (or rejected without Reason) |
 | `SUPERSEDED_TARGET_MISSING` | error | superseded-by targets a missing or other-type record |
 | `PROVISIONAL_ID_IN_CANONICAL` | error | A provisional ID (X-?n) appears in a canonical file |

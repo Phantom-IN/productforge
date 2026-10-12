@@ -84,6 +84,19 @@ def _repair_findings(ws: Path, run_id: str) -> tuple[int, str]:
     return result["errors"] + result["warnings"], "\n".join(lines) if lines else "none"
 
 
+def _check_pending(ws: Path) -> None:
+    limit = int(config.resolve("agents.max_pending_runs", ws))
+    pending = workspace.pending_runs(ws)
+    if len(pending) >= limit:
+        ids_ = ", ".join(p["run_id"] for p in pending)
+        raise UsageError(
+            f"{len(pending)} staging runs are still unmerged (limit agents.max_pending_runs="
+            f"{limit}): {ids_}. Preflight and merge them (or `pf.py staging discard`) first.",
+            code="RUN_LIMIT",
+            details={"pending": [p["run_id"] for p in pending]},
+        )
+
+
 def render(
     ws: Path,
     role: str,
@@ -110,6 +123,7 @@ def render(
         raw = run_dir / workspace.RAW
         raw_files = sorted(str(p) for p in raw.rglob("*") if p.is_file()) if raw.is_dir() else []
     else:
+        _check_pending(ws)
         run_id, run_dir = workspace.create_staging_run(ws, role)
 
     input_lines = [
@@ -209,6 +223,7 @@ def render_delegation(
         if not run_dir.is_dir():
             raise UsageError(f"no staging run {run_id!r}", code="NO_SUCH_RUN")
     else:
+        _check_pending(ws)
         run_id, run_dir = workspace.create_staging_run(ws, "delegate")
     raw_dir = run_dir / workspace.RAW
     raw_dir.mkdir(exist_ok=True)

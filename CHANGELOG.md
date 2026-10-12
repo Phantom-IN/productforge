@@ -47,8 +47,24 @@ versions follow [Semantic Versioning](https://semver.org/).
   surfaces templates; `WRONG_REF_TYPE` finding; `research-plan` unmined-source worklist; SKILL.md
   research loop (source → evidence → surface → gate); deterministic fixture generator
   `tests/fixtures/build_tasklet.py` with gate-passing DISCOVERY and DISCOVERY_FAILING snapshots.
+- Phase 08: record amendments (`### AMEND <ID>` — Status/Reason/Resolution of open-stage records,
+  logged, all-or-nothing refusals) and dedupe passes; generated views (`pflib/render.py`: feature
+  hierarchy + matrix, surface → features) re-rendered by every merge, `pf.py render`; prose sections
+  (e.g. `## Domains`) merged in record files; `pf.py feature-plan`; feature validators (`BAD_ENUM`,
+  `FIELD_NOT_YET_ALLOWED`, `PARENT_DOMAIN_MISMATCH`, `PARENT_CYCLE`, `GENERATED_REGION_EDITED`);
+  product-analyst domain split + feature pass; SKILL.md `features`; PRODUCT_MODEL fixture snapshot.
+- Phase 09: workflow files (`research/workflows/W-NNN-<slug>.md`) with the step grammar
+  `N. [observed|implied-system] <step> — <refs>` (`pflib/workflows.py`); workflow validators
+  (`BAD_STEPS`, `BAD_STEP_TAG`, `OBSERVED_STEP_NO_EVIDENCE`, `NO_SYSTEM_STEPS` (warn),
+  `WORKFLOW_CONFIDENCE`); `pf.py workflow-candidates`; generated workflow index in
+  `research/README.md`; `templates/research/workflow.md`; `agents/ux-analyst.md`; SKILL.md
+  `workflows`; merge counts the body of a workflow file that dedupes into an existing workflow as
+  ignored prose; 8 Tasklet workflows in the PRODUCT_MODEL fixture.
 
 ### Fixed
+- Briefing more runs than `agents.max_pending_runs` is refused (`RUN_LIMIT`); `pf.py staging list` /
+  `staging discard`; orchestrator resumes leftover runs first; per-domain feature budget.
+- `NEAR_DUPLICATE_TITLE` no longer compares superseded/rejected records.
 - `agents/README.md` was registered by Claude Code as a bogus `productforge:README` agent; moved to
   `docs/agents.md`.
 

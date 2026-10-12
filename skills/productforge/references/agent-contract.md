@@ -27,7 +27,11 @@ workspace safe — then follow that one and mention the conflict in `NOTES`.
    your run. Reference other new records by their provisional IDs and existing records by their final
    IDs (`S-004`). Never invent a final ID.
 6. **Never edit an existing record.** To add evidence to an existing claim, stage a record with the
-   same dedupe key (e.g. the same claim text); merge adds your references to it.
+   same dedupe key (e.g. the same claim text); merge adds your references to it. The **one
+   exception** is an *amendment* — only when your brief asks for it (dedupe pass, late-found
+   conflict): a `### AMEND <final ID>` block that sets only `Status`, `Reason` and/or `Resolution`,
+   plus a required `- Why:` line. Merge applies it only to records of the open stage and logs it;
+   anything else is refused. Never use it to rewrite a claim — supersede it with a new record.
 7. Fill templates exactly as given; keep their headings; leave fields empty only where the schema
    allows it.
 

@@ -19,6 +19,8 @@ from pflib.io import atomic_write_text
 PF_DIR = ".productforge"
 STAGING = "staging"
 MERGED = "_merged"
+DISCARDED = "_discarded"
+ARCHIVES = (MERGED, DISCARDED)
 RAW = "raw"  # delegated-provider output inside a run; never merged (§9.4)
 CACHE = "cache"  # .productforge/cache/ (discover results, …)
 RUN_META = ".run.json"
@@ -100,6 +102,51 @@ def create_staging_run(ws: Path, role: str) -> tuple[str, Path]:
             append_history(ws, {"event": "staging-new", "run_id": run_id, "role": role})
             return run_id, path
     raise UsageError("could not allocate a unique run id", code="BAD_RUN_ID")
+
+
+def pending_runs(ws: Path) -> list[dict[str, Any]]:
+    """Unmerged staging runs: id, role, created_at, staged .md files and records (raw/ excluded)."""
+    root = staging_root(ws)
+    if not root.is_dir():
+        return []
+    out: list[dict[str, Any]] = []
+    for path in sorted(p for p in root.iterdir() if p.is_dir() and p.name not in ARCHIVES):
+        meta_path = path / RUN_META
+        meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.is_file() else {}
+        files = [
+            f for f in path.rglob("*.md")
+            if not any(part.startswith(".") or part == RAW for part in f.relative_to(path).parts)
+        ]  # fmt: skip
+        recs = sum(
+            1 for f in files for line in f.read_text(encoding="utf-8").splitlines()
+            if line.startswith("### ")
+        )  # fmt: skip
+        raw = path / RAW
+        out.append({
+            "run_id": path.name,
+            "role": meta.get("role"),
+            "created_at": meta.get("created_at"),
+            "files": len(files),
+            "blocks": recs,
+            "raw_files": sum(1 for f in raw.rglob("*") if f.is_file()) if raw.is_dir() else 0,
+        })  # fmt: skip
+    return out
+
+
+def discard_run(ws: Path, run_id: str, reason: str) -> Path:
+    """Move a pending run to ``staging/_discarded/`` (kept for audit; never merged)."""
+    import shutil
+
+    if not reason.strip():
+        raise UsageError("discard needs a non-empty --reason", code="DISCARD_NEEDS_REASON")
+    path = staging_dir(ws, run_id)
+    if not path.is_dir():
+        raise UsageError(f"no pending staging run {run_id!r}", code="NO_SUCH_RUN")
+    dest = staging_root(ws) / DISCARDED / run_id
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    shutil.move(str(path), str(dest))
+    append_history(ws, {"event": "discard", "run_id": run_id, "reason": reason.strip()})
+    return dest
 
 
 def append_history(ws: Path, event: dict[str, Any]) -> None:

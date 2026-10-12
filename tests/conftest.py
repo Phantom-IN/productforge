@@ -100,6 +100,19 @@ TASKLET = FIXTURES / "workspaces" / "tasklet"
 INVALID = FIXTURES / "invalid"
 
 
+def copy_snapshot(name: str, dest: Path) -> Path:
+    import shutil
+
+    shutil.copytree(TASKLET / name, dest)
+    return dest
+
+
+@pytest.fixture
+def tasklet_product_model(tmp_path: Path) -> Path:
+    """A writable copy of the Tasklet PRODUCT_MODEL fixture workspace."""
+    return copy_snapshot("PRODUCT_MODEL", tmp_path / "tasklet-pm")
+
+
 @pytest.fixture
 def tasklet_discovery(tmp_path: Path) -> Path:
     """A writable copy of the Tasklet DISCOVERY fixture workspace."""
@@ -139,8 +152,12 @@ def apply_overlay(ws: Path, path: Path) -> str:
     steps += [(parts[i], parts[i + 1], parts[i + 2]) for i in range(1, len(parts), 3)]
     for target_rel, mode_spec, chunk in steps:
         target = ws / target_rel
-        text = target.read_text(encoding="utf-8")
+        text = target.read_text(encoding="utf-8") if target.is_file() else ""
         mode, _, record_id = mode_spec.partition(" ")
+        if mode == "write":  # create or overwrite the whole file
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(chunk, encoding="utf-8")
+            continue
         if mode == "append":
             text = text.rstrip("\n") + "\n\n" + chunk
         else:
@@ -150,4 +167,8 @@ def apply_overlay(ws: Path, path: Path) -> str:
             replacement = [chunk] if mode == "replace" else []
             text = "".join(doc.lines[: rec.start] + replacement + doc.lines[rec.end :])
         target.write_text(text, encoding="utf-8")
+    if meta.get("render", "yes") != "no":
+        from pflib import render
+
+        render.render_all(ws)  # merge always re-renders; keep views fresh like real runs do
     return meta["expect"]

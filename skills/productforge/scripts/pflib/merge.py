@@ -15,14 +15,14 @@ from __future__ import annotations
 
 import os
 import shutil
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from pflib import catalog, ids, records, workspace
+from pflib import catalog, ids, records, render, workspace
 from pflib.catalog import ArtifactSpec, RecordSchema
 from pflib.errors import CheckFailed, UsageError
 from pflib.index import WorkspaceIndex
@@ -54,6 +54,9 @@ class MergeReport:
     documents_updated: list[str] = field(default_factory=list)
     conflicts: list[dict[str, str]] = field(default_factory=list)
     ignored_prose_lines: int = 0
+    amended: list[str] = field(default_factory=list)  # existing records changed by amendments
+    sections_updated: list[str] = field(default_factory=list)  # prose sections in record files
+    rendered: list[str] = field(default_factory=list)  # artifacts whose generated views changed
     dropped: list[str] = field(default_factory=list)  # new sources dropped by research.max_sources
     over_cap: int = 0  # sources still above the cap (kept because other records cite them)
 
@@ -68,6 +71,9 @@ class MergeReport:
             "documents_updated": self.documents_updated,
             "conflicts": self.conflicts,
             "ignored_prose_lines": self.ignored_prose_lines,
+            "amended": self.amended,
+            "sections_updated": self.sections_updated,
+            "rendered": self.rendered,
             "dropped": self.dropped,
             "over_cap": self.over_cap,
         }
@@ -213,8 +219,44 @@ def merge_document_sections(canonical: str | None, staged: str) -> str:
 # --------------------------------------------------------------------------- merge
 
 
-def _collect(run_dir: Path) -> tuple[list[StagedRecord], dict[str, str], dict[str, str], int]:
-    """Returns (staged records, record-file texts by staged rel, document texts by rel, prose)."""
+@dataclass
+class StagedAmendment:
+    rel: str
+    amendment: records.Amendment
+
+
+def _record_file_body_lines(text: str) -> int:
+    """Non-blank, non-heading lines after a record file's header record."""
+    body = text.split("\n## ", 1)[1] if "\n## " in text else ""
+    return sum(1 for ln in body.splitlines()[1:] if ln.strip() and not ln.startswith("#"))
+
+
+def _prose_sections(doc: Document, spec: ArtifactSpec) -> str:
+    """Staged ``##`` sections of a records-kind file that hold no records, are not a schema's
+    record section and contain no generated region (e.g. ``## Domains``) — merged like documents."""
+    record_sections = {s.section for s in spec.schemas if s.section}
+    heads = [s for s in doc.sections if s.level <= 2]
+    out: list[str] = []
+    for i, sec in enumerate(heads):
+        end = heads[i + 1].start if i + 1 < len(heads) else len(doc.lines)
+        block = "".join(doc.lines[sec.start : end])
+        has_records = any(sec.start <= r.start < end for r in doc.records)
+        if sec.level != 2 or has_records or f"## {sec.title}" in record_sections:
+            continue
+        if "pf:generated:start" in block:
+            continue
+        out.append(block if block.endswith("\n") else block + "\n")
+    return "".join(out)
+
+
+def _collect(
+    run_dir: Path,
+) -> tuple[
+    list[StagedRecord], dict[str, str], dict[str, str], int, list[StagedAmendment], dict[str, str]
+]:
+    """Returns (records, record-file texts, documents, prose lines, amendments, prose sections)."""
+    amendments: list[StagedAmendment] = []
+    sections: dict[str, str] = {}
     staged: list[StagedRecord] = []
     record_files: dict[str, str] = {}
     documents: dict[str, str] = {}
@@ -237,6 +279,13 @@ def _collect(run_dir: Path) -> tuple[list[StagedRecord], dict[str, str], dict[st
         if spec.kind == catalog.KIND_DOCUMENT:
             documents[rel] = text
             continue
+        found = records.parse_amendments(text, path=rel)
+        amendments.extend(StagedAmendment(rel, a) for a in found)
+        if found:  # amendment blocks are not prose
+            kept = text.splitlines(keepends=True)
+            for a in reversed(found):
+                del kept[a.start : a.end]
+            text = "".join(kept)
         doc = records.parse_document(text, path=rel)
         if spec.kind == catalog.KIND_RECORD_FILE:
             if len(doc.records) != 1:
@@ -248,7 +297,13 @@ def _collect(run_dir: Path) -> tuple[list[StagedRecord], dict[str, str], dict[st
                 )
             record_files[rel] = text
         else:
-            prose += _count_prose(doc)
+            block = _prose_sections(doc, spec)
+            if block:
+                sections[rel] = block
+            merged_lines = [
+                ln for ln in block.splitlines() if ln.strip() and not ln.startswith("#")
+            ]
+            prose += _count_prose(doc) - len(merged_lines)  # headings are never counted as prose
         for rec in doc.records:
             parsed = ids.parse(rec.id)
             assert parsed is not None
@@ -275,7 +330,7 @@ def _collect(run_dir: Path) -> tuple[list[StagedRecord], dict[str, str], dict[st
             seen[rec.id] = rel
             staged.append(StagedRecord(rel, spec, schema, rec, order))
             order += 1
-    return staged, record_files, documents, prose
+    return staged, record_files, documents, prose, amendments, sections
 
 
 def _count_prose(doc: Document) -> int:
@@ -336,6 +391,75 @@ def _apply_source_cap(
     return [sr for sr in staged if sr.record.id not in drop]
 
 
+def _apply_amendments(
+    ws: Path,
+    amendments: list[StagedAmendment],
+    mapping: dict[str, str],
+    index: WorkspaceIndex,
+    outputs: dict[str, str],
+    current_text: Callable[[str, ArtifactSpec], str],
+    report: MergeReport,
+) -> list[dict[str, Any]]:
+    """Validate every amendment first (all-or-nothing), then apply them to ``outputs``."""
+    if not amendments:
+        return []
+    from pflib import state
+
+    try:
+        open_stage = state.load(ws).state.value
+    except CheckFailed as exc:
+        raise MergeError("amendments need a workspace state.json", code="AMEND_LOCKED") from exc
+    located: list[tuple[StagedAmendment, str, ArtifactSpec, Record]] = []
+    for sa in amendments:
+        a = sa.amendment
+        where = f"{sa.rel}:{a.line}"
+        parsed = ids.parse(a.target, strict=False)
+        hit = None
+        if parsed is not None:
+            candidates = index.records(parsed.prefix)
+            hit = next(((rel, rec) for rel, rec in candidates if rec.id == a.target), None)
+        if hit is None:
+            raise MergeError(f"{where}: amendment target {a.target} does not exist",
+                             code="AMEND_TARGET_MISSING", details={"id": a.target})  # fmt: skip
+        rel, rec = hit
+        spec = catalog.spec_for_path(rel)
+        assert spec is not None and parsed is not None
+        owner = spec.owner_of(parsed.prefix)
+        if owner != open_stage:
+            raise MergeError(
+                f"{where}: {a.target} belongs to {owner}, which is not the open stage "
+                f"({open_stage}); use `pf.py reopen {owner}` to change it",
+                code="AMEND_LOCKED", details={"id": a.target, "owner": owner},
+            )  # fmt: skip
+        changes = {k: v for k, v in a.fields.items() if k != "Why"}
+        bad = sorted(set(changes) - set(records.AMENDABLE_FIELDS))
+        if bad or not changes:
+            raise MergeError(
+                f"{where}: amendments may only set {', '.join(records.AMENDABLE_FIELDS)} "
+                f"(got {', '.join(bad) or 'nothing'})",
+                code="AMEND_FIELD_NOT_ALLOWED", details={"id": a.target, "fields": bad},
+            )  # fmt: skip
+        if not a.fields.get("Why", "").strip():
+            raise MergeError(f"{where}: amendment of {a.target} needs a `- Why:` line",
+                             code="AMEND_NO_REASON", details={"id": a.target})  # fmt: skip
+        located.append((sa, rel, spec, rec))
+    events: list[dict[str, Any]] = []
+    for sa, rel, spec, rec in located:
+        doc = records.parse_document(current_text(rel, spec), path=rel)
+        current = doc.record(rec.id)
+        assert current is not None
+        updated = _copy(current)
+        changes = {
+            k: rewrite_provisional(v, mapping) for k, v in sa.amendment.fields.items() if k != "Why"
+        }
+        for key, value in changes.items():
+            updated.set(key, value)
+        outputs[rel] = records.serialize_document(doc, {rec.id: updated})
+        report.amended.append(rec.id)
+        events.append({"id": rec.id, "fields": changes, "why": sa.amendment.fields["Why"].strip()})
+    return events
+
+
 def _skeleton(spec: ArtifactSpec) -> str:
     return f"# {spec.title}\n"
 
@@ -350,7 +474,9 @@ def merge(ws: Path, run_id: str) -> MergeReport:
 
     with merge_lock(ws):
         report = MergeReport(run_id=run_id)
-        staged, record_files, documents, report.ignored_prose_lines = _collect(run_dir)
+        staged, record_files, documents, report.ignored_prose_lines, amendments, sections = (
+            _collect(run_dir)
+        )
         index = WorkspaceIndex(ws)
         staged = _apply_source_cap(ws, staged, record_files, documents, index, report)
         marks = workspace.load_id_marks(ws)
@@ -386,11 +512,16 @@ def merge(ws: Path, run_id: str) -> MergeReport:
             if key is not None and key in canon_keys[prefix]:
                 final = canon_keys[prefix][key][1].id
                 canon_unions.setdefault(final, []).append(sr)
-                report.deduped += 1
             elif key is not None and (prefix, key) in run_keys:
                 final = run_keys[(prefix, key)]
                 staged_unions.setdefault(final, []).append(sr)
+            else:
+                final = ""
+            if final:
                 report.deduped += 1
+                if sr.spec.kind == catalog.KIND_RECORD_FILE:
+                    # only the header record unions; the duplicate file's body is not merged
+                    report.ignored_prose_lines += _record_file_body_lines(record_files[sr.rel])
             else:
                 next_num[prefix] += 1
                 final = ids.format_id(prefix, next_num[prefix])
@@ -404,6 +535,8 @@ def merge(ws: Path, run_id: str) -> MergeReport:
         # Every provisional reference anywhere in the run must resolve.
         texts = [records.serialize_record(sr.record) for sr in staged]
         texts += list(record_files.values()) + list(documents.values())
+        texts += ["\n".join(sa.amendment.fields.values()) for sa in amendments]
+        texts += list(sections.values())
         dangling = sorted(set().union(*(provisional_refs(t) for t in texts)) - set(mapping))
         if dangling:
             raise MergeError(
@@ -451,7 +584,21 @@ def merge(ws: Path, run_id: str) -> MergeReport:
                     current_text(rel, sr.spec), [new_rec], sr.schema.section
                 )
 
-        # 3) documents (section-level merge)
+        # 3) amendments to existing records of the open stage
+        amend_events = _apply_amendments(
+            ws, amendments, mapping, index, outputs, current_text, report
+        )
+
+        # 4) prose sections inside records-kind files (e.g. "## Domains")
+        for rel, block in sorted(sections.items()):
+            section_spec = catalog.spec_for_staged_path(rel)
+            assert section_spec is not None
+            outputs[rel] = merge_document_sections(
+                current_text(rel, section_spec), rewrite_provisional(block, mapping)
+            )
+            report.sections_updated.append(rel)
+
+        # 5) documents (section-level merge)
         for rel, text in sorted(documents.items()):
             path = ws / rel
             canonical = path.read_text(encoding="utf-8") if path.is_file() else None
@@ -468,6 +615,9 @@ def merge(ws: Path, run_id: str) -> MergeReport:
             atomic_write_text(target, text)
             report.files_written.append(rel)
 
+        report.rendered = render.render_all(ws)
+        for event in amend_events:
+            workspace.append_history(ws, {"event": "amend", "run_id": run_id, **event})
         for prefix, number in next_num.items():
             marks[prefix] = max(marks.get(prefix, 0), number)
         workspace.save_id_marks(ws, marks)
@@ -504,7 +654,7 @@ def allocate_next(ws: Path, prefix: str) -> str:
 
 
 def _preflight_ignore(directory: str, names: list[str]) -> set[str]:
-    return {n for n in names if n in (workspace.MERGED, "cache")}
+    return {n for n in names if n in (*workspace.ARCHIVES, "cache")}
 
 
 def preflight(ws: Path, run_id: str) -> dict[str, Any]:

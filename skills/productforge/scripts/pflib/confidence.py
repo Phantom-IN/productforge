@@ -41,9 +41,17 @@ class SourceIndex:
     evidence: dict[str, list[str]] = field(default_factory=dict)
 
     def effective_sources(self, rec: Record) -> list[SourceInfo]:
+        return self._walk(rec.id, list(records.parse_refs(rec.get("Evidence"))))
+
+    def effective_sources_of(self, record_id: str) -> list[SourceInfo]:
+        """Sources reached from one record ID (itself, if it is a source)."""
+        if record_id in self.sources:
+            return [self.sources[record_id]]
+        return self._walk(record_id, list(self.evidence.get(record_id, [])))
+
+    def _walk(self, start: str, stack: list[str]) -> list[SourceInfo]:
         found: dict[str, SourceInfo] = {}
-        seen: set[str] = {rec.id}
-        stack = list(records.parse_refs(rec.get("Evidence")))
+        seen: set[str] = {start}
         while stack:
             ref = stack.pop()
             if ref in seen:

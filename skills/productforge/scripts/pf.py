@@ -36,13 +36,16 @@ from pflib import (  # noqa: E402
     config,
     deps,
     discover,
+    features,
     gates,
     merge,
     metrics,
+    render,
     research,
     scaffold,
     state,
     validators,
+    workflows,
     workspace,
 )
 from pflib.errors import (  # noqa: E402
@@ -334,6 +337,25 @@ def _cmd_research_plan(args: argparse.Namespace) -> dict[str, Any]:
     return research.plan(ws)
 
 
+def _cmd_feature_plan(args: argparse.Namespace) -> dict[str, Any]:
+    ws = workspace.resolve_workspace(args.workspace)
+    return features.plan(ws)
+
+
+def _cmd_workflow_candidates(args: argparse.Namespace) -> dict[str, Any]:
+    ws = workspace.resolve_workspace(args.workspace)
+    return workflows.candidates(ws)
+
+
+def _cmd_render(args: argparse.Namespace) -> dict[str, Any]:
+    ws = workspace.resolve_workspace(args.workspace)
+    return {"rendered": render.render_all(ws, only=args.artifact)}
+
+
+def _add_render(p: argparse.ArgumentParser) -> None:
+    p.add_argument("--artifact", metavar="PATH", help="only this artifact")
+
+
 def _cmd_set_scope(args: argparse.Namespace) -> dict[str, Any]:
     ws = workspace.resolve_workspace(args.workspace)
     st = scaffold.set_scope(ws, args.text, accepted=args.accepted, source=args.source)
@@ -347,6 +369,19 @@ def _cmd_next_id(args: argparse.Namespace) -> dict[str, Any]:
 
 def _cmd_staging(args: argparse.Namespace) -> dict[str, Any]:
     ws = workspace.resolve_workspace(args.workspace)
+    if args.action == "list":
+        return {"pending": workspace.pending_runs(ws)}
+    if args.action == "discard":
+        if not args.run_id or not args.reason:
+            raise UsageError(
+                "usage: pf.py staging discard <run-id> --reason TEXT", code="USAGE_ERROR"
+            )
+        return {
+            "discarded": args.run_id,
+            "path": str(workspace.discard_run(ws, args.run_id, args.reason)),
+        }
+    if not args.role:
+        raise UsageError("usage: pf.py staging new --role ROLE", code="USAGE_ERROR")
     run_id, path = workspace.create_staging_run(ws, args.role)
     return {"run_id": run_id, "path": str(path)}
 
@@ -437,8 +472,10 @@ def _add_next_id(p: argparse.ArgumentParser) -> None:
 
 
 def _add_staging(p: argparse.ArgumentParser) -> None:
-    p.add_argument("action", choices=["new"], help="staging action")
-    p.add_argument("--role", required=True, help="role agent that will write the run")
+    p.add_argument("action", choices=["new", "list", "discard"], help="staging action")
+    p.add_argument("run_id", nargs="?", help="run to discard")
+    p.add_argument("--role", help="role agent that will write the run (new)")
+    p.add_argument("--reason", help="why the run is discarded (discard)")
 
 
 def _add_merge(p: argparse.ArgumentParser) -> None:
@@ -517,6 +554,19 @@ SUBCOMMANDS: list[tuple[str, str, Callable[[argparse.ArgumentParser], None], Han
         "partitions, budgets, coverage and scope advice for research",
         _add_nothing,
         _cmd_research_plan,
+    ),
+    (
+        "feature-plan",
+        "domains, features per domain, surfaces without features",
+        _add_nothing,
+        _cmd_feature_plan,
+    ),
+    ("render", "re-render generated views from records", _add_render, _cmd_render),
+    (
+        "workflow-candidates",
+        "propose workflows to reconstruct (deterministic)",
+        _add_nothing,
+        _cmd_workflow_candidates,
     ),
     (
         "score",

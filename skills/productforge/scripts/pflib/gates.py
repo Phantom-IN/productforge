@@ -195,7 +195,7 @@ def _state_file_valid(ws: Path) -> ConditionResult:
 def _no_unmerged_staging(ws: Path) -> ConditionResult:
     root = workspace.staging_root(ws)
     pending = (
-        sorted(p.name for p in root.iterdir() if p.is_dir() and p.name != workspace.MERGED)
+        sorted(p.name for p in root.iterdir() if p.is_dir() and p.name not in workspace.ARCHIVES)
         if root.is_dir()
         else []
     )

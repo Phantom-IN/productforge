@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pflib import ids
+from pflib import ids, records
 from pflib.index import WorkspaceIndex
 
 CONFIDENCE_STATES = ("CONFIRMED", "PROBABLE", "INFERRED", "UNKNOWN")
@@ -45,17 +45,10 @@ def confidence_breakdown(ws: Path, index: WorkspaceIndex | None = None) -> dict[
     return out
 
 
-INACTIVE_STATUS_PREFIXES = ("superseded-by", "rejected")
-
-
 def active_claims(ws: Path, index: WorkspaceIndex | None = None) -> list[str]:
     """IDs of D records that are neither superseded nor rejected."""
     index = index or WorkspaceIndex(ws)
-    return [
-        rec.id
-        for _, rec in index.records("D")
-        if not rec.get("Status").strip().startswith(INACTIVE_STATUS_PREFIXES)
-    ]
+    return [rec.id for _, rec in index.records("D") if records.is_active(rec)]
 
 
 def domains(ws: Path, index: WorkspaceIndex | None = None) -> int:

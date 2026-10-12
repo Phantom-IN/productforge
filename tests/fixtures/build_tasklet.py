@@ -7,6 +7,8 @@ Snapshots (tests/fixtures/workspaces/tasklet/):
 - DISCOVERY          — a gate-passing DISCOVERY workspace.
 - DISCOVERY_FAILING  — fails exactly G-DISC-TIER1 and G-DISC-MIN-CLAIMS (no Tier 1 source, too few
                        claims) while validating cleanly.
+- PRODUCT_MODEL      — DISCOVERY advanced (locks written) + a 31-feature matrix across 5 domains;
+                       generated regions are rendered by pflib itself.
 
 Everything is fictional ("Tasklet", *.example hosts). Never put real third-party content here.
 Existing records must stay byte-identical (lock/overlay tests depend on them): append, don't edit.
@@ -16,9 +18,11 @@ from __future__ import annotations
 
 import json
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent / "workspaces" / "tasklet"
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "skills" / "productforge" / "scripts"))
 
 STATE = {
     "schema_version": 1,
@@ -290,6 +294,197 @@ SURFACES_HEAD = (
 )
 
 
+DOMAINS = """
+- Tasks & boards: creating, assigning and tracking tasks on boards (D-001, D-037)
+- Projects: grouping related tasks (D-021)
+- Collaboration: comments, notifications, guests and search (D-038, D-019, D-004)
+- Workspace & access: workspaces, members, roles, billing and sign-in (D-025, D-027)
+- Integrations & API: the developer API and third-party integrations (D-003, D-033)
+"""
+
+
+def f(i: int, feature: str, domain: str, parent: str, surface: str, ev: str, tier: str,
+      complexity: str, notes: str = "") -> str:  # fmt: skip
+    return (
+        f"\n### F-{i:03d} — {feature}\n- Domain: {domain}\n- Feature: {feature}\n"
+        f"- Parent:{' ' + parent if parent else ''}\n- Surface: {surface}\n- Evidence: {ev}\n"
+        f"- Confidence: CONFIRMED\n- Plan tier: {tier}\n- Complexity: {complexity}\n"
+        f"- Notes:{' ' + notes if notes else ''}\n"
+    )
+
+
+TB, PJ, CO, WA, IA = (
+    "Tasks & boards",
+    "Projects",
+    "Collaboration",
+    "Workspace & access",
+    "Integrations & API",
+)
+FEATURES = [
+    f(1, "Tasks", TB, "", "PS-03", "D-001, D-024", "all", "Medium", "Core object of the product."),
+    f(2, "Assignment", TB, "F-001", "PS-03", "D-001, D-019", "all", "Low", "Single assignee."),
+    f(3, "Due dates and reminders", TB, "F-001", "PS-03", "D-023", "all", "Low"),
+    f(4, "Statuses", TB, "F-001", "PS-03", "D-024", "all", "Low", "Fixed status set."),
+    f(5, "Labels", TB, "F-001", "PS-03", "D-014", "all", "Low", "Defined per workspace."),
+    f(6, "Attachments", TB, "F-001", "PS-03", "D-039", "all", "Medium", "Needs object storage."),
+    f(7, "Recurring tasks", TB, "F-001", "PS-03", "D-042, D-005", "all", "Medium", "Needs a scheduler."),
+    f(8, "Board view", TB, "", "PS-03", "D-037", "all", "Medium"),
+    f(9, "Live updates", TB, "", "PS-03", "D-007", "all", "High", "Realtime propagation to clients."),
+    f(10, "Activity history", TB, "F-001", "PS-05", "D-012", "all", "Medium", "Append-only log."),
+    f(11, "Projects", PJ, "", "PS-04", "D-021, D-002", "all", "Low"),
+    f(12, "Project archive and restore", PJ, "F-011", "PS-04", "D-022", "all", "Low"),
+    f(13, "Optional project membership", PJ, "F-011", "PS-04", "D-002", "all", "Low"),
+    f(14, "Comments", CO, "", "PS-03", "D-038", "all", "Low"),
+    f(15, "Mentions", CO, "F-014", "PS-03", "D-038", "all", "Low"),
+    f(16, "In-app notifications", CO, "", "PS-05", "D-019", "all", "Medium"),
+    f(17, "Email digests", CO, "F-016", "PS-05", "D-020", "all", "Medium", "Scheduled job per member."),
+    f(18, "Guest access", CO, "", "PS-06", "D-004", "unknown", "Medium", "Plan gating disputed (U-002)."),
+    f(19, "Global search", CO, "", "PS-03", "D-036", "all", "Medium", "Spans tasks and projects."),
+    f(20, "Workspaces", WA, "", "PS-06", "D-025", "all", "Low", "Top-level container."),
+    f(21, "Member invitations", WA, "F-020", "PS-02", "D-026", "all", "Low"),
+    f(22, "Roles", WA, "F-020", "PS-06", "D-027", "all", "Medium", "Owner, admin, member, guest."),
+    f(23, "Billing management", WA, "F-020", "PS-06", "D-028, D-040", "paid", "Medium"),
+    f(24, "Sign-in", WA, "", "PS-02", "D-029", "all", "Medium", "Magic links and Google."),
+    f(25, "Public REST API", IA, "", "PS-07", "D-003, D-032", "all", "High"),
+    f(26, "Personal access tokens", IA, "F-025", "PS-07", "D-030", "all", "Low"),
+    f(27, "Webhooks", IA, "F-025", "PS-07", "D-031", "all", "Medium", "Outbound delivery with retries."),
+    f(28, "Calendar sync", IA, "", "PS-06", "D-033", "all", "Medium"),
+    f(29, "Chat notifications", IA, "", "PS-06", "D-034", "all", "Low"),
+    f(30, "Git commit linking", IA, "", "PS-06", "D-035", "all", "Medium"),
+    f(31, "Plans and pricing", WA, "", "PS-01", "D-040", "all", "Low", "Free plan up to five members."),
+]  # fmt: skip
+
+
+def wf(i: int, name: str, actor: str, trigger: str, feats: str, surfaces: str, ev: str,
+       pre: str, outcome: str, steps: list[str], variations: list[str], reqs: list[str],
+       questions: str = "") -> tuple[str, str]:  # fmt: skip
+    from pflib import catalog
+
+    body = (
+        f"### W-{i:03d} — {name}\n- Actor: {actor}\n- Trigger: {trigger}\n- Features: {feats}\n"
+        f"- Surfaces: {surfaces}\n- Evidence: {ev}\n- Confidence: CONFIRMED\n"
+        f"- Preconditions:{' ' + pre if pre else ''}\n- Outcome: {outcome}\n\n## Steps\n\n"
+        + "".join(f"{n}. {s}\n" for n, s in enumerate(steps, 1))
+        + "\n## Variations & edge cases\n\n"
+        + "".join(f"- {v}\n" for v in variations)
+        + "\n## Engineering requirements surfaced\n\n"
+        + "".join(f"- {r}\n" for r in reqs)
+        + "\n## Open questions\n\n"
+        + (f"- {questions}\n" if questions else "- None yet.\n")
+    )
+    return f"research/workflows/W-{i:03d}-{catalog.slugify(name)}.md", body
+
+
+OBS, SYS = "[observed]", "[implied-system]"
+WORKFLOWS = [
+    wf(1, "Create a task", "Member", "Member adds a task on the board", "F-001, F-004, F-008", "PS-03", "D-024, D-037",
+       "Member belongs to the workspace", "A new task appears on the board",
+       [f"{OBS} Member opens the board and adds a task to a status column — D-037",
+        f"{OBS} Member enters a title; the task starts in To do — D-024",
+        f"{OBS} Member may set an assignee, a due date and labels — D-001, D-023, D-014",
+        f"{SYS} Check the member may create tasks in this workspace — F-022",
+        f"{SYS} Persist the task with its workspace and optional project — F-001, D-002",
+        f"{SYS} Append an activity entry for the task — F-010",
+        f"{SYS} Index the task for search — F-019",
+        f"{SYS} Broadcast the change to connected clients — F-009",
+        f"{SYS} Notify the assignee, if one was set — F-016"],
+       ["Guests can only comment, not create tasks (D-004)", "Free plans are limited to five members (D-040)"],
+       ["Step 5: tasks reference a workspace and an optional project", "Step 7: a search index over tasks",
+        "Step 8: realtime fan-out of task changes", "Step 9: notifications triggered by task events"]),
+    wf(2, "Assign a task", "Member", "Member picks an assignee on a task", "F-002, F-016", "PS-03, PS-05", "D-001, D-019",
+       "The task exists", "The task has one assignee who is notified",
+       [f"{OBS} Member chooses one assignee from the workspace members — D-001",
+        f"{OBS} The assignee receives an in-app notification — D-019",
+        f"{SYS} Replace any previous assignee (one assignee per task) — F-002",
+        f"{SYS} Record the change in the task's activity — F-010",
+        f"{SYS} Create the notification for the new assignee — F-016"],
+       ["Reassigning notifies the new assignee only (D-044)"],
+       ["Step 3: single nullable assignee reference", "Step 5: notification on assignment change"]),
+    wf(3, "Invite a member", "Admin", "Admin invites someone by email", "F-021, F-022", "PS-06, PS-02", "D-026, D-027",
+       "Admin role in the workspace", "The invitee joins with a role",
+       [f"{OBS} Admin enters an email address and a role — D-026, D-027",
+        f"{OBS} The invitee follows the emailed link and signs in — D-029",
+        f"{SYS} Check the admin may invite members — F-022",
+        f"{SYS} Create a pending invitation and send the email — F-021",
+        f"{SYS} On acceptance create the membership with the chosen role — F-020"],
+       ["Free plan member limit blocks extra invitations (D-040)"],
+       ["Step 4: invitation tokens with expiry", "Step 5: workspace membership with a role"], "U-002"),
+    wf(4, "Search the workspace", "Member", "Member types in the search box", "F-019", "PS-03", "D-036",
+       "", "Matching tasks and projects are listed",
+       [f"{OBS} Member types a query and sees tasks and projects together — D-036",
+        f"{SYS} Query a combined index of tasks and projects scoped to the workspace — F-019, D-043",
+        f"{SYS} Return only results the member may see — F-022"],
+       ["Guests see only shared tasks (D-004)"],
+       ["Step 2: multi-entity search scoped by workspace", "Step 3: permission filtering of results"]),
+    wf(5, "Comment on a task", "Member or guest", "Someone writes a comment", "F-014, F-015", "PS-03", "D-038, D-004",
+       "Access to the task", "The comment appears and mentioned members are told",
+       [f"{OBS} A member or guest writes a comment, optionally mentioning members — D-038, D-004",
+        f"{SYS} Persist the comment on the task — F-014",
+        f"{SYS} Notify mentioned members — F-015, F-016",
+        f"{SYS} Broadcast the new comment to viewers of the task — F-009"],
+       ["Guests may comment only on tasks shared with them (D-004)"],
+       ["Step 3: mention parsing and notifications"]),
+    wf(6, "Connect the calendar integration", "Member", "Member enables calendar sync", "F-028", "PS-06", "D-033",
+       "", "Due dates appear in the external calendar",
+       [f"{OBS} Member connects a calendar from the integrations settings — D-033",
+        f"{SYS} Store the integration credentials encrypted — F-028, D-016",
+        f"{SYS} Sync due dates to the calendar when they change — F-028, F-003"],
+       ["Disconnecting stops the sync"], ["Step 2: encrypted third-party credentials", "Step 3: outbound sync job"]),
+    wf(7, "Change a task's status", "Member", "Member moves a task to another column", "F-004, F-009", "PS-03", "D-024, D-007",
+       "The task exists", "The task shows its new status for everyone",
+       [f"{OBS} Member drags a task to another status column — D-024, D-037",
+        f"{OBS} Teammates see the move without reloading — D-007",
+        f"{SYS} Persist the new status and log it — F-004, F-010",
+        f"{SYS} Broadcast the change to connected clients — F-009"],
+       [], ["Step 4: realtime propagation within seconds (D-008)"]),
+    wf(8, "Archive a project", "Member", "Project owner archives a project", "F-012", "PS-04", "D-022",
+       "The member owns the project", "The project and its tasks leave the boards until restored",
+       [f"{OBS} The owner archives the project; it disappears from boards — D-022",
+        f"{OBS} The project can be restored later — D-022",
+        f"{SYS} Mark the project archived without deleting its tasks — F-012"],
+       [], ["Step 3: archive is a reversible state, not a delete"]),
+]  # fmt: skip
+
+
+def feature_matrix() -> str:
+    template = (
+        Path(__file__).resolve().parents[2]
+        / "skills/productforge/templates/research/FEATURE_MATRIX.md"
+    ).read_text()
+    text = template.replace("{{product_name}}", "Tasklet")
+    head, _, rest = text.partition("## Domains\n")
+    rest = rest.split("\n## Hierarchy", 1)[1]
+    return head + "## Domains\n" + DOMAINS + "\n## Hierarchy" + rest + "".join(FEATURES)
+
+
+def product_model(discovery: dict[str, str]) -> dict[str, str]:
+    """DISCOVERY advanced to PRODUCT_MODEL with real lock snapshots and rendered views."""
+    from pflib import render, state
+
+    files = dict(discovery)
+    files["research/FEATURE_MATRIX.md"] = feature_matrix()
+    for rel, body in WORKFLOWS:
+        files[rel] = body
+    readme = (
+        Path(__file__).resolve().parents[2]
+        / "skills/productforge/templates/research/research-README.md"
+    ).read_text()
+    files["research/README.md"] = readme.replace("{{product_name}}", "Tasklet").replace(
+        "{{target_url}}", "https://tasklet.example"
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        ws = Path(tmp)
+        for rel, text in files.items():
+            (ws / rel).parent.mkdir(parents=True, exist_ok=True)
+            (ws / rel).write_text(text, encoding="utf-8")
+        st = state.load(ws)
+        st.locks["DISCOVERY"] = state.snapshot_locks(ws, state.State.DISCOVERY)
+        state.transition(st, state.State.PRODUCT_MODEL, "2026-10-09T00:00:00Z")
+        state.save(ws, st)
+        render.render_all(ws)
+        return {rel: (ws / rel).read_text(encoding="utf-8") for rel in files}
+
+
 def snapshots() -> dict[str, dict[str, str]]:
     state = json.dumps(STATE, indent=2) + "\n"
     full = {
@@ -317,7 +512,7 @@ def snapshots() -> dict[str, dict[str, str]]:
         UNKNOWNS_HEAD + UNKNOWNS + NEW_UNKNOWNS.split("\n### U-008")[0] + "\n"
     )
     failing["research/product-surfaces.md"] = SURFACES_HEAD + SURFACES[0]
-    return {"DISCOVERY": full, "DISCOVERY_FAILING": failing}
+    return {"DISCOVERY": full, "DISCOVERY_FAILING": failing, "PRODUCT_MODEL": product_model(full)}
 
 
 def main(argv: list[str]) -> int:
