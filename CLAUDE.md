@@ -28,7 +28,7 @@ We are building **v1** — phases in [`plans/v1/`](plans/v1/README.md).
 3. **Target ≠ ours.** `research/` describes the target product; `spec/` ARCHITECTURE/ADRs/PRODUCT_SPEC
    describe *our* product. A target's internal technology stays `UNKNOWN` unless a Tier ≤ 2 source
    states it. Our architecture is never presented as a claim about theirs.
-4. **One identity scheme.** Record IDs (`S- D- U- PS- F- W- E- RL- I- A- C- R- INV- ADR-`) are
+4. **One identity scheme.** Record IDs (`S- D- U- PS- F- W- E- RL- PR- I- A- C- R- INV- ADR-`, full list in `ids.PREFIXES`) are
    allocated only by `pf.py`, never reused, never renumbered. Superseded records stay with
    `Status: superseded-by <ID>`.
 5. **Agents write staging; only `pf.py merge` writes canonical record files.** Agents use provisional

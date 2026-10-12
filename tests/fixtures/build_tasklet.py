@@ -446,6 +446,162 @@ WORKFLOWS = [
 ]  # fmt: skip
 
 
+# ---- Phase 10: domain model, roles and permission rules (appended after the DISCOVERY lock)
+MODEL_UNKNOWNS = """
+### U-009 — Who may delete tasks?
+- Question: Can members delete tasks, or only owners and admins?
+- Reason it matters: Decides the delete permission and whether deletion is soft.
+- Available evidence: D-024, D-027
+- V1 default:
+- Impact: Medium
+- Related: D-027
+
+### U-010 — Who may invite members and change roles?
+- Question: Can members invite people or change roles, or only owners and admins?
+- Reason it matters: Shapes the membership permissions and the invitation flow.
+- Available evidence: D-026, D-027
+- V1 default:
+- Impact: Medium
+- Related: D-026, D-027
+
+### U-011 — Who manages labels and integrations?
+- Question: May any member define labels and connect integrations, or only admins?
+- Reason it matters: Workspace-wide settings usually need an elevated role.
+- Available evidence: D-014, D-033
+- V1 default:
+- Impact: Low
+- Related: D-014, D-033
+"""
+
+
+def ent(i: int, title: str, resp: str, identity: str, key: str, stable: str, rels: str,
+        lifecycle: str, mutable: str, immutable: str, deletion: str, owner: str, authz: str,
+        feats: str, ev: str, conf: str = "CONFIRMED", **extra: str) -> str:  # fmt: skip
+    s = (
+        f"\n### E-{i:02d} — {title}\n- Responsibility: {resp}\n- Identity: {identity}\n"
+        f"- Human-readable key: {key}\n- Stable after creation: {stable}\n"
+        f"- Relationships: {rels}\n- Lifecycle: {lifecycle}\n- Mutable fields: {mutable}\n"
+        f"- Immutable fields: {immutable}\n- Deletion semantics: {deletion}\n"
+        f"- Ownership: {owner}\n- Authorization implications: {authz}\n- Features: {feats}\n"
+        f"- Evidence: {ev}\n- Confidence: {conf}\n"
+    )
+    for k, v in extra.items():
+        s += f"- {k.replace('_', ' ').capitalize()}: {v}\n"
+    return s
+
+
+ENTITIES = [
+    ent(1, "Workspace", "Top-level container for members, projects, tasks and labels", "Opaque workspace ID (format not public)", "Workspace name", "unknown",
+        "E-03 (1:N, optional) memberships; E-04 (1:N, optional) projects", "created → active", "name, plan", "id, created at",
+        "restrict — workspace deletion is not documented", "The member with the owner role", "Every record is scoped to one workspace; every query filters by it",
+        "F-020, F-023", "D-025, D-027, D-028"),
+    ent(2, "User", "A person who signs in", "Email address (magic link or Google sign-in)", "Email address", "unknown",
+        "E-03 (1:N, optional) memberships", "invited → active", "none — no profile editing is documented", "id",
+        "orphan-allowed — content keeps its author after a member leaves", "The user themself", "Identity is global; rights come from memberships",
+        "F-024", "D-029, D-026"),
+    ent(3, "Membership", "A user's role in one workspace", "(workspace, user) pair", "—", "yes",
+        "E-01 (N:1, required) workspace; E-02 (N:1, required) user", "invited → active → removed", "role", "workspace, user",
+        "cascade — removing a member deletes only the membership", "The workspace", "Carries the role every permission check reads",
+        "F-021, F-022", "D-026, D-027"),
+    ent(4, "Project", "Groups related tasks under one owner", "Opaque project ID (format not public)", "Project name", "unknown",
+        "E-01 (N:1, required) workspace; E-03 (N:1, required) owner", "active → archived → restored", "name, owner, archived", "id, workspace",
+        "archive — archived projects can be restored", "One owning member", "Archive is limited to the project's owner",
+        "F-011, F-012", "D-021, D-022"),
+    ent(5, "Task", "The unit of work tracked on boards", "Opaque task ID exposed by the REST API", "Task title", "unknown",
+        "E-01 (N:1, required) workspace; E-04 (N:1, optional) project; E-03 (N:1, optional) assignee; E-07 (N:M, optional) labels",
+        "To do → In progress → Done", "title, status, assignee, due date, reminder, labels", "id, workspace",
+        "restrict — task deletion is not documented (U-009)", "The workspace", "Guests see only tasks shared with them",
+        "F-001, F-002, F-003, F-004, F-005", "D-001, D-002, D-024, D-003", "CONFIRMED", related_unknown="U-009"),
+    ent(6, "Comment", "Discussion on a task, with @-mentions", "Opaque comment ID (format not public)", "—", "unknown",
+        "E-05 (N:1, required) task; E-02 (N:1, required) author", "posted", "body", "task, author",
+        "cascade — removed with its task (inferred)", "Its author", "Guests may comment on shared tasks",
+        "F-014, F-015", "D-038, D-004"),
+    ent(7, "Label", "A workspace-wide tag tasks may carry", "Opaque label ID (format not public)", "Label name", "unknown",
+        "E-01 (N:1, required) workspace; E-05 (N:M, optional) tasks", "created → in use", "name", "workspace",
+        "cascade — removing a label removes it from tasks (inferred)", "The workspace", "Defined per workspace (U-011)",
+        "F-005", "D-014", "CONFIRMED", related_unknown="U-011"),
+    ent(8, "Attachment", "A file attached to a task", "Opaque attachment ID (format not public)", "File name", "unknown",
+        "E-05 (N:1, required) task", "uploaded", "none — files are replaced, not edited", "task, file",
+        "cascade — removed with its task (inferred)", "The uploading member", "Needs object storage with the task's access rules",
+        "F-006", "D-039"),
+    ent(9, "Notification", "An in-app alert for one member", "Opaque notification ID (format not public)", "—", "unknown",
+        "E-02 (N:1, required) recipient; E-05 (N:1, optional) task", "unread → read", "none", "recipient, task",
+        "orphan-allowed — kept after the task changes", "Its recipient", "Visible only to its recipient",
+        "F-016", "D-019"),
+    ent(10, "Integration", "A connection to a calendar, chat or git service", "Opaque integration ID (format not public)", "Provider name", "unknown",
+        "E-01 (N:1, required) workspace", "connected → disconnected", "configuration", "workspace, provider",
+        "restrict — disconnecting is documented, deletion is not", "The workspace", "Connecting integrations may need an elevated role (U-011)",
+        "F-028, F-029, F-030", "D-033, D-034, D-035", "CONFIRMED", related_unknown="U-011"),
+    ent(11, "Activity event", "One entry in a task's history", "Opaque event ID (format not public)", "—", "yes",
+        "E-05 (N:1, required) task; E-02 (N:1, optional) actor", "appended", "none — append-only", "everything",
+        "cascade — retention is unknown (U-001)", "The workspace", "Readable by whoever can read the task",
+        "F-010", "D-012", "CONFIRMED", related_unknown="U-001"),
+]  # fmt: skip
+
+
+def role(i: int, title: str, desc: str, inherits: str, ev: str) -> str:
+    return (
+        f"\n### RL-{i:02d} — {title}\n- Description: {desc}\n- Scope: workspace\n"
+        f"- Inherits: {inherits}\n- Evidence: {ev}\n- Confidence: CONFIRMED\n"
+    )
+
+
+ROLES = [
+    role(1, "Owner", "Owns the workspace; everything an admin can do", "RL-02", "D-027"),
+    role(2, "Admin", "Manages members, billing and settings", "RL-03", "D-027, D-028"),
+    role(3, "Member", "Creates and works on tasks and projects", "none", "D-027"),
+    role(4, "Guest", "Comments on tasks shared with them", "none", "D-027, D-004"),
+]
+
+
+def rule(i: int, resource: str, action: str, grants: str, ev: str, limited: str = "",
+         conf: str = "CONFIRMED", unknown: str = "", title: str = "") -> str:  # fmt: skip
+    s = (
+        f"\n### PR-{i:03d} — {title or action.capitalize() + ' ' + NAMES[resource]}\n"
+        f"- Resource: {resource}\n- Action: {action}\n"
+        f"- Grants: {grants}\n- Limited means:{' ' + limited if limited else ''}\n"
+        f"- Evidence: {ev}\n- Confidence: {conf}\n"
+    )
+    return s + (f"- Related unknown: {unknown}\n" if unknown else "")
+
+
+NAMES = {"E-01": "workspace", "E-03": "membership", "E-04": "project", "E-05": "task",
+         "E-06": "comment", "E-07": "labels", "E-08": "attachment", "E-10": "integrations"}  # fmt: skip
+ALL = "RL-01 ✓, RL-02 ✓, RL-03 ✓"
+RULES = [
+    rule(1, "E-01", "manage-billing", "RL-01 ✓, RL-02 ✓, RL-03 ✗, RL-04 ✗", "D-028", title="Manage workspace billing"),
+    rule(2, "E-03", "create", "RL-01 ✓, RL-02 ✓, RL-03 ?, RL-04 ✗", "D-026", conf="PROBABLE", unknown="U-010"),
+    rule(3, "E-03", "update", "RL-01 ✓, RL-02 ?, RL-03 ✗, RL-04 ✗", "D-027", conf="PROBABLE", unknown="U-010", title="Change a member's role"),
+    rule(4, "E-04", "create", f"{ALL}, RL-04 ✗", "D-021, D-004"),
+    rule(5, "E-04", "archive", "RL-01 ✓, RL-02 ✓, RL-03 Limited, RL-04 ✗", "D-022", limited="RL-03: only the project's owner"),
+    rule(6, "E-05", "create", f"{ALL}, RL-04 ✗", "D-004, D-024"),
+    rule(7, "E-05", "read", f"{ALL}, RL-04 Limited", "D-004", limited="RL-04: only tasks shared with them"),
+    rule(8, "E-05", "update", f"{ALL}, RL-04 ✗", "D-004, D-001"),
+    rule(9, "E-05", "delete", "RL-01 ✓, RL-02 ✓, RL-03 ?, RL-04 ✗", "D-027", conf="PROBABLE", unknown="U-009"),
+    rule(10, "E-06", "create", f"{ALL}, RL-04 Limited", "D-004, D-038", limited="RL-04: only on tasks shared with them"),
+    rule(11, "E-07", "manage", "RL-01 ✓, RL-02 ✓, RL-03 ?, RL-04 ✗", "D-014", conf="PROBABLE", unknown="U-011"),
+    rule(12, "E-08", "create", f"{ALL}, RL-04 ✗", "D-039, D-004"),
+    rule(13, "E-10", "manage", "RL-01 ✓, RL-02 ✓, RL-03 ?, RL-04 ✗", "D-033", conf="PROBABLE", unknown="U-011"),
+]  # fmt: skip
+
+
+def spec_file(name: str, sections: dict[str, str]) -> str:
+    """A spec/ template with record blocks appended under the given headings."""
+    text = (
+        Path(__file__).resolve().parents[2] / f"skills/productforge/templates/spec/{name}"
+    ).read_text()
+    text = text.replace("{{product_name}}", "Tasklet").replace(
+        "{{target_url}}", "https://tasklet.example"
+    )
+    for heading, body in sections.items():
+        head, sep, rest = text.partition(f"\n{heading}\n")
+        assert sep, heading
+        nxt = rest.find("\n## ")
+        rest = rest + body if nxt < 0 else rest[:nxt] + body + rest[nxt:]
+        text = head + sep + rest
+    return text
+
+
 def feature_matrix() -> str:
     template = (
         Path(__file__).resolve().parents[2]
@@ -481,6 +637,18 @@ def product_model(discovery: dict[str, str]) -> dict[str, str]:
         st.locks["DISCOVERY"] = state.snapshot_locks(ws, state.State.DISCOVERY)
         state.transition(st, state.State.PRODUCT_MODEL, "2026-10-09T00:00:00Z")
         state.save(ws, st)
+        # PRODUCT_MODEL work: unknowns appended to the locked DISCOVERY file, spec/ model files
+        extra = {
+            "research/UNKNOWNS.md": files["research/UNKNOWNS.md"] + MODEL_UNKNOWNS,
+            "spec/DOMAIN_MODEL.md": spec_file("DOMAIN_MODEL.md", {"## Records": "".join(ENTITIES)}),
+            "spec/PERMISSIONS_MATRIX.md": spec_file(
+                "PERMISSIONS_MATRIX.md", {"## Roles": "".join(ROLES), "## Rules": "".join(RULES)}
+            ),
+        }
+        for rel, text in extra.items():
+            (ws / rel).parent.mkdir(parents=True, exist_ok=True)
+            (ws / rel).write_text(text, encoding="utf-8")
+        files.update(extra)
         render.render_all(ws)
         return {rel: (ws / rel).read_text(encoding="utf-8") for rel in files}
 

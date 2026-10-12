@@ -231,7 +231,8 @@ CATALOG: tuple[ArtifactSpec, ...] = (
                 "Responsibility, Identity, Relationships, Lifecycle, Mutable fields, "
                 "Immutable fields, Deletion semantics, Ownership, Authorization implications, "
                 "Evidence, Confidence",
-                optional="Derived from, Related unknown, Features",
+                optional="Derived from, Related unknown, Features, Human-readable key, "
+                "Stable after creation",
                 ref_fields="Relationships, Evidence, Derived from, Related unknown, Features",
                 union_fields="Evidence, Derived from, Related unknown, Features",
             ),
@@ -257,8 +258,7 @@ CATALOG: tuple[ArtifactSpec, ...] = (
                 ref_fields="Resource, Grants, Evidence, Related unknown",
                 union_fields="Evidence, Related unknown",
                 allow_empty="Limited means",
-                dedupe="Resource, Action",
-                section="## Rules",
+                section="## Rules",  # title dedupe: a corrected rule supersedes the old one
             ),
         ),
     ),
@@ -416,12 +416,16 @@ OVERVIEW_PATH = "research/product-overview.md"
 FEATURE_MATRIX_PATH = "research/FEATURE_MATRIX.md"
 SURFACES_PATH = "research/product-surfaces.md"
 RESEARCH_README_PATH = "research/README.md"
+DOMAIN_MODEL_PATH = "spec/DOMAIN_MODEL.md"
+PERMISSIONS_PATH = "spec/PERMISSIONS_MATRIX.md"
 
 # Closed value sets per (prefix, field), checked by validators (BAD_ENUM).
 ENUMS: dict[tuple[str, str], tuple[str, ...]] = {
     ("F", "Complexity"): ("Low", "Medium", "High"),
     ("F", "Plan tier"): ("all", "paid", "enterprise", "unknown"),
     ("U", "Impact"): ("Low", "Medium", "High"),
+    ("E", "Stable after creation"): ("yes", "no", "unknown"),
+    ("RL", "Scope"): ("workspace", "team", "resource", "system"),
 }
 
 # Fields that must never appear on a record type (FIELD_NOT_YET_ALLOWED): scoring lives in SC

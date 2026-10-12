@@ -67,3 +67,27 @@ Questions public sources cannot answer. Unknowns never block planning; each gets
 - V1 default:
 - Impact: Medium
 - Related: D-019, D-020
+
+### U-009 — Who may delete tasks?
+- Question: Can members delete tasks, or only owners and admins?
+- Reason it matters: Decides the delete permission and whether deletion is soft.
+- Available evidence: D-024, D-027
+- V1 default:
+- Impact: Medium
+- Related: D-027
+
+### U-010 — Who may invite members and change roles?
+- Question: Can members invite people or change roles, or only owners and admins?
+- Reason it matters: Shapes the membership permissions and the invitation flow.
+- Available evidence: D-026, D-027
+- V1 default:
+- Impact: Medium
+- Related: D-026, D-027
+
+### U-011 — Who manages labels and integrations?
+- Question: May any member define labels and connect integrations, or only admins?
+- Reason it matters: Workspace-wide settings usually need an elevated role.
+- Available evidence: D-014, D-033
+- V1 default:
+- Impact: Low
+- Related: D-014, D-033

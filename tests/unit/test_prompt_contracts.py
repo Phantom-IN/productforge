@@ -325,3 +325,33 @@ def test_ux_analyst_and_workflows_section() -> None:
         "brief only the current batch",
     ):
         assert phrase in flows, phrase
+
+
+def test_domain_architect_and_model_section() -> None:
+    agent = (AGENTS / "domain-architect.md").read_text(encoding="utf-8")
+    tools = frontmatter(agent)["tools"]
+    assert "Bash" not in tools and "WebFetch" not in tools  # no network by design
+    for phrase in (
+        "No network",
+        "RESEARCH REQUESTS",
+        "Never state the target's internal technology",
+        "one cell for every\n   role",
+        "Deletion semantics",
+        "required `N:1`",
+        "supersede the old one",
+        "Domain and permission fields",
+    ):
+        assert phrase in agent, phrase
+    text = SKILL.read_text(encoding="utf-8")
+    model = text.split("### `/productforge model`", 1)[1].split("\n### ", 1)[0]
+    for phrase in (
+        "--role domain-architect",
+        "--template spec/DOMAIN_MODEL.md",
+        "--template spec/PERMISSIONS_MATRIX.md",
+        "unknown_permission_cells",
+        "over_soft_cap",
+        "Phase 11",
+    ):
+        assert phrase in model, phrase
+    stubs = text.split("### Stage commands not yet available", 1)[1]
+    assert "| `model` |" not in stubs

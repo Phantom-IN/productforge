@@ -119,10 +119,52 @@ def workflow_regions(index: WorkspaceIndex) -> dict[str, str]:
     return {"workflows": "\n".join(rows) + "\n"}
 
 
+def domain_regions(index: WorkspaceIndex) -> dict[str, str]:
+    from pflib import domain
+
+    ents = domain.active(index, "E")
+    if not ents:
+        return {"relationship-tree": "_No entities yet._\n", "identity": "_No entities yet._\n"}
+    rows = ["| Entity | Identity scheme | Human-readable key | Stable after creation? | Evidence |",
+            "|---|---|---|---|---|"]  # fmt: skip
+    for e in ents:
+        cells = [f"{e.id} {e.title}", e.get("Identity"), e.get("Human-readable key"),
+                 e.get("Stable after creation"), e.get("Evidence")]  # fmt: skip
+        rows.append("| " + " | ".join(_cell(c) for c in cells) + " |")
+    return {
+        "relationship-tree": "\n".join(domain.relationship_tree(index)) + "\n",
+        "identity": "\n".join(rows) + "\n",
+    }
+
+
+def permission_regions(index: WorkspaceIndex) -> dict[str, str]:
+    from pflib import domain
+
+    roles, rules = domain.matrix_rows(index)
+    if not rules:
+        return {"permissions": "_No permission rules yet._\n"}
+    entities = {e.id: e for e in domain.active(index, "E")}
+    header = ["Resource", "Action", *(f"{r.id} {r.title}" for r in roles), "Rule"]
+    rows = ["| " + " | ".join(_cell(h) for h in header) + " |",
+            "|" + "|".join("---" for _ in header) + "|"]  # fmt: skip
+    for rule in rules:
+        cells, _ = domain.parse_grants(rule.get("Grants"))
+        res = next(iter(records.parse_refs(rule.get("Resource"))), "")
+        label = f"{res} {entities[res].title}" if res in entities else rule.get("Resource")
+        values = [label, rule.get("Action"), *(cells.get(r.id, "") for r in roles), rule.id]
+        rows.append("| " + " | ".join(_cell(v) for v in values) + " |")
+    return {"permissions": "\n".join(rows) + "\n"}
+
+
 RENDERERS: dict[str, Renderer] = {
     FEATURE_MATRIX: Renderer(feature_regions, {"hierarchy": "## Hierarchy", "matrix": "## Matrix"}),
     SURFACES: Renderer(surface_regions, {"surface-features": "## Surface → features"}),
     catalog.RESEARCH_README_PATH: Renderer(workflow_regions, {"workflows": "## Workflows"}),
+    catalog.DOMAIN_MODEL_PATH: Renderer(
+        domain_regions,
+        {"relationship-tree": "## Relationship tree", "identity": "## Identity decisions"},
+    ),
+    catalog.PERMISSIONS_PATH: Renderer(permission_regions, {"permissions": "## Matrix"}),
 }
 assert all(catalog.spec_for_path(rel) is not None for rel in RENDERERS)
 

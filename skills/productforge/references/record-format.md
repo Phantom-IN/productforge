@@ -146,6 +146,25 @@ Tables and trees that are views over records live between `<!-- pf:generated:sta
 markers (`GENERATED_REGION_EDITED`). Prose sections without records in a records file (e.g.
 `## Domains` in `FEATURE_MATRIX.md`) are merged section by section like documents.
 
+## Domain and permission fields
+
+Entities (`E`), roles (`RL`) and permission rules (`PR`) use small grammars inside field values:
+
+- **`Relationships`** — `;`-separated `E-NN (<1:1|1:N|N:1|N:M>, <required|optional>) [note]`, or
+  `none`. Cardinality reads *this : other*; `required` means this entity cannot exist without the
+  link. The first required `N:1` link is the entity's parent in the generated relationship tree.
+  When both sides declare each other the cardinalities must be inverse (`RELATIONSHIP_INCONSISTENT`).
+- **`Deletion semantics`** — starts with `cascade`, `soft-delete`, `archive`, `restrict` or
+  `orphan-allowed`; free text may follow (`archive — archived projects can be restored`).
+- **`Mutable fields`** — `none …` marks an immutable entity; otherwise the entity (or one linked
+  through `Features` whose name says create/edit/delete/assign/…) needs at least one `PR` rule.
+- **`Grants`** — `,`-separated `RL-NN <cell>`, one per active role, cells `✓` `✗` `Limited` `?`.
+  `Limited` needs `Limited means`; `?` needs a `Related unknown` U record. One active rule per
+  resource × action (`DUPLICATE_PERMISSION_RULE`); a corrected rule gets a new title and supersedes
+  the old one by amendment.
+- Optional `Human-readable key` and `Stable after creation` (`yes`/`no`/`unknown`) feed the
+  generated identity table; `RL` `Scope` is `workspace`, `team`, `resource` or `system`.
+
 ## Validator finding codes
 
 Reported by `pf.py validate` / `check` as findings (`error` findings make the command exit 1 and
@@ -172,6 +191,15 @@ tolerant: a malformed record yields one finding and the rest of the file is stil
 | `OBSERVED_STEP_NO_EVIDENCE` | error | An [observed] workflow step cites no S-/D- evidence |
 | `NO_SYSTEM_STEPS` | warn | A workflow lists no [implied-system] steps |
 | `WORKFLOW_CONFIDENCE` | error | A CONFIRMED workflow's observed steps lack Tier ≤ 2 evidence |
+| `BAD_RELATIONSHIP` | error | A relationship does not follow 'E-NN (<card>, <required>)' |
+| `RELATIONSHIP_INCONSISTENT` | warn | Two entities link each other with clashing cardinality |
+| `BAD_DELETION_SEMANTICS` | error | Deletion semantics lacks a known deletion kind |
+| `BAD_GRANT` | error | A permission cell is not '<RL-ID> <✓|✗|Limited|?>' |
+| `PERMISSION_CELL_MISSING` | error | A permission rule has no cell for an active role |
+| `UNKNOWN_CELL_NO_U` | error | A '?' permission cell without a Related unknown U record |
+| `LIMITED_WITHOUT_MEANS` | error | A 'Limited' permission cell without 'Limited means' |
+| `ENTITY_WITHOUT_PERMISSIONS` | error | A mutable entity has no permission rules |
+| `DUPLICATE_PERMISSION_RULE` | error | Two active permission rules for one resource and action |
 | `BAD_STATUS` | error | Status is not one of the allowed values (or rejected without Reason) |
 | `SUPERSEDED_TARGET_MISSING` | error | superseded-by targets a missing or other-type record |
 | `PROVISIONAL_ID_IN_CANONICAL` | error | A provisional ID (X-?n) appears in a canonical file |

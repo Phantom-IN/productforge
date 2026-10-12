@@ -460,8 +460,12 @@ def _apply_amendments(
     return events
 
 
-def _skeleton(spec: ArtifactSpec) -> str:
-    return f"# {spec.title}\n"
+def _skeleton(ws: Path, rel: str, spec: ArtifactSpec) -> str:
+    """Starting text of a canonical file merge creates: its template, else a bare heading."""
+    from pflib import scaffold  # scaffold imports state; keep merge's import graph small
+
+    seeded = scaffold.seed_text(ws, rel)
+    return seeded if seeded is not None else f"# {spec.title}\n"
 
 
 def merge(ws: Path, run_id: str) -> MergeReport:
@@ -552,7 +556,7 @@ def merge(ws: Path, run_id: str) -> MergeReport:
             if rel in outputs:
                 return outputs[rel]
             path = ws / rel
-            return path.read_text(encoding="utf-8") if path.is_file() else _skeleton(spec)
+            return path.read_text(encoding="utf-8") if path.is_file() else _skeleton(ws, rel, spec)
 
         # 1) unions into existing canonical records
         canon_by_id = {

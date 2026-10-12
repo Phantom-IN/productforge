@@ -60,6 +60,16 @@ versions follow [Semantic Versioning](https://semver.org/).
   `research/README.md`; `templates/research/workflow.md`; `agents/ux-analyst.md`; SKILL.md
   `workflows`; merge counts the body of a workflow file that dedupes into an existing workflow as
   ignored prose; 8 Tasklet workflows in the PRODUCT_MODEL fixture.
+- Phase 10: reconstructed domain model and permissions — `spec/DOMAIN_MODEL.md` (E) and
+  `spec/PERMISSIONS_MATRIX.md` (RL, PR) templates; field grammars for relationships, deletion
+  semantics and grants (`pflib/domain.py`); generated relationship tree, identity table and
+  permissions matrix; validators (`BAD_RELATIONSHIP`, `RELATIONSHIP_INCONSISTENT` (warn),
+  `BAD_DELETION_SEMANTICS`, `BAD_GRANT`, `PERMISSION_CELL_MISSING`, `UNKNOWN_CELL_NO_U`,
+  `LIMITED_WITHOUT_MEANS`, `ENTITY_WITHOUT_PERMISSIONS`, `DUPLICATE_PERMISSION_RULE`; self-supersede
+  flagged); `agents/domain-architect.md` (no network); SKILL.md `model` (part 1) and a general
+  research-request protocol; merge seeds a new canonical file from its template; `pf.py status`
+  reports permission rules and unknown cells; Tasklet domain model fixture (11 entities, 4 roles,
+  13 rules).
 
 ### Fixed
 - Briefing more runs than `agents.max_pending_runs` is refused (`RUN_LIMIT`); `pf.py staging list` /

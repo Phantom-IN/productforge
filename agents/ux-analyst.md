@@ -42,6 +42,7 @@ For each workflow the brief names, write one file using the template the brief g
      and keep what the flow needs: **authorize** the actor · **validate** input · **persist** the
      change · write **audit/activity** · update the **search index** · publish a **realtime event** ·
      **notify** people · call an **integration** · **enqueue a job** (scheduled or async work).
+   - A long step may wrap: indent the continuation lines (the references still count).
 3. **`## Variations & edge cases`**: permissions, plan gating, errors, empty states — with evidence.
 4. **`## Engineering requirements surfaced`**: one line per requirement, tagged with its step
    (`- Step 5: tasks reference a workspace and an optional project`). If the flow truly needs no

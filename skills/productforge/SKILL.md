@@ -138,7 +138,19 @@ Stage sections delegate work to role agents (`agents/*.md`) through this loop:
   category, features by domain), and only as many as the section allows: brief **only the runs you
   are about to spawn** (never brief a later batch early), spawn them in one message, then preflight
   and merge **one at a time** in run order before briefing the next batch.
-- **Research requests** listed by an agent are collected and reported to the user.
+- **Research requests** in agent summaries are handled once per command, after that command's own
+  runs are merged:
+  - `browse <url>` / `pdf <url>` / `repo <url>` → the matching capability (`web.browse`,
+    `docs.pdf`, `repo.intel`) through the Delegated run protocol; when it resolves to `builtin`,
+    report the request as unresolved.
+  - Any other request (a missing fact) → **one targeted research-agent run** for all of them:
+    `brief --role research-agent --task "Targeted evidence pass for <role>: <requests>. Add sources,
+    claims and unknowns only." --input research/sources.md --input research/DISCOVERY_LEDGER.md
+    --input research/UNKNOWNS.md --template research/sources.md --template
+    research/DISCOVERY_LEDGER.md`. This is allowed while DISCOVERY is closed: new S/D/U records are
+    appends; an amendment to a closed record is refused (`AMEND_LOCKED` → suggest `reopen`).
+  - Then re-run the requesting role **once** with the same task plus "New evidence: <new IDs from
+    the merge report>". Requests still open after that are reported to the user.
 
 ## Inline fallback
 
@@ -314,6 +326,28 @@ is rendered by merge.
 5. Report: workflows per domain, the observed vs implied step counts (from the index in
    `research/README.md`), validation, and the next command (`/productforge model`, Phase 10).
 
+### `/productforge model`
+
+PRODUCT_MODEL, part 1: the target's reconstructed domain model `spec/DOMAIN_MODEL.md` (`E-`) and
+`spec/PERMISSIONS_MATRIX.md` (roles `RL-`, rules `PR-`). Merge renders the relationship tree, the
+identity table and the permissions matrix. Integrations and architecture inference (part 2) and the
+PRODUCT_MODEL gate arrive in Phase 11 — say so in the report.
+
+1. **Domain pass**, one domain-architect run: `brief --role domain-architect --task "Domain and
+   permissions pass: reconstruct the entities, roles and permission rules." --input
+   research/FEATURE_MATRIX.md --input research/workflows --input research/DISCOVERY_LEDGER.md
+   --input research/UNKNOWNS.md --input research/sources.md --input spec/DOMAIN_MODEL.md --input
+   spec/PERMISSIONS_MATRIX.md --template spec/DOMAIN_MODEL.md --template spec/PERMISSIONS_MATRIX.md`.
+   When `feature-plan` reports `over_soft_cap`, split it: a core run (tenancy, users, memberships,
+   roles) first, then one run per domain (`--partition "<domain>"`, the core entities listed in the
+   task) in batches of at most `agents.max_pending_runs`.
+2. Preflight, repair and merge per the Agent run protocol; then its **research requests** (the
+   domain architect has no network, so missing evidence always arrives this way).
+3. Report from `pf.py status --json`: `entities`, `roles`, `permission_rules`,
+   `unknown_permission_cells`, `missing_permission_cells`; the first lines of the generated
+   relationship tree (its root should be the tenancy entity); validation findings. Next command:
+   `/productforge model` again after Phase 11 for part 2.
+
 ### `/productforge status`
 
 Run `python3.11 "$PF" status --workspace <ws> --json` (omit `--workspace` if unknown). With no
@@ -336,7 +370,6 @@ After dispatch (so refusals and transitions still behave correctly), these comma
 
 | Command | Arrives in |
 |---|---|
-| `model` | Phases 10–11 |
 | `competitors` | Phase 12 |
 | `scope` | Phase 13 |
 | `architect` | Phase 14 |

@@ -110,6 +110,12 @@ def _status_human(p: dict[str, Any]) -> str:
         f"Core workflows identified: {s['workflows']}",
         f"Primary entities identified: {s['entities']}",
         f"Role boundaries identified: {s['roles']}",
+        f"Permission rules: {s['permission_rules']}"
+        + (
+            f" ({s['unknown_permission_cells']} unknown cells)"
+            if s["unknown_permission_cells"]
+            else ""
+        ),
         f"External integrations identified: {s['integrations']}",
         "",
         "Claim confidence: " + " · ".join(f"{k.title()} {v}" for k, v in conf.items()),

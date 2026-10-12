@@ -3,11 +3,12 @@
 A workflow file is one ``W-`` record followed by prose sections; ``## Steps`` holds numbered steps:
 
     1. [observed] User opens the task composer — D-019, S-001
-    2. [implied-system] Task is persisted and an activity entry is written — F-010
+    2. [implied-system] Task is persisted and an activity entry is written
+       — F-010
 
-``[observed]`` steps are what public evidence shows; ``[implied-system]`` steps are the system
-behaviour such a flow requires (persist, authorize, index, notify, …) — engineering inferences that
-feed architecture inference later.
+An indented line continues the step above it. ``[observed]`` steps are what public evidence
+shows; ``[implied-system]`` steps are the system behaviour such a flow requires (persist,
+authorize, index, notify, …) — engineering inferences that feed architecture inference later.
 """
 
 from __future__ import annotations
@@ -38,6 +39,17 @@ def steps_section(text: str) -> str | None:
     return records.parse_document(text).section_text("Steps")
 
 
+def _logical_lines(body: str) -> list[str]:
+    """Lines with indented continuations joined to the step above (a wrapped list item)."""
+    out: list[str] = []
+    for line in body.splitlines():
+        if out and line[:1] in (" ", "\t") and line.strip() and NUMBERED_RE.match(out[-1]):
+            out[-1] = f"{out[-1].rstrip()} {line.strip()}"
+        else:
+            out.append(line)
+    return out
+
+
 def parse_steps(text: str) -> tuple[list[Step], list[str]]:
     """Steps of a workflow file and the numbered lines that do not follow the grammar."""
     body = steps_section(text)
@@ -45,7 +57,7 @@ def parse_steps(text: str) -> tuple[list[Step], list[str]]:
         return [], []
     steps: list[Step] = []
     bad: list[str] = []
-    for line in body.splitlines():
+    for line in _logical_lines(body):
         if not NUMBERED_RE.match(line):
             continue
         m = STEP_RE.match(line)

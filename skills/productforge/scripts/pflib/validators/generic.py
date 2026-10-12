@@ -95,7 +95,10 @@ def status_values(ctx: Context, loc: Loc) -> list[Finding]:
             return [finding("BAD_STATUS", loc.rel, rec.id, f"{rec.id}: superseded-by needs one ID")]
         target = targets[0]
         tparsed = ids.parse(target, strict=False)
-        if ctx.get(target) is None or not own or not tparsed or tparsed.prefix != own.prefix:
+        if target == rec.id:
+            out.append(finding("SUPERSEDED_TARGET_MISSING", loc.rel, rec.id,
+                               f"{rec.id} is superseded by itself"))  # fmt: skip
+        elif ctx.get(target) is None or not own or not tparsed or tparsed.prefix != own.prefix:
             out.append(
                 finding(
                     "SUPERSEDED_TARGET_MISSING",

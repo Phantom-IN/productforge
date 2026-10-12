@@ -49,8 +49,8 @@ def _render(text: str, values: dict[str, str]) -> str:
     return text
 
 
-def discovery_templates() -> list[tuple[Path, str]]:
-    """(template path, canonical workspace path) for every DISCOVERY-owned template."""
+def artifact_templates() -> list[tuple[Path, str]]:
+    """(template path, canonical workspace path) for every template of a catalog artifact."""
     out: list[tuple[Path, str]] = []
     if not TEMPLATES_DIR.is_dir():
         return out
@@ -58,9 +58,37 @@ def discovery_templates() -> list[tuple[Path, str]]:
         rel = path.relative_to(TEMPLATES_DIR).as_posix()
         target = catalog.TEMPLATE_ALIASES.get(rel, rel)
         spec = catalog.spec_for_path(target)
-        if spec is not None and spec.owner_stage == stages.DISCOVERY:
+        if spec is not None and not spec.is_glob:
             out.append((path, target))
     return out
+
+
+def discovery_templates() -> list[tuple[Path, str]]:
+    """(template path, canonical workspace path) for every DISCOVERY-owned template."""
+    return [
+        (path, rel)
+        for path, rel in artifact_templates()
+        if catalog.spec_for_path(rel).owner_stage == stages.DISCOVERY  # type: ignore[union-attr]
+    ]
+
+
+def template_values(ws: Path) -> dict[str, str]:
+    st = state.load(ws)
+    return {
+        "product_name": st.product["name"],
+        "target_url": st.product["target_url"],
+        "date": date.today().isoformat(),
+    }
+
+
+def seed_text(ws: Path, rel: str) -> str | None:
+    """A canonical file's starting text from its template (merge uses it for new files)."""
+    if not (ws / workspace.PF_DIR / state.STATE_FILE).is_file():
+        return None  # not an initialised workspace (bare test trees): no product name to fill
+    for path, target in artifact_templates():
+        if target == rel:
+            return _render(path.read_text(encoding="utf-8"), template_values(ws))
+    return None
 
 
 def init_workspace(

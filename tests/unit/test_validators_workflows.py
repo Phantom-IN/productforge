@@ -93,3 +93,20 @@ def test_confirmed_needs_tier_two_evidence_on_half_the_observed_steps(
     assert "WORKFLOW_CONFIDENCE" in codes(tasklet_product_model)
     edit(tasklet_product_model, "- Confidence: CONFIRMED", "- Confidence: PROBABLE")
     assert "WORKFLOW_CONFIDENCE" not in codes(tasklet_product_model)
+
+
+def test_wrapped_steps_keep_their_references(tasklet_product_model: Path) -> None:
+    text = (
+        "## Steps\n\n1. [observed] Member opens the board and adds a task to a status\n"
+        "   column — D-037,\n   S-017\n2. [implied-system] Persist the task — F-001\n"
+        "Not indented: a paragraph after the list\n"
+    )
+    steps, bad = workflows.parse_steps(text)
+    assert bad == [] and [s.refs for s in steps] == [("D-037", "S-017"), ("F-001",)]
+    assert steps[0].text == "Member opens the board and adds a task to a status column"
+    edit(
+        tasklet_product_model,
+        "1. [observed] Member opens the board and adds a task to a status column — D-037",
+        "1. [observed] Member opens the board and adds a task to a status column\n   — D-037",
+    )
+    assert validators.run(tasklet_product_model) == []

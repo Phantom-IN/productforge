@@ -19,6 +19,7 @@ SUMMARY = {
     "workflows": "W",
     "entities": "E",
     "roles": "RL",
+    "permission_rules": "PR",
     "integrations": "I",
     "inferences": "A",
     "competitors": "C",
@@ -64,4 +65,9 @@ def summary(ws: Path, index: WorkspaceIndex | None = None) -> dict[str, int]:
     per_prefix = counts(ws, index)
     out = {label: per_prefix[prefix] for label, prefix in SUMMARY.items()}
     out["domains"] = domains(ws, index)
+    from pflib import domain
+
+    cells = domain.permission_cells(index)
+    out["unknown_permission_cells"] = cells["cells"]["?"]
+    out["missing_permission_cells"] = cells["missing"]
     return out
