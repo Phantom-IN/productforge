@@ -707,6 +707,173 @@ SIGNALS = [
 ]  # fmt: skip
 
 
+# ---- Phase 13: scope (score cards, requirements, V1 defaults)
+WORDS = {
+    "Core value": ("peripheral to tracking work", "supports the core loop", "important to daily work", "the reason the product exists"),
+    "User frequency": ("rarely used", "used now and then", "used weekly", "used every session"),
+    "Dependency importance": ("nothing depends on it", "one feature builds on it", "several features build on it", "most features need it"),
+    "Differentiation": ("not a selling point", "expected but unremarkable", "a visible strength", "a reason to choose the product"),
+    "Engineering complexity": ("trivial", "straightforward CRUD", "new moving parts", "hard: realtime, search or payments"),
+    "Infrastructure complexity": ("no new infrastructure", "a small addition", "a new service to run", "significant new infrastructure"),
+    "Security impact": ("no security risk", "minor risk", "exposes data if wrong", "security-critical"),
+    "Operational cost": ("none", "small", "noticeable", "high"),
+    "Time to implement": ("hours", "days", "about a week", "weeks"),
+    "External availability": ("no service fits", "partial services exist", "good services exist", "mature services cover it"),
+}  # fmt: skip
+
+# F: core, freq, dep, diff, eng, infra, sec, ops, time, external, future, extra fields
+SCORES = {
+    "F-001": (3, 3, 3, 2, 2, 1, 1, 1, 2, 0, "yes", {}),
+    "F-002": (2, 3, 1, 1, 1, 0, 1, 0, 1, 0, "yes", {}),
+    "F-003": (2, 2, 0, 1, 1, 1, 0, 1, 1, 1, "yes", {}),
+    "F-004": (3, 3, 2, 1, 1, 0, 0, 0, 1, 0, "yes", {}),
+    "F-005": (1, 2, 0, 1, 1, 0, 0, 0, 1, 0, "yes", {}),
+    "F-006": (2, 2, 0, 1, 2, 2, 2, 2, 1, 3, "yes", {"External service": "Object storage with signed download links"}),
+    "F-007": (1, 1, 0, 1, 2, 2, 0, 1, 2, 0, "yes", {}),
+    "F-008": (3, 3, 2, 2, 2, 0, 0, 0, 2, 0, "yes", {}),
+    "F-009": (2, 3, 1, 2, 3, 3, 1, 2, 3, 1, "yes", {
+        "Override decision": "BUILD SIMPLIFIED",
+        "Override reason": "Live updates are the target's selling point (D-007); V1 polls instead of pushing",
+        "Simplification": "Boards refresh on focus and every 30 s; no push channel in V1"}),
+    "F-010": (2, 2, 2, 1, 1, 1, 1, 1, 1, 0, "yes", {}),
+    "F-011": (3, 3, 2, 1, 1, 0, 1, 0, 1, 0, "yes", {}),
+    "F-012": (1, 1, 0, 0, 1, 0, 0, 0, 1, 0, "yes", {}),
+    "F-013": (2, 2, 1, 0, 1, 0, 0, 0, 1, 0, "yes", {}),
+    "F-014": (3, 3, 1, 2, 1, 0, 1, 0, 1, 0, "yes", {}),
+    "F-015": (2, 2, 0, 1, 1, 0, 1, 0, 1, 0, "yes", {}),
+    "F-016": (2, 3, 1, 1, 2, 1, 0, 1, 1, 1, "yes", {}),
+    "F-017": (1, 1, 0, 0, 1, 1, 0, 1, 1, 2, "yes", {}),
+    "F-018": (1, 1, 0, 1, 2, 0, 3, 0, 2, 0, "yes", {}),
+    "F-019": (2, 2, 0, 2, 3, 3, 1, 2, 3, 2, "yes", {}),
+    "F-020": (3, 3, 3, 0, 1, 1, 2, 0, 1, 0, "yes", {}),
+    "F-021": (2, 1, 2, 0, 1, 0, 2, 0, 1, 1, "yes", {}),
+    "F-022": (2, 1, 3, 0, 2, 0, 3, 0, 1, 0, "yes", {}),
+    "F-023": (1, 0, 1, 0, 3, 1, 3, 1, 2, 3, "yes", {"External service": "A payment and subscription provider"}),
+    "F-024": (3, 3, 3, 0, 2, 1, 3, 1, 2, 3, "yes", {"External service": "An identity provider for magic links and Google sign-in"}),
+    "F-025": (2, 1, 0, 1, 2, 1, 2, 1, 2, 0, "yes", {}),
+    "F-026": (0, 1, 0, 0, 1, 0, 2, 0, 1, 0, "maybe", {}),
+    "F-027": (0, 0, 0, 1, 2, 2, 1, 1, 2, 1, "maybe", {}),
+    "F-028": (1, 1, 0, 1, 2, 1, 1, 1, 2, 1, "yes", {}),
+    "F-029": (0, 1, 0, 1, 1, 1, 0, 0, 1, 1, "maybe", {}),
+    "F-030": (0, 0, 0, 1, 2, 1, 1, 1, 2, 0, "no", {}),
+    "F-031": (1, 0, 0, 0, 0, 0, 0, 0, 1, 0, "maybe", {}),
+}  # fmt: skip
+FEATURE_NAMES = {
+    m.group(1): m.group(2) for m in re.finditer(r"^### (F-\d+) — (.+)$", "".join(FEATURES), re.M)
+}
+
+
+def score_card(i: int, fid: str) -> str:
+    *vals, future, extra = SCORES[fid]
+    lines = [f"\n### SC-{i:03d} — {FEATURE_NAMES[fid]}\n- Feature: {fid}\n"]
+    for (name, words), v in zip(WORDS.items(), vals, strict=True):
+        lines.append(f"- {name}: {v} — {words[v]}\n")
+    lines.append(f"- Future: {future}\n")
+    lines += [f"- {k}: {v}\n" for k, v in extra.items()]
+    return "".join(lines)
+
+
+def req(
+    i: int, title: str, statement: str, derived: str, signal: str, prio: str, feats: str
+) -> str:
+    return (
+        f"\n### R-{i:03d} — {title}\n- Statement: {statement}\n- Derived from: {derived}\n"
+        f"- Acceptance signal: {signal}\n- Priority: {prio}\n- Features: {feats}\n"
+    )
+
+
+REQUIREMENTS = [
+    req(1, "Tasks move through a fixed status set", "Members create tasks with a title, an optional assignee, due date and reminder, and move them through To do, In progress and Done", "W-001, W-002, W-007, D-024, A-004", "A task created on the board shows in To do and can reach Done in two moves", "must", "F-001, F-002, F-003, F-004"),
+    req(2, "Boards show tasks by status and stay current", "The board shows one column per status and reflects other members' changes within 30 s", "W-007, A-001, D-037", "A status change made in one browser appears in another within 30 s", "must", "F-008, F-009"),
+    req(3, "Projects group tasks", "Members group tasks into projects with one owner; a task may have no project", "W-008, D-021, D-002", "A task can be created with and without a project", "must", "F-011, F-013"),
+    req(4, "Every task keeps its history", "Every change to a task appends an entry to its activity history that is never edited", "A-004, D-012", "Editing a task three times shows three history entries", "must", "F-010"),
+    req(5, "Members discuss tasks", "Members comment on tasks and mention other members", "W-005, D-038", "A mention in a comment notifies the mentioned member", "must", "F-014, F-015"),
+    req(6, "Members are notified in the app", "Members get an in-app notification when assigned or mentioned, within 5 s", "A-003, W-002", "Assigning a task produces a notification for the assignee within 5 s", "should", "F-016"),
+    req(7, "Workspaces hold members", "Every record belongs to one workspace; admins invite members by email", "W-003, A-006, E-01", "An invited member joins and sees only that workspace's data", "must", "F-020, F-021"),
+    req(8, "Roles decide what members may do", "Owner, admin, member and guest roles are enforced on every request as in the permissions matrix", "A-005, PR-007, E-03", "A guest cannot read a task that was not shared with them", "must", "F-022"),
+    req(9, "Sign-in uses an identity provider", "Members sign in with an emailed one-time link or a Google account through an identity provider", "A-014, I-06", "A sign-in link works once and then expires", "must", "F-024"),
+    req(10, "Files attach to tasks", "Members attach files to tasks; files are stored by an object-storage service and served only to readers of the task", "A-010", "A member without access to the task cannot download its file", "should", "F-006"),
+    req(11, "Billing runs through a payment provider", "Owners and admins manage the subscription through a payment provider; we never store card data", "D-028, D-040", "Upgrading a workspace changes its plan without our system seeing card numbers", "should", "F-023"),
+]  # fmt: skip
+
+
+def default(i: int, uid: str, value: str, why: str, impact: str) -> str:
+    return (
+        f"\n### UD-{i:03d} — {uid}: {value}\n- Unknown: {uid}\n- V1 default: {value}\n"
+        f"- Rationale: {why}\n- Impact if wrong: {impact}\n"
+    )
+
+
+DEFAULTS = [
+    default(1, "U-001", "Keep activity history for the life of the task", "Simplest rule; storage is small", "Low — a retention job can be added later"),
+    default(2, "U-002", "Guests are allowed on every plan", "Matches the help center, the more specific source", "Medium — billing rules change if guests become paid"),
+    default(3, "U-003", "No AI triage", "Only an unverified rumour mentions it", "Low"),
+    default(4, "U-004", "No public SDK in V1", "No public repositories are known", "Low"),
+    default(5, "U-005", "No enterprise plan in V1", "No evidence of one", "Medium — SSO and audit would be needed"),
+    default(6, "U-006", "Talks are not needed for V1", "Talks only add evidence", "None"),
+    default(7, "U-007", "Official tutorials are not needed for V1", "Tutorials only add evidence", "None"),
+    default(8, "U-008", "In-app notifications only", "The only channel the evidence confirms for alerts", "Medium — email delivery may be expected"),
+    default(9, "U-009", "Only owners and admins delete tasks", "The safer choice for shared work", "Low — easy to widen"),
+    default(10, "U-010", "Only owners and admins invite members and change roles", "Least privilege", "Low — easy to widen"),
+    default(11, "U-011", "Only owners and admins manage labels and integrations", "Workspace-wide settings need an elevated role", "Low — easy to widen"),
+]  # fmt: skip
+
+SPEC_NARRATIVE = {
+    "## Product summary": "tasklet-alt is task tracking for small teams: tasks on boards, grouped into projects, discussed in comments, inside one workspace per team.\n",
+    "## Users": "Small teams (S-007): owners and admins who run the workspace, members who do the work, and guests who comment on shared tasks.\n",
+    "## V1 goals": "- Track tasks from To do to Done on a board (R-001, R-002)\n- Collaborate with comments, mentions and notifications (R-005, R-006)\n- Run a workspace with roles and invitations (R-007, R-008)\n",
+    "## V1 non-goals": "- Push-based live sync (polling in V1, see SC-009)\n- Search, recurring tasks, integrations and the public API (deferred in the parity matrix)\n",
+}  # fmt: skip
+
+
+def scope_defined(pm: dict[str, str], failing: bool = False) -> dict[str, str]:
+    """PRODUCT_MODEL advanced to SCOPE_DEFINED (PRODUCT_MODEL locked) with the scope artifacts.
+
+    ``failing``: U-009…U-011 have no V1 default and late research found two conflicting claims
+    with no explanation — the gate fails exactly G-SC-UNKNOWNS-DEFAULTED and
+    G-SC-CONFLICTS-RESOLVED while validation stays clean (the conflict is a warning).
+    """
+    from pflib import render, state
+
+    files = dict(pm)
+    cards = "".join(score_card(i, fid) for i, fid in enumerate(sorted(SCORES), start=1))
+    reqs = REQUIREMENTS
+    defaults = DEFAULTS[:8] if failing else DEFAULTS
+    spec = spec_file("PRODUCT_SPEC.md", {"## Requirements": "".join(reqs)}).replace(
+        "{{our_name}}", "tasklet-alt"
+    )
+    for heading, body in SPEC_NARRATIVE.items():
+        spec = spec.replace(
+            f"{heading}\n\n_To be written by the scope editor._\n", f"{heading}\n\n{body}"
+        )
+    with tempfile.TemporaryDirectory() as tmp:
+        ws = Path(tmp)
+        for rel, text in files.items():
+            (ws / rel).parent.mkdir(parents=True, exist_ok=True)
+            (ws / rel).write_text(text, encoding="utf-8")
+        st = state.load(ws)
+        st.locks["PRODUCT_MODEL"] = state.snapshot_locks(ws, state.State.PRODUCT_MODEL)
+        state.transition(st, state.State.SCOPE_DEFINED, "2026-10-13T00:00:00Z")
+        state.save(ws, st)
+        extra = {
+            "spec/PARITY_MATRIX.md": spec_file("PARITY_MATRIX.md", {"## Scores": cards}),
+            "spec/PRODUCT_SPEC.md": spec,
+            "research/UNKNOWNS.md": files["research/UNKNOWNS.md"]
+            + "\n## V1 defaults\n"
+            + "".join(defaults),
+        }
+        if failing:
+            extra["research/DISCOVERY_LEDGER.md"] = files["research/DISCOVERY_LEDGER.md"] + "".join([
+                d(45, "Attachments are limited to 10 MB", "Each attachment may be at most 10 MB.", "S-001", "CONFIRMED", status="conflicting-with D-046"),
+                d(46, "The upload cap is 25 MB per file", "Each attachment may be at most 25 MB.", "S-008", "CONFIRMED", status="conflicting-with D-045"),
+            ])  # fmt: skip
+        for rel, text in extra.items():
+            (ws / rel).write_text(text, encoding="utf-8")
+        files.update(extra)
+        render.render_all(ws)
+        return {rel: (ws / rel).read_text(encoding="utf-8") for rel in files}
+
+
 def spec_file(name: str, sections: dict[str, str]) -> str:
     """A template (``spec/`` unless a folder is given) with record blocks under the headings."""
     rel = name if "/" in name else f"spec/{name}"
@@ -830,11 +997,14 @@ def snapshots() -> dict[str, dict[str, str]]:
         UNKNOWNS_HEAD + UNKNOWNS + NEW_UNKNOWNS.split("\n### U-008")[0] + "\n"
     )
     failing["research/product-surfaces.md"] = SURFACES_HEAD + SURFACES[0]
+    pm = product_model(full)
     return {
         "DISCOVERY": full,
         "DISCOVERY_FAILING": failing,
-        "PRODUCT_MODEL": product_model(full),
+        "PRODUCT_MODEL": pm,
         "PRODUCT_MODEL_FAILING": product_model(full, failing=True),
+        "SCOPE_DEFINED": scope_defined(pm),
+        "SCOPE_DEFINED_FAILING": scope_defined(pm, failing=True),
     }
 
 

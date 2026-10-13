@@ -421,6 +421,9 @@ PERMISSIONS_PATH = "spec/PERMISSIONS_MATRIX.md"
 INTEGRATIONS_PATH = "spec/INTEGRATIONS.md"
 INFERENCE_PATH = "research/architecture-inference.md"
 COMPETITORS_PATH = "research/COMPETITORS.md"
+UNKNOWNS_PATH = "research/UNKNOWNS.md"
+PARITY_PATH = "spec/PARITY_MATRIX.md"
+PRODUCT_SPEC_PATH = "spec/PRODUCT_SPEC.md"
 
 # Closed value sets per (prefix, field), checked by validators (BAD_ENUM).
 ENUMS: dict[tuple[str, str], tuple[str, ...]] = {
@@ -432,6 +435,10 @@ ENUMS: dict[tuple[str, str], tuple[str, ...]] = {
     ("I", "Direction"): ("inbound", "outbound", "bidirectional"),
     ("I", "Provider category"): ("scm", "chat", "calendar", "identity", "storage", "email",
                                  "analytics", "payments", "webhooks", "api", "other"),
+    ("SC", "Future"): ("yes", "maybe", "no"),
+    ("SC", "Override decision"): ("BUILD NOW", "BUILD SIMPLIFIED", "USE EXTERNAL SERVICE", "DEFER",
+                                  "DROP"),
+    ("R", "Priority"): ("must", "should"),
     ("FS", "Signal"): ("table-stakes", "differentiator", "rare", "absent-in-target"),
     ("A", "Area"): ("realtime", "async", "search", "storage", "files", "authn", "authz", "tenancy",
                     "integrations", "notifications", "audit", "offline", "performance",
@@ -443,6 +450,10 @@ RESERVED_FIELDS: dict[str, tuple[tuple[str, ...], str]] = {
     "F": (
         ("MVP", "Decision", "Score", "Scores", "Override reason", "Override decision"),
         "scoring belongs in SC score cards during SCOPE_DEFINED, not on features",
+    ),
+    "SC": (
+        ("Priority", "Score", "Total", "Decision"),
+        "pf.py score computes priorities and decisions; the score card holds only the 0–3 scores",
     ),
     "A": (
         ("Proposed implementation",),

@@ -77,6 +77,7 @@ def template_values(ws: Path) -> dict[str, str]:
     return {
         "product_name": st.product["name"],
         "target_url": st.product["target_url"],
+        "our_name": st.product.get("our_name") or f"{st.product['slug']}-alt",
         "date": date.today().isoformat(),
     }
 

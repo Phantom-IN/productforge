@@ -60,6 +60,22 @@ def domains(ws: Path, index: WorkspaceIndex | None = None) -> int:
     )
 
 
+def funnel(ws: Path, index: WorkspaceIndex | None = None) -> dict[str, int | None]:
+    """The reduction funnel (IDEA §20): observed → features → requirements → V1 → phases."""
+    from pflib import score
+
+    index = index or WorkspaceIndex(ws)
+    reqs = [r for _, r in index.records("R") if records.is_active(r)]
+    v1 = {r.feature for r in score.evaluate(ws, index) if r.decision in score.IN_V1}
+    return {
+        "observed_claims": len(active_claims(ws, index)),
+        "features": sum(1 for _, f in index.records("F") if records.is_active(f)),
+        "core_requirements": sum(1 for r in reqs if r.get("Priority").strip() == "must"),
+        "v1_capabilities": len(v1),
+        "phases": None,  # filled by phase-plan generation (Phase 15)
+    }
+
+
 def table_stakes(ws: Path, index: WorkspaceIndex | None = None) -> dict[str, int]:
     """F ID → number of competitors offering it, for table-stakes features (≥ 2 competitors).
     Phase 13 scoring reads it; features without competitor data are absent, i.e. neutral."""

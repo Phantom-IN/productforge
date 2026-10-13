@@ -87,6 +87,18 @@ versions follow [Semantic Versioning](https://semver.org/).
   `COMPETITOR_SOURCE_AS_EVIDENCE`); product-analyst competitor pass; SKILL.md `competitors`; three
   synthetic competitors in the Tasklet fixture; `competitors.max_sources` budget
   (`COMPETITOR_OVER_BUDGET`, warn).
+- Phase 13: scope reduction — `pflib/score.py` (weighted priority, ordered decision rules with a
+  dependency floor, table-stakes bonus; calibrated thresholds `scope.build_threshold` 6 /
+  `scope.defer_threshold` −4); `pf.py score [--write]` and `pf.py override` (user decisions as
+  logged score-card amendments; `records.AMENDABLE_EXTRA`); `spec/PARITY_MATRIX.md` and
+  `spec/PRODUCT_SPEC.md` templates with generated parity matrix, overrides, reduction funnel and
+  accepted defaults; feature-matrix MVP/Decision/Score columns generated from score cards;
+  `metrics.funnel`; scope validators (`BAD_SCORE`, `OVERRIDE_NO_REASON`, `SIMPLIFICATION_MISSING`,
+  `EXTERNAL_SERVICE_MISSING`, `FEATURE_UNSCORED`, `DUPLICATE_SCORE`, `FEATURE_WITHOUT_REQUIREMENT`);
+  the SCOPE_DEFINED gate (all seven `G-SC-*`); `agents/scope-editor.md`;
+  `references/prioritisation-model.md`; stage procedures moved out of SKILL.md into
+  `references/commands-product-model.md` and `references/commands-scope.md`; SCOPE_DEFINED and
+  SCOPE_DEFINED_FAILING fixtures.
 
 ### Fixed
 - Briefing more runs than `agents.max_pending_runs` is refused (`RUN_LIMIT`); `pf.py staging list` /

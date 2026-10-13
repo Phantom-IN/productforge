@@ -37,6 +37,13 @@ REQUIRED_SECTIONS = [
 MAX_SKILL_LINES = 400
 
 
+def commands_text() -> str:
+    """SKILL.md plus the command references it delegates stage procedures to."""
+    parts = [SKILL.read_text(encoding="utf-8")]
+    parts += [p.read_text(encoding="utf-8") for p in sorted(REFERENCES.glob("commands-*.md"))]
+    return "\n".join(parts)
+
+
 def frontmatter(text: str) -> dict[str, str]:
     if not text.startswith("---\n"):
         return {}
@@ -256,7 +263,7 @@ def test_product_analyst_and_evidence_pass_contracts() -> None:
 
 def test_features_section_and_amendment_rules() -> None:
     text = SKILL.read_text(encoding="utf-8")
-    feats = text.split("### `/productforge features`", 1)[1].split("\n### ", 1)[0]
+    feats = commands_text().split("### `/productforge features`", 1)[1].split("\n### ", 1)[0]
     for phrase in (
         '"$PF" feature-plan',
         "Domain split",
@@ -316,8 +323,7 @@ def test_ux_analyst_and_workflows_section() -> None:
     ):
         assert phrase in agent, phrase
     assert "Bash" not in frontmatter(agent)["tools"]
-    text = SKILL.read_text(encoding="utf-8")
-    flows = text.split("### `/productforge workflows`", 1)[1].split("\n### ", 1)[0]
+    flows = commands_text().split("### `/productforge workflows`", 1)[1].split("\n### ", 1)[0]
     for phrase in (
         '"$PF" workflow-candidates',
         "AskUserQuestion",
@@ -344,7 +350,7 @@ def test_domain_architect_and_model_section() -> None:
     ):
         assert phrase in agent, phrase
     text = SKILL.read_text(encoding="utf-8")
-    model = text.split("### `/productforge model`", 1)[1].split("\n### ", 1)[0]
+    model = commands_text().split("### `/productforge model`", 1)[1].split("\n### ", 1)[0]
     model = " ".join(model.split())  # commands wrap across lines
     for phrase in (
         "--role domain-architect",
@@ -410,7 +416,7 @@ def test_competitor_pass_and_section() -> None:
         assert phrase in comp, phrase
     text = SKILL.read_text(encoding="utf-8")
     section = " ".join(
-        text.split("### `/productforge competitors`", 1)[1].split("\n### ", 1)[0].split()
+        commands_text().split("### `/productforge competitors`", 1)[1].split("\n### ", 1)[0].split()
     )
     for phrase in (
         '"$PF" competitor-candidates',
@@ -424,3 +430,42 @@ def test_competitor_pass_and_section() -> None:
     ):
         assert phrase in section, phrase
     assert "`competitors`" not in text.split("### Stage commands not yet available", 1)[1]
+
+
+def test_scope_editor_and_scope_command() -> None:
+    agent = (AGENTS / "scope-editor.md").read_text(encoding="utf-8")
+    assert "Bash" not in frontmatter(agent)["tools"]
+    flat = " ".join(agent.split())
+    for phrase in (
+        "Never compute or state a total",
+        "pf.py score",
+        "— <why",
+        "FEATURE_UNSCORED",
+        "FEATURE_WITHOUT_REQUIREMENT",
+        "### AMEND SC-009",
+        "Do not undo the user's overrides",
+        "never a vendor",
+        "## V1 defaults",
+    ):
+        assert phrase in flat, phrase
+    scope = " ".join(
+        commands_text().split("### `/productforge scope`", 1)[1].split("\n## ", 1)[0].split()
+    )
+    for phrase in (
+        '"$PF" score --write',
+        '"$PF" override',
+        "AskUserQuestion",
+        "Requirements are written only after the user accepts",
+        "--role scope-editor",
+        "never advance here",
+        "--template spec/PARITY_MATRIX.md",
+        "--template spec/PRODUCT_SPEC.md",
+        "R1",
+    ):
+        assert phrase in scope, phrase
+    model = (REFERENCES / "prioritisation-model.md").read_text(encoding="utf-8")
+    assert len(model.splitlines()) < 300 and "R1" in model and "calibrat" in model.lower()
+    assert (
+        "`scope`"
+        not in SKILL.read_text(encoding="utf-8").split("### Stage commands not yet available", 1)[1]
+    )

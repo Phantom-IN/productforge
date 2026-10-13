@@ -60,6 +60,8 @@ DEFAULTS: dict[str, ConfigKey] = {
     "model.max_workflows": _k(25, "Workflow reconstruction cap"),
     "competitors.max": _k(5, "Competitor pass cap"),
     "competitors.max_sources": _k(10, "Source budget per competitor (warned above it)"),
+    "scope.build_threshold": _k(6, "Priority at or above which a feature is built in V1"),
+    "scope.defer_threshold": _k(-4, "Priority at or above which a feature is deferred (else drop)"),
     "quotes.max_words": _k(25, "Maximum verbatim quote length from any source"),
     **{
         f"scope.weights.{name}": _k(weight, f"Prioritisation weight: {label}")

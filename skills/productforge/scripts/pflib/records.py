@@ -377,6 +377,20 @@ def normalise_text(value: str) -> str:
 
 AMEND_HEAD_RE = re.compile(r"^### AMEND (?P<id>[A-Z]{1,3}-\d+)\s*$")
 AMENDABLE_FIELDS = ("Status", "Reason", "Resolution")
+# Extra fields an amendment may set, per record type (score cards are revised in the open stage).
+AMENDABLE_EXTRA: dict[str, tuple[str, ...]] = {
+    "SC": ("Core value", "User frequency", "Dependency importance", "Differentiation",
+           "Engineering complexity", "Infrastructure complexity", "Security impact",
+           "Operational cost", "Time to implement", "External availability", "Future",
+           "Override decision", "Override reason", "Simplification", "External service"),
+}  # fmt: skip
+
+
+def amendable(record_id: str) -> tuple[str, ...]:
+    prefix = record_id.split("-", 1)[0]
+    return AMENDABLE_FIELDS + AMENDABLE_EXTRA.get(prefix, ())
+
+
 INACTIVE_STATUS_PREFIXES = ("superseded-by", "rejected")
 
 

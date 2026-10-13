@@ -106,6 +106,8 @@ python3.11 skills/productforge/scripts/pf.py research-plan --workspace /tmp/tl -
 python3.11 skills/productforge/scripts/pf.py feature-plan --workspace /tmp/tl --json
 python3.11 skills/productforge/scripts/pf.py workflow-candidates --workspace /tmp/tl --json
 python3.11 skills/productforge/scripts/pf.py competitor-candidates --workspace /tmp/tl --json
+python3.11 skills/productforge/scripts/pf.py score --write --workspace /tmp/tl --json
+python3.11 skills/productforge/scripts/pf.py override F-012 --decision DEFER --reason "…" --workspace /tmp/tl --json
 python3.11 skills/productforge/scripts/pf.py deps --available "anthropic-skills:pdf" --workspace /tmp/tl
 python3.11 skills/productforge/scripts/pf.py delegate anthropic-skills:pdf --task "…" --workspace /tmp/tl
 python3.11 skills/productforge/scripts/pf.py deps --json          # which skills/plugins are reused
@@ -133,7 +135,10 @@ claude --plugin-dir .                 # then: /productforge status  (or /product
   records live in generated regions (`<!-- pf:generated:start <name> -->` … `end`), rebuilt by
   `pflib/render.py` on every merge; register new views in `render.RENDERERS`.
 - Existing records change only through **amendments** (`### AMEND <ID>`: `Status`/`Reason`/
-  `Resolution` + `Why`, open stage only) — see `references/record-format.md`.
+  `Resolution` + `Why`, open stage only; score cards may also amend their scores and overrides,
+  `records.AMENDABLE_EXTRA`) — see `references/record-format.md`.
+- SKILL.md owns dispatch and the shared protocols; stage-command procedures live in
+  `references/commands-<stage>.md` (loaded on demand) so SKILL.md stays under ~400 lines.
 - Writing style in generated artifacts: paraphrase, cite IDs, no marketing language.
 
 ## Extension recipes

@@ -51,7 +51,12 @@ def test_skill_and_contract_document_research_requests() -> None:
         "New evidence",
     ):
         assert phrase in protocol, phrase
-    model = skill.split("### `/productforge model`", 1)[1].split("\n### ", 1)[0]
+    ref = ROOT / "skills/productforge/references/commands-product-model.md"
+    model = (
+        ref.read_text(encoding="utf-8")
+        .split("### `/productforge model`", 1)[1]
+        .split("\n### ", 1)[0]
+    )
     model = " ".join(model.split())
     assert "research requests" in model and "no network" in model
 

@@ -149,7 +149,11 @@ def register(stage: str, condition: GateCondition) -> None:
 
 # Modules that register stage-specific conditions; imported lazily on first evaluation so they
 # can depend on anything (validators, research, …) without import cycles.
-CONDITION_MODULES = ("pflib.conditions_discovery", "pflib.conditions_product_model")
+CONDITION_MODULES = (
+    "pflib.conditions_discovery",
+    "pflib.conditions_product_model",
+    "pflib.conditions_scope",
+)
 
 
 def load_conditions() -> None:

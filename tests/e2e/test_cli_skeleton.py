@@ -59,7 +59,6 @@ def test_status_human_output(pf_cli: Cli) -> None:
 @pytest.mark.parametrize(
     "argv, phase",
     [
-        (["score"], "13"),
         (["lint-phases"], "15"),
         (["trace"], "16"),
     ],

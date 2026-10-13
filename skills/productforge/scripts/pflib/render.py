@@ -45,6 +45,10 @@ def _cell(value: str) -> str:
     return value.replace("\n", " ").replace("|", "\\|").strip() or "—"
 
 
+def _num(value: float) -> str:
+    return str(int(value)) if value == int(value) else f"{value:.1f}"
+
+
 def _features(index: WorkspaceIndex) -> list[records.Record]:
     return [rec for _, rec in index.records("F") if records.is_active(rec)]
 
@@ -77,10 +81,19 @@ def feature_regions(index: WorkspaceIndex) -> dict[str, str]:
         lines.append(f"- **{domain}**")
         for rec in sorted(roots[domain], key=lambda r: r.id):
             walk(rec, 1)
+    from pflib import score
+
+    scored = {r.feature: r for r in score.evaluate(index.ws, index)}  # empty before scoping
     header = "| " + " | ".join(MATRIX_COLUMNS) + " |"
     rows = [header, "|" + "|".join("---" for _ in MATRIX_COLUMNS) + "|"]
     for f in sorted(feats, key=lambda r: (r.get("Domain").strip(), r.id)):
-        values = [f.id] + [f.get(col) for col in MATRIX_COLUMNS[1:9]] + ["", "", ""]
+        row = scored.get(f.id)
+        scope_cells = ["", "", ""]
+        if row is not None and row.decision:
+            mvp = "yes" if row.decision in score.IN_V1 else "no"
+            prio = "" if row.priority is None else _num(row.priority)
+            scope_cells = [mvp, row.decision + (" (override)" if row.override else ""), prio]
+        values = [f.id] + [f.get(col) for col in MATRIX_COLUMNS[1:9]] + scope_cells
         rows.append("| " + " | ".join(_cell(v) for v in values) + " |")
     return {"hierarchy": "\n".join(lines) + "\n", "matrix": "\n".join(rows) + "\n"}
 
@@ -245,6 +258,72 @@ def competitor_regions(index: WorkspaceIndex) -> dict[str, str]:
     }
 
 
+OUR_V1 = {"BUILD NOW": "✓", "BUILD SIMPLIFIED": "Simplified", "USE EXTERNAL SERVICE": "External",
+          "DEFER": "✗", "DROP": "✗"}  # fmt: skip
+
+
+def parity_regions(index: WorkspaceIndex) -> dict[str, str]:
+    from pflib import domain, score
+
+    rows = score.evaluate(index.ws, index)
+    if not rows:
+        return {"parity": "_No score cards yet._\n", "overrides": "_No overrides._\n"}
+    feats = {f.id: f for f in domain.active(index, "F")}
+    cards = {sc.id: sc for _, sc in index.records("SC")}
+    out = ["| Feature | Target | Our V1 | Future | Decision | Notes |", "|---|---|---|---|---|---|"]
+    overrides = []
+    for r in rows:
+        f, sc = feats.get(r.feature), cards[r.sc]
+        name = f"{r.feature} {(f.get('Feature').strip() or f.title) if f else '?'}"
+        conf = f.get("Confidence").strip() if f else ""
+        target = "✓" if conf in ("", "CONFIRMED") else f"✓ ({conf})"
+        notes = [sc.get("Simplification"), sc.get("External service")]
+        if r.table_stakes:
+            notes.append(f"table stakes ({r.table_stakes} competitors)")
+        if r.priority is None:
+            notes.append(r.rule)
+        decision = (r.decision or "—") + (" (override)" if r.override else "")
+        cells = [name, target, OUR_V1.get(r.decision or "", "—"), sc.get("Future"), decision,
+                 "; ".join(n.strip() for n in notes if n and n.strip())]  # fmt: skip
+        out.append("| " + " | ".join(_cell(c) for c in cells) + " |")
+        if r.override:
+            overrides.append(f"- {r.sc} {r.feature}: computed {r.computed or '—'} → {r.override} — "
+                             f"{_cell(sc.get('Override reason'))}")  # fmt: skip
+    return {
+        "parity": "\n".join(out) + "\n",
+        "overrides": ("\n".join(overrides) if overrides else "_No overrides._") + "\n",
+    }
+
+
+def product_spec_regions(index: WorkspaceIndex) -> dict[str, str]:
+    from pflib import metrics
+
+    f = metrics.funnel(index.ws, index)
+    labels = (
+        ("observed_claims", "Observed claims"),
+        ("features", "Features reconstructed"),
+        ("core_requirements", "Core requirements (must)"),
+        ("v1_capabilities", "V1 capabilities (built or external)"),
+        ("phases", "Phases"),
+    )
+    funnel = ["| Step | Count |", "|---|---:|"]
+    funnel += [f"| {label} | {'—' if f[key] is None else f[key]} |" for key, label in labels]
+    uds = [ud for _, ud in index.records("UD") if records.is_active(ud)]
+    questions = {u.id: u for _, u in index.records("U")}
+    if uds:
+        defaults = ["| Unknown | Question | V1 default | Impact if wrong |", "|---|---|---|---|"]
+        for ud in sorted(uds, key=lambda r: r.id):
+            uid = next(iter(records.parse_refs(ud.get("Unknown"))), "")
+            q = questions.get(uid)
+            cells = [uid, q.get("Question") if q else "—", ud.get("V1 default"),
+                     ud.get("Impact if wrong")]  # fmt: skip
+            defaults.append("| " + " | ".join(_cell(c) for c in cells) + " |")
+        accepted = "\n".join(defaults) + "\n"
+    else:
+        accepted = "_No defaults accepted yet._\n"
+    return {"funnel": "\n".join(funnel) + "\n", "defaults": accepted}
+
+
 RENDERERS: dict[str, Renderer] = {
     FEATURE_MATRIX: Renderer(feature_regions, {"hierarchy": "## Hierarchy", "matrix": "## Matrix"}),
     SURFACES: Renderer(surface_regions, {"surface-features": "## Surface → features"}),
@@ -255,6 +334,12 @@ RENDERERS: dict[str, Renderer] = {
     ),
     catalog.PERMISSIONS_PATH: Renderer(permission_regions, {"permissions": "## Matrix"}),
     catalog.INTEGRATIONS_PATH: Renderer(integration_regions, {"integrations": "## Summary"}),
+    catalog.PARITY_PATH: Renderer(
+        parity_regions, {"parity": "## Matrix", "overrides": "## Overrides"}
+    ),
+    catalog.PRODUCT_SPEC_PATH: Renderer(
+        product_spec_regions, {"funnel": "## Reduction funnel", "defaults": "## Accepted defaults"}
+    ),
     catalog.COMPETITORS_PATH: Renderer(
         competitor_regions,
         {

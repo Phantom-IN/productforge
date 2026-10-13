@@ -114,6 +114,12 @@ def tasklet_product_model(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
+def tasklet_scope(tmp_path: Path) -> Path:
+    """A writable copy of the Tasklet SCOPE_DEFINED fixture workspace."""
+    return copy_snapshot("SCOPE_DEFINED", tmp_path / "tasklet-sc")
+
+
+@pytest.fixture
 def tasklet_discovery(tmp_path: Path) -> Path:
     """A writable copy of the Tasklet DISCOVERY fixture workspace."""
     import shutil

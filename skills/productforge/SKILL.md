@@ -21,8 +21,8 @@ to a realistic MVP, designs an **independent** architecture, and writes a phase-
 
 It is **not** a website cloner — read `references/philosophy.md` when unsure how to behave.
 
-> **Build status:** DISCOVERY and PRODUCT_MODEL are live; `scope`, `architect` and `finalize`
-> arrive in Phases 13–15 and say so.
+> **Build status:** DISCOVERY, PRODUCT_MODEL and SCOPE_DEFINED are live; `architect` and
+> `finalize` arrive in Phases 14–15 and say so.
 
 ## Hard constraints
 
@@ -269,114 +269,13 @@ pass; surfaces → surface pass.
    table plus merge reports' `dropped`/`over_cap`. If the gate passes, the next command is
    `/productforge features` (it asks before closing DISCOVERY); otherwise `/productforge research`.
 
-### `/productforge features`
+### PRODUCT_MODEL commands: `features` · `workflows` · `model` · `competitors`
 
-PRODUCT_MODEL: the feature hierarchy in `research/FEATURE_MATRIX.md`. Views (`## Hierarchy`,
-`## Matrix`, the surfaces' `## Surface → features`) are rendered by merge — never by hand.
+Read `references/commands-product-model.md` and follow the section for the command.
 
-1. **Plan.** `python3.11 "$PF" feature-plan --workspace <ws> --json`.
-2. **Domain split** when `domains` is empty (or the user asks to redo it): one product-analyst run —
-   `brief --role product-analyst --task "Domain split: propose 4-10 non-overlapping domains for
-   <scope> in a ## Domains section." --input research/product-surfaces.md
-   --input research/product-overview.md --input research/DISCOVERY_LEDGER.md
-   --template research/FEATURE_MATRIX.md`. Preflight, repair, merge. Show the domains and ask with
-   AskUserQuestion: "Use these domains" or Other (their changes). On changes, re-run the domain
-   split with the user's instruction in the task. Without AskUserQuestion, continue and list the
-   domains in the report so the user can rerun.
-3. **Feature passes**, in batches of at most `max_parallel` domains from `empty_domains` (brief only
-   the current batch): `brief --role product-analyst --task "Feature pass for domain <name>:
-   record every user-visible capability in this domain (hierarchy at most 3 levels)." --partition
-   "<name>" --input research/DISCOVERY_LEDGER.md --input research/sources.md
-   --input research/product-surfaces.md --input research/FEATURE_MATRIX.md
-   --input research/UNKNOWNS.md --template research/FEATURE_MATRIX.md --budget "at most
-   <per_domain_budget> features; group minor capabilities as sub-features"`. Spawn the batch in one
-   message; preflight, repair and merge each run one at a time; then brief the next batch.
-4. **Coverage.** Plan again. If `surfaces_without_features` is not empty, one product-analyst run
-   mapping features for those surfaces; report `features_in_unlisted_domains` if any.
-5. **Dedupe pass** if `pf.py validate` shows `NEAR_DUPLICATE_TITLE` warnings for features: one
-   product-analyst run with the warnings and the instruction to supersede the weaker feature by
-   amendment. Preflight, repair, merge.
-6. Report features per domain (`feature-plan`), surfaces without features, validation, and the next
-   command (`/productforge workflows`, Phase 09).
+### SCOPE_DEFINED command: `scope`
 
-### `/productforge workflows`
-
-PRODUCT_MODEL: core user workflows in `research/workflows/`, each separating `[observed]` steps (with
-evidence) from `[implied-system]` steps (what our system must do). The index in `research/README.md`
-is rendered by merge.
-
-1. **Candidates.** `python3.11 "$PF" workflow-candidates --workspace <ws> --json` — deterministic
-   proposals from the feature matrix, at least one per domain, capped by `model.max_workflows`.
-2. **Trim.** Show the candidates grouped by domain and ask with AskUserQuestion: "Use all
-   (Recommended)", "Only one per domain", or Other (the user's list). Without AskUserQuestion, use
-   all and list them in the report.
-3. **Workflow passes**, one ux-analyst run per domain, in batches of at most
-   `agents.max_pending_runs` (brief only the current batch): `brief --role ux-analyst --task
-   "Workflow pass for domain <name>: reconstruct these workflows: <names and their F IDs>."
-   --partition "<name>" --input research/FEATURE_MATRIX.md --input research/DISCOVERY_LEDGER.md
-   --input research/sources.md --input research/product-surfaces.md --input research/UNKNOWNS.md
-   --template research/workflow.md`. Spawn the batch in one message; preflight, repair and merge
-   one at a time; then the next batch.
-4. **Research requests** per the Agent run protocol.
-5. Report: workflows per domain, the observed vs implied step counts (from the index in
-   `research/README.md`), validation, and the next command (`/productforge model`).
-
-### `/productforge model`
-
-PRODUCT_MODEL: the target's domain model (`spec/DOMAIN_MODEL.md`, `E-`), permissions
-(`spec/PERMISSIONS_MATRIX.md`, `RL-`/`PR-`), integrations (`spec/INTEGRATIONS.md`, `I-`) and
-architecture inference (`research/architecture-inference.md`, `A-`). Merge renders every view.
-Read `references/product-model-playbook.md`. Run the passes in order, **skipping a pass whose
-records exist** (counts from `pf.py status --json`) unless the user asks to redo it:
-
-1. **Domain pass** (when `entities` is 0), one domain-architect run: `brief --role domain-architect
-   --task "Domain and permissions pass: reconstruct the entities, roles and permission rules."
-   --input research/FEATURE_MATRIX.md --input research/workflows --input research/DISCOVERY_LEDGER.md
-   --input research/UNKNOWNS.md --input research/sources.md --input spec/DOMAIN_MODEL.md --input
-   spec/PERMISSIONS_MATRIX.md --template spec/DOMAIN_MODEL.md --template spec/PERMISSIONS_MATRIX.md`.
-   When `feature-plan` reports `over_soft_cap`, split it: a core run (tenancy, users, memberships,
-   roles) first, then one run per domain (`--partition "<domain>"`, the core entities listed in the
-   task) in batches of at most `agents.max_pending_runs`.
-2. **Integration pass** (when `integrations` is 0), one product-analyst run: `brief --role
-   product-analyst --task "Integration pass: one I record per provider or mechanism."
-   --input research/DISCOVERY_LEDGER.md --input research/sources.md --input research/FEATURE_MATRIX.md
-   --input spec/INTEGRATIONS.md --input research/UNKNOWNS.md --template spec/INTEGRATIONS.md`.
-3. **Inference pass** (when `inferences` is 0, or the gate's `G-PM-INFERENCE-COMPLETE` names
-   uncovered workflows — then the task lists them), one systems-architect run: `brief --role
-   systems-architect --task "Inference pass: …" --input research/workflows --input
-   spec/DOMAIN_MODEL.md --input spec/PERMISSIONS_MATRIX.md --input spec/INTEGRATIONS.md --input
-   research/DISCOVERY_LEDGER.md --input research/sources.md --input
-   research/architecture-inference.md --template research/architecture-inference.md`.
-4. After each run: preflight, repair and merge per the Agent run protocol; then its **research
-   requests** (these agents have no network, so missing evidence always arrives this way).
-5. **Gate.** `python3.11 "$PF" check --workspace <ws> --json`: report the PRODUCT_MODEL gate as a
-   compact table — **never advance here**. Also report `entities`, `roles`, `permission_rules`,
-   `unknown_permission_cells`, `integrations`, `inferences` from `pf.py status --json`, the root of
-   the relationship tree, and any `TECH_ASSERTION_IN_OBSERVATION` / `REQUIREMENT_NOT_MEASURABLE`
-   warnings for the user to review. If the gate passes the next command is `/productforge scope`
-   (it asks before closing PRODUCT_MODEL); otherwise the command each failing condition names.
-
-### `/productforge competitors`
-
-Optional, PRODUCT_MODEL: a shallow category lens in `research/COMPETITORS.md` (`C-`, `FS-`).
-Skipping it is fine — scoring treats missing signals as neutral.
-
-1. **Candidates.** `python3.11 "$PF" competitor-candidates --workspace <ws> --json` (names from
-   comparison/review source titles, capped by `competitors.max`). **Never research a competitor the
-   user has not confirmed** or add names yourself: ask with AskUserQuestion (multi-select + Other).
-   No answer — or no AskUserQuestion — means list the candidates and stop.
-2. **Per competitor**, in batches of at most 3: `python3.11 "$PF" discover <its homepage>
-   --max-pages 20 --workspace <ws>` (only when the user gave or confirmed its URL; otherwise the
-   analyst finds it), then `brief --role product-analyst --task "Competitor pass for <name>: at most
-   10 sources." --partition "<name>" --input research/FEATURE_MATRIX.md --input
-   research/COMPETITORS.md --input research/sources.md --template research/COMPETITORS.md
-   --template research/sources.md`. If `research.deep` resolves to a real provider, delegate one
-   pass per competitor (positioning, features, pricing, complaints) first. Preflight, repair, merge.
-   Research requests count toward the competitor's `competitors.max_sources` budget: once it is
-   spent, report them instead of running a targeted pass.
-3. Report the generated landscape and the table-stakes, rare and differentiator counts (from
-   `research/COMPETITORS.md`), plus validation. Next: `/productforge scope` once the PRODUCT_MODEL
-   gate passes.
+Read `references/commands-scope.md` and follow it.
 
 ### `/productforge status`
 
@@ -396,4 +295,4 @@ stage, stale stages, the IDEA-style counts, claim confidence, gate progress and 
 ### Stage commands not yet available
 
 After dispatch (so refusals and transitions still behave correctly), these say "not available in
-this build" and stop: `scope` (Phase 13), `architect` (Phase 14), `finalize` (Phase 15).
+this build" and stop: `architect` (Phase 14), `finalize` (Phase 15).

@@ -432,10 +432,11 @@ def _apply_amendments(
                 code="AMEND_LOCKED", details={"id": a.target, "owner": owner},
             )  # fmt: skip
         changes = {k: v for k, v in a.fields.items() if k != "Why"}
-        bad = sorted(set(changes) - set(records.AMENDABLE_FIELDS))
+        allowed = records.amendable(a.target)
+        bad = sorted(set(changes) - set(allowed))
         if bad or not changes:
             raise MergeError(
-                f"{where}: amendments may only set {', '.join(records.AMENDABLE_FIELDS)} "
+                f"{where}: amendments of {a.target} may only set {', '.join(allowed)} "
                 f"(got {', '.join(bad) or 'nothing'})",
                 code="AMEND_FIELD_NOT_ALLOWED", details={"id": a.target, "fields": bad},
             )  # fmt: skip

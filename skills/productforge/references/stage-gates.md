@@ -145,6 +145,21 @@ for a deliberately tiny product — the gate report always shows the numbers.
 `/productforge model` reports this gate but never advances; `/productforge scope` asks before
 closing PRODUCT_MODEL.
 
+## How the SCOPE_DEFINED conditions are measured
+
+| Condition | Passes when |
+|---|---|
+| `G-SC-ALL-SCORED` | every active feature has exactly one active `SC` score card |
+| `G-SC-DECISIONS-COMPUTED` | no score card has malformed scores, and `FEATURE_MATRIX.md`, `PARITY_MATRIX.md` and `PRODUCT_SPEC.md` equal a fresh render from `pf.py score` |
+| `G-SC-OVERRIDES-REASONED` | every `Override decision` has an `Override reason` |
+| `G-SC-PARITY-COMPLETE` | the generated parity matrix has a row for every active feature |
+| `G-SC-REQUIREMENTS-COVER-BUILD` | every BUILD NOW / BUILD SIMPLIFIED / USE EXTERNAL SERVICE feature is in some active `R`'s `Features` |
+| `G-SC-UNKNOWNS-DEFAULTED` | every active `U` has a `UD` (or a non-empty `V1 default`) |
+| `G-SC-CONFLICTS-RESOLVED` | no `CONFLICT_UNRESOLVED` — the PRODUCT_MODEL-era warning blocks here |
+
+`/productforge scope` reports this gate but never advances; `/productforge architect` asks before
+closing SCOPE_DEFINED.
+
 ## Scope
 
 DISCOVERY cannot close without an accepted scope (`G-SCOPE-SET`). `/productforge <url> --scope "…"`

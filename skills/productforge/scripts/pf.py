@@ -44,6 +44,7 @@ from pflib import (  # noqa: E402
     render,
     research,
     scaffold,
+    score,
     state,
     validators,
     workflows,
@@ -359,6 +360,32 @@ def _cmd_competitor_candidates(args: argparse.Namespace) -> dict[str, Any]:
     return competitors.candidates(ws)
 
 
+def _add_score(p: argparse.ArgumentParser) -> None:
+    p.add_argument("--write", action="store_true", help="re-render the views built from scores")
+
+
+def _cmd_score(args: argparse.Namespace) -> dict[str, Any]:
+    ws = workspace.resolve_workspace(args.workspace)
+    out = score.report(ws)
+    if args.write:
+        out["rendered"] = render.render_all(ws)
+    return out
+
+
+def _add_override(p: argparse.ArgumentParser) -> None:
+    p.add_argument("feature", help="feature ID, e.g. F-012")
+    group = p.add_mutually_exclusive_group(required=True)
+    group.add_argument("--decision", choices=score.DECISIONS)
+    group.add_argument("--clear", action="store_true", help="remove the override")
+    p.add_argument("--reason", required=True, help="the user's reason, in their words")
+
+
+def _cmd_override(args: argparse.Namespace) -> dict[str, Any]:
+    ws = workspace.resolve_workspace(args.workspace)
+    return score.record_override(ws, args.feature, None if args.clear else args.decision,
+                                 args.reason)  # fmt: skip
+
+
 def _cmd_render(args: argparse.Namespace) -> dict[str, Any]:
     ws = workspace.resolve_workspace(args.workspace)
     return {"rendered": render.render_all(ws, only=args.artifact)}
@@ -586,11 +613,12 @@ SUBCOMMANDS: list[tuple[str, str, Callable[[argparse.ArgumentParser], None], Han
         _add_nothing,
         _cmd_competitor_candidates,
     ),
+    ("score", "compute feature priorities and decisions", _add_score, _cmd_score),
     (
-        "score",
-        "compute feature priorities and decisions",
-        _add_nothing,
-        _not_implemented("score", "13"),
+        "override",
+        "record the user's decision for a feature (amends its score card)",
+        _add_override,
+        _cmd_override,
     ),
     (
         "lint-phases",
