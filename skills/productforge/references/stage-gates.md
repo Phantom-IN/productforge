@@ -174,6 +174,18 @@ closing SCOPE_DEFINED.
 `/productforge architect` reports this gate but never advances; `/productforge finalize` asks
 before closing ARCHITECTURE_LOCKED.
 
+## How the PHASE_PLAN_READY conditions are measured
+
+| Condition | Passes when |
+|---|---|
+| `G-PP-ROOT-DOCS` | the five root documents exist with their required sections; CLAUDE.md has one golden rule per invariant |
+| `G-PP-PHASE-LINT` | ≥ 1 phase file and `pf.py lint-phases` reports nothing |
+| `G-PP-TRACE-CLEAN` | `pf.py trace` reports no error (every V1 requirement planned, every ADR and invariant used, no scope leak) |
+| `G-PP-TRACEABILITY-RENDERED` | `spec/TRACEABILITY.md` equals a fresh `pf.py trace --write` |
+
+PHASE_PLAN_READY is the last stage: `pf.py complete --confirmed` records its completion once the
+gate passes. `status` reports IMPLEMENTATION when a phase in `plans/README.md` has left `Not started`.
+
 ## Scope
 
 DISCOVERY cannot close without an accepted scope (`G-SCOPE-SET`). `/productforge <url> --scope "…"`

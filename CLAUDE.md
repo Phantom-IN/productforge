@@ -110,6 +110,10 @@ python3.11 skills/productforge/scripts/pf.py score --write --workspace /tmp/tl -
 python3.11 skills/productforge/scripts/pf.py override F-012 --decision DEFER --reason "…" --workspace /tmp/tl --json
 python3.11 skills/productforge/scripts/pf.py set-preferences --stack "Next.js, PostgreSQL" --workspace /tmp/tl --json
 python3.11 skills/productforge/scripts/pf.py lint-phases --workspace /tmp/tl --json   # generated plans
+python3.11 skills/productforge/scripts/pf.py trace --write --workspace /tmp/tl --json
+python3.11 skills/productforge/scripts/pf.py explain R-007 --workspace /tmp/tl
+python3.11 skills/productforge/scripts/pf.py complete --confirmed --workspace /tmp/tl --json
+echo '{"tool_name":"Write","tool_input":{"file_path":"/tmp/tl/research/sources.md"}}' | python3.11 hooks/stage_guard.py
 python3.11 skills/productforge/scripts/pf.py deps --available "anthropic-skills:pdf" --workspace /tmp/tl
 python3.11 skills/productforge/scripts/pf.py delegate anthropic-skills:pdf --task "…" --workspace /tmp/tl
 python3.11 skills/productforge/scripts/pf.py deps --json          # which skills/plugins are reused

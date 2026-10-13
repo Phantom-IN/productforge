@@ -252,6 +252,13 @@ tolerant: a malformed record yields one finding and the rest of the file is stil
 | `PHASE_INDEX_MISMATCH` | error | Plans index, phase files and the plan's breakdown disagree |
 | `PHASE_ID_REF_DANGLING` | error | A phase's References cite a record that does not exist |
 | `ROOTDOC_SECTION_MISSING` | error | A generated root document lacks a required section |
+| `TRACE_R_NOT_PLANNED` | error | A requirement for V1 features is cited by no phase |
+| `TRACE_ADR_UNUSED` | error | A decision is cited by no phase and is not Status: global |
+| `TRACE_INV_UNUSED` | error | An invariant reaches neither CLAUDE.md, the index nor a phase |
+| `TRACE_D_NO_SOURCE` | error | A claim reaches no source through its evidence |
+| `TRACE_F_NO_EVIDENCE` | error | A feature reaches no claim or source |
+| `TRACE_PHASE_NO_REQUIREMENT` | warn | A phase after 00 cites no R, ADR or INV |
+| `TRACE_DROPPED_FEATURE_PLANNED` | error | A phase plans a requirement of deferred features |
 | `BAD_STATUS` | error | Status is not one of the allowed values (or rejected without Reason) |
 | `SUPERSEDED_TARGET_MISSING` | error | superseded-by targets a missing or other-type record |
 | `PROVISIONAL_ID_IN_CANONICAL` | error | A provisional ID (X-?n) appears in a canonical file |

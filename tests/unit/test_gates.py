@@ -8,12 +8,22 @@ from pflib import gates, scaffold, state, workspace
 from pflib.errors import CheckFailed
 
 
-def test_unbuilt_conditions_fail_as_not_built(new_ws: Path) -> None:
+def test_unbuilt_conditions_fail_as_not_built(
+    new_ws: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    declared = [*gates.EXPECTED["PHASE_PLAN_READY"], ("G-PP-FUTURE", "a later check", "99")]
+    monkeypatch.setitem(gates.EXPECTED, "PHASE_PLAN_READY", declared)
     report = gates.evaluate(new_ws, "PHASE_PLAN_READY")
     by_id = {r.id: r for r in report.results}
-    assert by_id["G-PP-TRACE-CLEAN"].status == gates.STATUS_NOT_BUILT
-    assert by_id["G-PP-TRACE-CLEAN"].detail == "not built yet (Phase 16)"
+    assert by_id["G-PP-FUTURE"].status == gates.STATUS_NOT_BUILT
+    assert by_id["G-PP-FUTURE"].detail == "not built yet (Phase 99)"
     assert not report.passed
+
+
+def test_every_declared_condition_is_built() -> None:
+    gates.load_conditions()
+    for stage, declared in gates.EXPECTED.items():
+        assert {cid for cid, _, _ in declared} == set(gates.REGISTRY[stage]), stage
 
 
 def test_discovery_conditions_are_all_built(new_ws: Path) -> None:

@@ -1,0 +1,17 @@
+{
+  "description": "ProductForge stage guard: inside a ProductForge workspace, blocks direct writes to canonical record files and to artifacts of a stage that is not open. No-op elsewhere.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3.11 \"${CLAUDE_PLUGIN_ROOT}/hooks/stage_guard.py\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -27,7 +27,12 @@ Re-running resumes: skip a pass whose output exists and lints clean (`pf.py lint
    AskUserQuestion: "Accept the plan (Recommended)", "Split a phase", "Merge phases", "Reorder". On
    a change, brief the planner with the user's request, merge, lint, and show the list again.
    Without AskUserQuestion, report and stop.
-5. **Gate.** `python3.11 "$PF" check --workspace <ws> --json`: report the PHASE_PLAN_READY gate
-   (the traceability conditions arrive with `pf.py trace`). Finish with the exact next step:
-   "Open a new Claude Code session in `<ws>`, paste `STARTUP_PROMPT.md`, then say
-   `execute phase 00`."
+5. **Trace.** `python3.11 "$PF" trace --write --workspace <ws> --json` renders
+   `spec/TRACEABILITY.md`; its findings (a requirement no phase builds, an unused ADR or invariant,
+   a phase planning a deferred feature) go back to the planner as a repair brief. Offer
+   `pf.py explain <R-ID>` for any chain the user wants to walk.
+6. **Gate and completion.** `python3.11 "$PF" check --workspace <ws> --json`: report the
+   PHASE_PLAN_READY gate as a compact table. When it passes, ask with AskUserQuestion whether to
+   mark the plan complete; on yes, `python3.11 "$PF" complete --confirmed --workspace <ws> --json`.
+   Finish with the exact next step: "Open a new Claude Code session in `<ws>`, paste
+   `STARTUP_PROMPT.md`, then say `execute phase 00`."

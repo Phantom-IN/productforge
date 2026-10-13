@@ -520,3 +520,10 @@ def test_phase_planner_and_finalize_command() -> None:
                     "## References", "## Open questions / risks",
                     "## Definition of done"):  # fmt: skip
         assert heading in method, heading
+
+
+def test_finalize_traces_and_completes() -> None:
+    section = " ".join(commands_text().split("### `/productforge finalize`", 1)[1].split())
+    for phrase in ('"$PF" trace --write', "pf.py explain", '"$PF" complete --confirmed',
+                   "AskUserQuestion"):  # fmt: skip
+        assert phrase in section, phrase

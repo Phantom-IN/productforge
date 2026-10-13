@@ -93,6 +93,13 @@ CODES: dict[str, tuple[str, str]] = {
     "PHASE_INDEX_MISMATCH": (ERROR, "Plans index, phase files and the plan's breakdown disagree"),
     "PHASE_ID_REF_DANGLING": (ERROR, "A phase's References cite a record that does not exist"),
     "ROOTDOC_SECTION_MISSING": (ERROR, "A generated root document lacks a required section"),
+    "TRACE_R_NOT_PLANNED": (ERROR, "A requirement for V1 features is cited by no phase"),
+    "TRACE_ADR_UNUSED": (ERROR, "A decision is cited by no phase and is not Status: global"),
+    "TRACE_INV_UNUSED": (ERROR, "An invariant reaches neither CLAUDE.md, the index nor a phase"),
+    "TRACE_D_NO_SOURCE": (ERROR, "A claim reaches no source through its evidence"),
+    "TRACE_F_NO_EVIDENCE": (ERROR, "A feature reaches no claim or source"),
+    "TRACE_PHASE_NO_REQUIREMENT": (WARN, "A phase after 00 cites no R, ADR or INV"),
+    "TRACE_DROPPED_FEATURE_PLANNED": (ERROR, "A phase plans a requirement of deferred features"),
     "BAD_STATUS": (ERROR, "Status is not one of the allowed values (or rejected without Reason)"),
     "SUPERSEDED_TARGET_MISSING": (ERROR, "superseded-by targets a missing or other-type record"),
     "PROVISIONAL_ID_IN_CANONICAL": (ERROR, "A provisional ID (X-?n) appears in a canonical file"),
@@ -248,6 +255,7 @@ def run(ws: Path, stage: str | None = None, artifact: str | None = None) -> list
         ref_types,
         scope,
         sources,
+        trace,
         workflows,
     )
 

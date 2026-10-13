@@ -32,6 +32,7 @@ from dataclasses import dataclass  # noqa: E402
 from pflib import (  # noqa: E402
     __version__,
     brief,
+    catalog,
     commands,
     competitors,
     config,
@@ -47,6 +48,7 @@ from pflib import (  # noqa: E402
     scaffold,
     score,
     state,
+    trace,
     validators,
     workflows,
     workspace,
@@ -59,7 +61,7 @@ from pflib.errors import (  # noqa: E402
     UsageError,
 )
 from pflib.index import WorkspaceIndex  # noqa: E402
-from pflib.io import emit  # noqa: E402
+from pflib.io import atomic_write_text, emit  # noqa: E402
 
 Handler = Callable[[argparse.Namespace], Any]
 
@@ -593,6 +595,73 @@ def _add_nothing(p: argparse.ArgumentParser) -> None:
     return None
 
 
+def _add_explain(p: argparse.ArgumentParser) -> None:
+    p.add_argument("id", help='a record ID (R-007) or a phase ("Phase 09")')
+
+
+def _add_complete(p: argparse.ArgumentParser) -> None:
+    p.add_argument("--confirmed", action="store_true", help="the user agreed")
+
+
+def _cmd_trace(args: argparse.Namespace) -> CommandResult:
+    ws = workspace.resolve_workspace(args.workspace)
+    out = trace.report(ws)
+    if args.write:
+        target = ws / catalog.TRACEABILITY_PATH
+        if not target.is_file():
+            seeded = scaffold.seed_text(ws, catalog.TRACEABILITY_PATH)
+            atomic_write_text(target, seeded or "# Traceability\n")
+        out["rendered"] = render.render_all(ws, only=catalog.TRACEABILITY_PATH)
+    human = [f"{f['severity'].upper():5} {f['code']}  {f['record_id'] or f['artifact']}: "
+             f"{f['message']}" for f in out["findings"]]  # fmt: skip
+    human.append(f"{out['fully_traced']}/{out['requirements']} requirements traced from a source "
+                 f"to a phase; {out['errors']} error(s), {out['warnings']} warning(s)")  # fmt: skip
+    return CommandResult(
+        out, EXIT_CHECK_FAILED if out["errors"] else EXIT_OK, human="\n".join(human)
+    )
+
+
+def _cmd_explain(args: argparse.Namespace) -> CommandResult:
+    ws = workspace.resolve_workspace(args.workspace)
+    out = trace.explain(ws, args.id)
+    g = trace.build(ws)
+
+    def lines(nodes: list[dict[str, Any]], arrow: str, depth: int = 1) -> list[str]:
+        rows = []
+        for n in nodes:
+            rows.append(f"{'  ' * depth}{arrow} {trace.describe(n['id'], g.records)}  [{n['via']}]")
+            rows += lines(n["children"], arrow, depth + 1)
+        return rows
+
+    human = [trace.describe(args.id, g.records), "upstream (rests on):"] + lines(
+        out["upstream"], "←"
+    )
+    human += ["downstream (built by):"] + lines(out["downstream"], "→")
+    return CommandResult(out, human="\n".join(human))
+
+
+def _cmd_complete(args: argparse.Namespace) -> CommandResult:
+    ws = workspace.resolve_workspace(args.workspace)
+    st = state.load(ws)
+    report = gates.evaluate(ws, st.state.value)
+    payload: dict[str, Any] = {"completed": False, "gate": report.to_dict()}
+    if st.state is not state.State.PHASE_PLAN_READY:
+        raise UsageError(f"complete applies to PHASE_PLAN_READY (open: {st.state.value})",
+                         code="ILLEGAL_TRANSITION")  # fmt: skip
+    if not report.passed:
+        payload["message"] = f"PHASE_PLAN_READY gate failing: {', '.join(report.failing())}"
+        return CommandResult(payload, EXIT_CHECK_FAILED)
+    if not args.confirmed:
+        payload["message"] = "gate passed; re-run with --confirmed once the user agrees"
+        return CommandResult(payload)
+    now = workspace.iso(workspace.utc_now())
+    state.complete(st, now)
+    state.save(ws, st)
+    workspace.append_history(ws, {"event": "complete", "stage": st.state.value})
+    payload.update(completed=True, completed_at=now)
+    return CommandResult(payload)
+
+
 # name, help, argument builder, handler — order mirrors IMPLEMENTATION_PLAN.md §8.
 SUBCOMMANDS: list[tuple[str, str, Callable[[argparse.ArgumentParser], None], Handler]] = [
     ("init", "create a workspace and open DISCOVERY", _add_init, _cmd_init),
@@ -673,7 +742,9 @@ SUBCOMMANDS: list[tuple[str, str, Callable[[argparse.ArgumentParser], None], Han
         _add_nothing,
         _cmd_lint_phases,
     ),
-    ("trace", "build the traceability graph", _add_trace, _not_implemented("trace", "16")),
+    ("trace", "build the traceability graph", _add_trace, _cmd_trace),
+    ("explain", "show a record's upstream and downstream chain", _add_explain, _cmd_explain),
+    ("complete", "record that PHASE_PLAN_READY is complete", _add_complete, _cmd_complete),
     ("check", "validate + gate + lint + trace", _add_nothing, _cmd_check),
 ]
 

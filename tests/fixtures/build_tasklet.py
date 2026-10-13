@@ -1136,6 +1136,7 @@ def project_docs(n_invariants: int) -> dict[str, str]:
         for name in ("README.md", "DEVELOPMENT.md", "STARTUP_PROMPT.md")
     }
     docs.update({"IMPLEMENTATION_PLAN.md": plan, "CLAUDE.md": claude, "plans/README.md": readme})
+    docs["spec/TRACEABILITY.md"] = fill((root / "spec/TRACEABILITY.md").read_text())
     docs.update(dict(phase_file(*ph) for ph in PHASES))
     return docs
 

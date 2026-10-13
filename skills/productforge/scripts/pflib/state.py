@@ -205,6 +205,16 @@ def transition(st: WorkspaceState, to: State, now: str) -> None:
     open_stage(st, to, now)
 
 
+def complete(st: WorkspaceState, now: str) -> None:
+    """Record that the final stage (PHASE_PLAN_READY) is complete (gate checking: the caller)."""
+    if st.state is not State.PHASE_PLAN_READY:
+        raise UsageError(
+            f"complete only applies to PHASE_PLAN_READY (open stage is {st.state.value})",
+            code="ILLEGAL_TRANSITION",
+        )
+    _stage_entry(st, st.state)["completed_at"] = now
+
+
 def reopen(st: WorkspaceState, stage: State, reason: str) -> list[str]:
     """Re-open an earlier stage. Returns the stages marked stale."""
     if not reason.strip():

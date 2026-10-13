@@ -344,6 +344,46 @@ def architecture_regions(index: WorkspaceIndex) -> dict[str, str]:
     return {"decisions": "\n".join(rows) + "\n", "coverage": "\n".join(cov_rows) + "\n"}
 
 
+def traceability_regions(index: WorkspaceIndex) -> dict[str, str]:
+    from pflib import trace
+
+    rep = trace.report(index.ws)
+    if not rep["requirements"]:
+        return {
+            "chains": "_No requirements yet._\n",
+            "coverage": "_No requirements yet._\n",
+            "gaps": "_None._\n",
+        }
+    rows = [
+        "| R | Sources | Claims | Features / workflows | Inferences | ADRs | Phases |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    for rid, c in sorted(rep["chains"].items()):
+        cells = [
+            rid,
+            ", ".join(c["sources"]),
+            ", ".join(c["claims"]),
+            ", ".join(c["features"] + c["workflows"]),
+            ", ".join(c["inferences"]),
+            ", ".join(c["adrs"]),
+            ", ".join(p.split()[1] for p in c["phases"]),
+        ]
+        rows.append("| " + " | ".join(_cell(x) for x in cells) + " |")
+    coverage = (
+        f"| Measure | Count |\n|---|---:|\n| Requirements | {rep['requirements']} |\n"
+        f"| Traced from a source to a phase | {rep['fully_traced']} |\n"
+        f"| Trace errors | {rep['errors']} |\n| Trace warnings | {rep['warnings']} |\n"
+    )
+    gaps = (
+        "".join(
+            f"- `{f['code']}` {f['record_id'] or f['artifact']}: {_cell(f['message'])}\n"
+            for f in rep["findings"]
+        )
+        or "_None._\n"
+    )
+    return {"chains": "\n".join(rows) + "\n", "coverage": coverage, "gaps": gaps}
+
+
 RENDERERS: dict[str, Renderer] = {
     FEATURE_MATRIX: Renderer(feature_regions, {"hierarchy": "## Hierarchy", "matrix": "## Matrix"}),
     SURFACES: Renderer(surface_regions, {"surface-features": "## Surface → features"}),
@@ -357,6 +397,10 @@ RENDERERS: dict[str, Renderer] = {
     catalog.ARCHITECTURE_PATH: Renderer(
         architecture_regions,
         {"decisions": "## Decisions", "coverage": "## Requirement coverage"},
+    ),
+    catalog.TRACEABILITY_PATH: Renderer(
+        traceability_regions,
+        {"chains": "## Requirement chains", "coverage": "## Coverage summary", "gaps": "## Gaps"},
     ),
     catalog.PARITY_PATH: Renderer(
         parity_regions, {"parity": "## Matrix", "overrides": "## Overrides"}

@@ -56,19 +56,12 @@ def test_status_human_output(pf_cli: Cli) -> None:
     assert "No ProductForge workspace found" in out
 
 
-@pytest.mark.parametrize(
-    "argv, phase",
-    [
-        (["trace"], "16"),
-    ],
-)
-def test_unimplemented_subcommands_exit_2(pf_cli: Cli, argv: list[str], phase: str) -> None:
-    code, out, err = pf_cli(*argv, "--json")
-    assert code == 2
-    payload = json.loads(out)
-    assert payload["error"] == "NOT_IMPLEMENTED"
-    assert payload["message"] == f"{argv[0]}: not implemented (phase {phase})"
-    assert "not implemented" in err
+def test_every_subcommand_is_implemented() -> None:
+    import pf
+
+    stubs = [name for name, _, _, handler in pf.SUBCOMMANDS
+             if handler.__qualname__.startswith("_not_implemented")]  # fmt: skip
+    assert stubs == []
 
 
 def test_usage_error_exits_2(pf_cli: Cli) -> None:

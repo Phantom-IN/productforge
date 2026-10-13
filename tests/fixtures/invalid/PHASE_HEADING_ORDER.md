@@ -41,18 +41,18 @@ Builds projects for tasklet-alt V1 (§9).
 - [ ] a project has exactly one owner
 - [ ] archived projects are hidden but restorable
 
-## References
+## Test plan
 
 - Unit/integration: the tests named in the tasks.
 - Manual verification: walk the acceptance criteria locally.
 
-## Test plan
-
-- IMPLEMENTATION_PLAN §9, R-003, ADR-005
-
 ## Open questions / risks
 
 - None.
+
+## References
+
+- IMPLEMENTATION_PLAN §9, R-003, ADR-005
 
 ## Definition of done
 

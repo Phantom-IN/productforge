@@ -116,6 +116,14 @@ versions follow [Semantic Versioning](https://semver.org/).
   `references/phase-plan-method.md` and `references/commands-finalize.md`; `repotree` handles
   sibling names and comment lines; ProductForge's own `plans/v1/` pass the lint in CI (six task
   lines now name their files); PHASE_PLAN_READY fixture (13 phases).
+- Phase 16: traceability — `pflib/trace.py` (provenance graph over reference fields and phase
+  References; structural links excluded), `pf.py trace [--write]`, `pf.py explain`, `pf.py complete`;
+  `spec/TRACEABILITY.md` template and renderer (chains, coverage, gaps); trace findings
+  (`TRACE_R_NOT_PLANNED`, `TRACE_ADR_UNUSED`, `TRACE_INV_UNUSED`, `TRACE_D_NO_SOURCE`,
+  `TRACE_F_NO_EVIDENCE`, `TRACE_PHASE_NO_REQUIREMENT` (warn), `TRACE_DROPPED_FEATURE_PLANNED`); the
+  full PHASE_PLAN_READY gate; the PreToolUse stage guard (`hooks/hooks.json`,
+  `hooks/stage_guard.py`): blocks direct record-file, closed-stage and generated-view writes inside
+  workspaces, no-op elsewhere, fails open.
 
 ### Fixed
 - Briefing more runs than `agents.max_pending_runs` is refused (`RUN_LIMIT`); `pf.py staging list` /

@@ -27,11 +27,53 @@ def _phase_lint(ws: Path) -> ConditionResult:
         return ConditionResult(False, "no phase files yet (/productforge finalize)")
     if res.issues:
         codes = sorted({i.code for i in res.issues})
-        return ConditionResult(False, f"{len(res.issues)} lint finding(s): {', '.join(codes)} "
-                                      "(pf.py lint-phases)")  # fmt: skip
+        return ConditionResult(
+            False, f"{len(res.issues)} lint finding(s): {', '.join(codes)} (pf.py lint-phases)"
+        )
     return ConditionResult(True, f"{len(res.phases)} phases, pf.py lint-phases clean")
 
 
-register(STAGE, GateCondition("G-PP-ROOT-DOCS", "root documents exist with required sections",
-                              _root_docs))  # fmt: skip
+def _trace_clean(ws: Path) -> ConditionResult:
+    from pflib import trace
+
+    if not plans.phase_files(ws):
+        return ConditionResult(False, "no phase files yet (/productforge finalize)")
+    rep = trace.report(ws)
+    if rep["errors"]:
+        codes = sorted({f["code"] for f in rep["findings"] if f["severity"] == "error"})
+        return ConditionResult(
+            False, f"{rep['errors']} trace error(s): {', '.join(codes)} (pf.py trace)"
+        )
+    return ConditionResult(
+        True,
+        f"{rep['fully_traced']}/{rep['requirements']} requirements traced from a source to a phase",
+    )
+
+
+def _traceability_rendered(ws: Path) -> ConditionResult:
+    from pflib import render
+    from pflib.index import WorkspaceIndex
+
+    path = ws / catalog.TRACEABILITY_PATH
+    if not path.is_file():
+        return ConditionResult(False, f"{catalog.TRACEABILITY_PATH} missing (pf.py trace --write)")
+    text = path.read_text(encoding="utf-8")
+    if render.render_text(catalog.TRACEABILITY_PATH, text, WorkspaceIndex(ws)) != text:
+        return ConditionResult(False, f"{catalog.TRACEABILITY_PATH} is stale (pf.py trace --write)")
+    return ConditionResult(True, f"{catalog.TRACEABILITY_PATH} matches a fresh render")
+
+
+register(STAGE, GateCondition("G-PP-TRACE-CLEAN", "pf.py trace reports no errors", _trace_clean))
+register(
+    STAGE,
+    GateCondition(
+        "G-PP-TRACEABILITY-RENDERED",
+        "TRACEABILITY.md matches a fresh render",
+        _traceability_rendered,
+    ),
+)
+register(
+    STAGE,
+    GateCondition("G-PP-ROOT-DOCS", "root documents exist with required sections", _root_docs),
+)
 register(STAGE, GateCondition("G-PP-PHASE-LINT", "pf.py lint-phases is clean", _phase_lint))
