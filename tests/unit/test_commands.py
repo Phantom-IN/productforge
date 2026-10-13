@@ -73,3 +73,16 @@ def test_unknown_command(new_ws: Path) -> None:
 def test_every_stage_has_a_primary_command() -> None:
     for stage in state.ADVANCEABLE:
         assert commands.COMMAND_STAGE[commands.PRIMARY_COMMAND[stage]] == stage
+
+
+def test_next_command_follows_the_first_failing_condition(tasklet_product_model: Path) -> None:
+    from pflib import commands, gates, state
+
+    ws = tasklet_product_model
+    st = state.load(ws)
+    assert commands.next_command(ws, st) == "scope"  # gate passes
+    for p in (ws / "research/workflows").glob("W-006-*.md"):
+        p.unlink()  # the Integrations & API domain loses its workflow
+    report = gates.evaluate(ws, st.state.value)
+    assert "G-PM-WORKFLOW-PER-DOMAIN" in report.failing()  # first mapped failing condition
+    assert commands.next_command(ws, st, report) == "workflows"

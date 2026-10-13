@@ -123,6 +123,7 @@ Returned by `pf.py` commands (exit 1 or 2, JSON `{"error": CODE, ...}`); nothing
 | `NO_SUCH_RUN` / `BAD_RUN_ID` / `BAD_ROLE` | Invalid staging run or role name |
 | `NO_WORKSPACE` | No `.productforge/` found at or above the working directory |
 | `AMEND_TARGET_MISSING` / `AMEND_LOCKED` / `AMEND_FIELD_NOT_ALLOWED` / `AMEND_NO_REASON` | An amendment was refused (see Amendments) |
+| `REVISE_TARGET_MISSING` / `REVISE_LOCKED` / `REVISE_NO_REASON` / `BAD_REVISION` | A record-file revision was refused (see Revisions) |
 
 ## Amendments
 
@@ -138,6 +139,24 @@ sets `Status`, `Reason` and/or `Resolution` (nothing else) on a record of the **
 is required and is written to `history.log`, not to the record. Merge refuses amendments, writing
 nothing, with `AMEND_TARGET_MISSING`, `AMEND_LOCKED` (closed stage — `pf.py reopen`),
 `AMEND_FIELD_NOT_ALLOWED` or `AMEND_NO_REASON`. Provisional IDs in values are rewritten.
+
+## Revisions (record files)
+
+A record file's **body** (a workflow's `## Steps`, an ADR's notes) changes with a staged file that
+starts with `### REVISE <ID>` and a `- Why:` line, followed by the `##` sections to replace; other
+sections and the header record stay as they are (header fields change through unions and
+amendments). Open stage only; logged as a `revise` event. Refusals write nothing:
+`REVISE_TARGET_MISSING`, `REVISE_LOCKED` (closed stage — `pf.py reopen`), `REVISE_NO_REASON`,
+`BAD_REVISION` (not a record file, or no `##` section).
+
+```markdown
+### REVISE W-003
+- Why: the new help page (D-?1) shows the invite needs an admin first.
+
+## Steps
+
+1. [observed] Admin opens Members and invites by email — D-?1
+```
 
 ## Generated regions
 

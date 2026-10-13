@@ -115,17 +115,19 @@ def workflow_regions(index: WorkspaceIndex) -> dict[str, str]:
     flows = [(rel, w) for rel, w in index.records("W") if records.is_active(w)]
     if not flows:
         return {"workflows": ""}
-    rows = ["| W | Name | Actor | Features | Confidence | Implied system steps |",
-            "|---|---|---|---|---|---|"]  # fmt: skip
+    rows = ["| W | Name | Actor | Features | Confidence | Observed steps | Implied system steps |",
+            "|---|---|---|---|---|---|---|"]  # fmt: skip
     for rel, w in sorted(flows, key=lambda x: x[1].id):
         steps, _ = workflows.parse_steps(index.document(rel).text)
         implied = sum(1 for s in steps if s.tag == "implied-system")
+        observed = sum(1 for s in steps if s.tag == "observed")
         cells = [
             w.id,
             w.title,
             w.get("Actor"),
             w.get("Features"),
             w.get("Confidence"),
+            str(observed),
             str(implied),
         ]
         rows.append("| " + " | ".join(_cell(c) for c in cells) + " |")

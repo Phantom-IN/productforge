@@ -55,7 +55,9 @@ validator checks it); otherwise `PROBABLE`. Implied steps never raise confidence
 engineering inference.
 
 **One flow, one file.** Check `research/workflows/` first: reuse the exact workflow name to add
-evidence to an existing workflow instead of duplicating it. If an important flow is missing from the
+evidence to an existing workflow instead of duplicating it. To **change** an existing workflow's
+steps (new evidence), stage `### REVISE W-NNN` + `- Why: …` and the sections to replace — a
+re-staged copy would only add its IDs (record-format.md, Revisions). If an important flow is missing from the
 brief, mention it under `NOTES`.
 
 ## Reply

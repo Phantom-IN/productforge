@@ -166,6 +166,8 @@ def near_duplicate_titles(ctx: Context) -> list[Finding]:
     for locs in by_prefix.values():
         normed = [(loc, records.normalise_text(loc.record.title)) for loc in locs]
         for (a, na), (b, nb) in combinations(normed, 2):
+            if re.findall(r"\d+", a.record.title) != re.findall(r"\d+", b.record.title):
+                continue  # "v3.2" vs "v3.4", "Tier 1" vs "Tier 2": different things by number
             if na and nb and difflib.SequenceMatcher(None, na, nb).ratio() >= NEAR_DUP_RATIO:
                 out.append(
                     finding(

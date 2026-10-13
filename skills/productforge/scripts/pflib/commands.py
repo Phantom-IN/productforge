@@ -68,12 +68,29 @@ class Decision:
         }
 
 
+# The command that works on a failing gate condition, where a stage has several (v1.1 dogfood:
+# status kept suggesting `features` after the feature conditions passed).
+CONDITION_COMMAND: dict[str, str] = {
+    "G-PM-SURFACE-FEATURES": "features",
+    "G-PM-FEATURE-EVIDENCE": "features",
+    "G-PM-WORKFLOW-PER-DOMAIN": "workflows",
+    "G-PM-ENTITY-COMPLETE": "model",
+    "G-PM-PERMISSIONS-COVERAGE": "model",
+    "G-PM-INTEGRATIONS-COMPLETE": "model",
+    "G-PM-INFERENCE-COMPLETE": "model",
+}
+
+
 def next_command(ws: Path, st: state.WorkspaceState, report: gates.GateReport | None = None) -> str:
-    """Keep working on the open stage until its gate passes, then enter the next stage."""
+    """Keep working on the open stage until its gate passes — on the command that addresses the
+    first failing condition — then enter the next stage."""
     report = report or gates.evaluate(ws, st.state.value)
     nxt = st.state.next()
     if report.passed and nxt in PRIMARY_COMMAND:
         return PRIMARY_COMMAND[nxt]
+    for cid in report.failing():
+        if cid in CONDITION_COMMAND:
+            return CONDITION_COMMAND[cid]
     return PRIMARY_COMMAND.get(st.state, "status")
 
 

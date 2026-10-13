@@ -416,6 +416,10 @@ OVERVIEW_PATH = "research/product-overview.md"
 FEATURE_MATRIX_PATH = "research/FEATURE_MATRIX.md"
 SURFACES_PATH = "research/product-surfaces.md"
 RESEARCH_README_PATH = "research/README.md"
+# Document sections made of "- key: value" lines that several runs fill in parallel: merge keeps
+# every key and lets a staged line replace only its own key (v1.1 dogfood: parallel research runs
+# overwrote each other's ## Coverage lines).
+KEYED_SECTIONS: dict[str, tuple[str, ...]] = {"research/product-overview.md": ("Coverage",)}
 DOMAIN_MODEL_PATH = "spec/DOMAIN_MODEL.md"
 PERMISSIONS_PATH = "spec/PERMISSIONS_MATRIX.md"
 INTEGRATIONS_PATH = "spec/INTEGRATIONS.md"

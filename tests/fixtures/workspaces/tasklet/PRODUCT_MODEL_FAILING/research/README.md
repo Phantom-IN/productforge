@@ -20,13 +20,13 @@ Never edit these files by hand: agents stage changes and `pf.py merge` writes th
 ## Workflows
 
 <!-- pf:generated:start workflows -->
-| W | Name | Actor | Features | Confidence | Implied system steps |
-|---|---|---|---|---|---|
-| W-001 | Create a task | Member | F-001, F-004, F-008 | CONFIRMED | 6 |
-| W-002 | Assign a task | Member | F-002, F-016 | CONFIRMED | 3 |
-| W-003 | Invite a member | Admin | F-021, F-022 | CONFIRMED | 3 |
-| W-004 | Search the workspace | Member | F-019 | CONFIRMED | 2 |
-| W-005 | Comment on a task | Member or guest | F-014, F-015 | CONFIRMED | 3 |
-| W-007 | Change a task's status | Member | F-004, F-009 | CONFIRMED | 2 |
-| W-008 | Archive a project | Member | F-012 | CONFIRMED | 1 |
+| W | Name | Actor | Features | Confidence | Observed steps | Implied system steps |
+|---|---|---|---|---|---|---|
+| W-001 | Create a task | Member | F-001, F-004, F-008 | CONFIRMED | 3 | 6 |
+| W-002 | Assign a task | Member | F-002, F-016 | CONFIRMED | 2 | 3 |
+| W-003 | Invite a member | Admin | F-021, F-022 | CONFIRMED | 2 | 3 |
+| W-004 | Search the workspace | Member | F-019 | CONFIRMED | 1 | 2 |
+| W-005 | Comment on a task | Member or guest | F-014, F-015 | CONFIRMED | 1 | 3 |
+| W-007 | Change a task's status | Member | F-004, F-009 | CONFIRMED | 2 | 2 |
+| W-008 | Archive a project | Member | F-012 | CONFIRMED | 2 | 1 |
 <!-- pf:generated:end -->

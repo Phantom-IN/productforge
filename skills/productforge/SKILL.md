@@ -147,7 +147,8 @@ Stage sections delegate work to role agents (`agents/*.md`) through this loop:
     research/DISCOVERY_LEDGER.md`. This is allowed while DISCOVERY is closed: new S/D/U records are
     appends; an amendment to a closed record is refused (`AMEND_LOCKED` → suggest `reopen`).
   - Then re-run the requesting role **once** with the same task plus "New evidence: <new IDs from
-    the merge report>". Requests still open after that are reported to the user.
+    the merge report>" (record files such as workflows change by `### REVISE`, never by a
+    re-staged copy). Requests still open after that are reported to the user.
 
 ## Inline fallback
 

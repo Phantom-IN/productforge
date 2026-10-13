@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
@@ -60,6 +61,7 @@ class MergeReport:
     dropped: list[str] = field(default_factory=list)  # new sources dropped by research.max_sources
     over_cap: int = 0  # sources still above the cap (kept because other records cite them)
     documents_removed: list[str] = field(default_factory=list)  # REMOVE_MARKER documents
+    revised: list[str] = field(default_factory=list)  # record files whose body was revised
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -77,6 +79,7 @@ class MergeReport:
             "rendered": self.rendered,
             "dropped": self.dropped,
             "documents_removed": self.documents_removed,
+            "revised": self.revised,
             "over_cap": self.over_cap,
         }
 
@@ -191,9 +194,43 @@ def _level2_blocks(text: str) -> tuple[str, list[tuple[str, str]]]:
     return preamble, blocks
 
 
-def merge_document_sections(canonical: str | None, staged: str) -> str:
+def _bullet_key(line: str) -> str | None:
+    if line.startswith("- ") and ":" in line:
+        return line[2:].split(":", 1)[0].strip().lower()
+    return None
+
+
+def merge_keyed_block(canonical: str, staged: str) -> str:
+    """``- key: value`` lines: a staged line replaces its key's canonical line, new keys are
+    appended after the last bullet, and every other canonical line is kept."""
+    canon_lines = canonical.splitlines(keepends=True)
+    staged_by_key: dict[str, str] = {}
+    for line in staged.splitlines(keepends=True):
+        key = _bullet_key(line)
+        if key is not None:
+            staged_by_key[key] = line if line.endswith("\n") else line + "\n"
+    out: list[str] = []
+    seen: set[str] = set()
+    last_bullet = -1
+    for line in canon_lines:
+        key = _bullet_key(line)
+        if key is not None:
+            out.append(staged_by_key.get(key, line))
+            seen.add(key)
+            last_bullet = len(out) - 1
+        else:
+            out.append(line)
+    new = [line for key, line in staged_by_key.items() if key not in seen]
+    if new:
+        at = last_bullet + 1 if last_bullet >= 0 else len(out)
+        out[at:at] = new
+    return "".join(out)
+
+
+def merge_document_sections(canonical: str | None, staged: str, keyed: tuple[str, ...] = ()) -> str:
     """Section-level document merge: staged ``#``/``##`` sections replace same-named
-    canonical sections, new ones are appended; a missing canonical file is created as-is."""
+    canonical sections, new ones are appended; a missing canonical file is created as-is.
+    Sections named in ``keyed`` merge line by line on their ``- key:`` bullets."""
     if canonical is None:
         return staged
     _, staged_blocks = _level2_blocks(staged)
@@ -202,7 +239,9 @@ def merge_document_sections(canonical: str | None, staged: str) -> str:
     merged = list(canon_blocks)
     for heading, block in staged_blocks:
         block = block if block.endswith("\n") else block + "\n"
-        if heading in index:
+        if heading in index and heading.lstrip("#").strip() in keyed:
+            merged[index[heading]] = (heading, merge_keyed_block(merged[index[heading]][1], block))
+        elif heading in index:
             old = merged[index[heading]][1]
             # keep the canonical spacing before the next section
             trailing = old[len(old.rstrip("\n")) :]
@@ -225,6 +264,30 @@ def merge_document_sections(canonical: str | None, staged: str) -> str:
 class StagedAmendment:
     rel: str
     amendment: records.Amendment
+
+
+REVISE_RE = re.compile(
+    r"^### REVISE (?P<id>[A-Z]{1,3}-\d+)\s*\n(?P<why>- Why:[^\n]*\n)?(?P<body>.*)\Z", re.S
+)
+
+
+@dataclass
+class StagedRevision:
+    """A new body for an existing record file (v1.1 dogfood: workflows could not take new
+    evidence — a re-staged workflow only unioned its header IDs and lost the rewritten steps)."""
+
+    rel: str
+    target: str
+    why: str
+    body: str
+
+
+def parse_revision(rel: str, text: str) -> StagedRevision | None:
+    m = REVISE_RE.match(text.lstrip("\n"))
+    if not m:
+        return None
+    why = (m.group("why") or "")[len("- Why:") :].strip()
+    return StagedRevision(rel, m.group("id"), why, m.group("body"))
 
 
 def _record_file_body_lines(text: str) -> int:
@@ -252,11 +315,12 @@ def _prose_sections(doc: Document, spec: ArtifactSpec) -> str:
 
 
 def _collect(
-    run_dir: Path,
+    run_dir: Path, revisions: list[StagedRevision] | None = None
 ) -> tuple[
     list[StagedRecord], dict[str, str], dict[str, str], int, list[StagedAmendment], dict[str, str]
 ]:
-    """Returns (records, record-file texts, documents, prose lines, amendments, prose sections)."""
+    """Returns (records, record-file texts, documents, prose lines, amendments, prose sections);
+    record-file revisions (``### REVISE <ID>``) are appended to ``revisions``."""
     amendments: list[StagedAmendment] = []
     sections: dict[str, str] = {}
     staged: list[StagedRecord] = []
@@ -284,6 +348,12 @@ def _collect(
         if text.strip() == REMOVE_MARKER:
             raise MergeError(f"{rel}: record files cannot be removed (supersede records instead)",
                              code="BAD_REMOVE", details={"file": rel})  # fmt: skip
+        revision = parse_revision(rel, text) if spec.kind == catalog.KIND_RECORD_FILE else None
+        if revision is not None:
+            if revisions is None:
+                raise MergeError(f"{rel}: revisions are not accepted here", code="BAD_REVISION")
+            revisions.append(revision)
+            continue
         found = records.parse_amendments(text, path=rel)
         amendments.extend(StagedAmendment(rel, a) for a in found)
         if found:  # amendment blocks are not prose
@@ -396,6 +466,59 @@ def _apply_source_cap(
     return [sr for sr in staged if sr.record.id not in drop]
 
 
+def _apply_revisions(
+    ws: Path,
+    revisions: list[StagedRevision],
+    mapping: dict[str, str],
+    index: WorkspaceIndex,
+    outputs: dict[str, str],
+    current_text: Callable[[str, ArtifactSpec], str],
+    report: MergeReport,
+) -> list[dict[str, Any]]:
+    """Replace body sections of existing record files of the open stage (all-or-nothing)."""
+    if not revisions:
+        return []
+    from pflib import state
+
+    open_stage = state.load(ws).state.value
+    located = []
+    for rv in revisions:
+        parsed = ids.parse(rv.target, strict=False)
+        hit = next(((rel, rec) for rel, rec in index.records(parsed.prefix) if rec.id == rv.target),
+                   None) if parsed else None  # fmt: skip
+        if hit is None:
+            raise MergeError(f"{rv.rel}: revision target {rv.target} does not exist",
+                             code="REVISE_TARGET_MISSING", details={"id": rv.target})  # fmt: skip
+        rel, _ = hit
+        spec = catalog.spec_for_path(rel)
+        assert spec is not None and parsed is not None
+        if spec.kind != catalog.KIND_RECORD_FILE:
+            raise MergeError(f"{rv.rel}: {rv.target} is not a record file; use an amendment",
+                             code="BAD_REVISION", details={"id": rv.target})  # fmt: skip
+        owner = spec.owner_of(parsed.prefix)
+        if owner != open_stage:
+            raise MergeError(
+                f"{rv.rel}: {rv.target} belongs to {owner}, which is not the open stage "
+                f"({open_stage}); use `pf.py reopen {owner}` to change it",
+                code="REVISE_LOCKED", details={"id": rv.target, "owner": owner},
+            )  # fmt: skip
+        if not rv.why:
+            raise MergeError(f"{rv.rel}: revision of {rv.target} needs a `- Why:` line",
+                             code="REVISE_NO_REASON", details={"id": rv.target})  # fmt: skip
+        if "\n## " not in "\n" + rv.body:
+            raise MergeError(f"{rv.rel}: revision of {rv.target} holds no `## ` section",
+                             code="BAD_REVISION", details={"id": rv.target})  # fmt: skip
+        located.append((rv, rel, spec))
+    events = []
+    for rv, rel, spec in located:
+        body = rewrite_provisional(rv.body, mapping)
+        outputs[rel] = merge_document_sections(current_text(rel, spec), body)
+        report.revised.append(rv.target)
+        sections_changed = [ln[3:].strip() for ln in body.splitlines() if ln.startswith("## ")]
+        events.append({"id": rv.target, "sections": sections_changed, "why": rv.why})
+    return events
+
+
 def _apply_amendments(
     ws: Path,
     amendments: list[StagedAmendment],
@@ -501,8 +624,9 @@ def merge(ws: Path, run_id: str) -> MergeReport:
 
     with merge_lock(ws):
         report = MergeReport(run_id=run_id)
+        revisions: list[StagedRevision] = []
         staged, record_files, documents, report.ignored_prose_lines, amendments, sections = (
-            _collect(run_dir)
+            _collect(run_dir, revisions)
         )
         index = WorkspaceIndex(ws)
         staged = _apply_source_cap(ws, staged, record_files, documents, index, report)
@@ -564,6 +688,7 @@ def merge(ws: Path, run_id: str) -> MergeReport:
         texts += list(record_files.values()) + list(documents.values())
         texts += ["\n".join(sa.amendment.fields.values()) for sa in amendments]
         texts += list(sections.values())
+        texts += [rv.body for rv in revisions]
         dangling = sorted(set().union(*(provisional_refs(t) for t in texts)) - set(mapping))
         if dangling:
             raise MergeError(
@@ -615,6 +740,9 @@ def merge(ws: Path, run_id: str) -> MergeReport:
         amend_events = _apply_amendments(
             ws, amendments, mapping, index, outputs, current_text, report
         )
+        revise_events = _apply_revisions(
+            ws, revisions, mapping, index, outputs, current_text, report
+        )
 
         # 4) prose sections inside records-kind files (e.g. "## Domains")
         for rel, block in sorted(sections.items()):
@@ -635,7 +763,9 @@ def merge(ws: Path, run_id: str) -> MergeReport:
                     removals.append(rel)
                 continue
             canonical = path.read_text(encoding="utf-8") if path.is_file() else None
-            outputs[rel] = merge_document_sections(canonical, rewrite_provisional(text, mapping))
+            outputs[rel] = merge_document_sections(
+                canonical, rewrite_provisional(text, mapping), catalog.KEYED_SECTIONS.get(rel, ())
+            )
             report.documents_updated.append(rel)
 
         # Validate every output parses before touching the disk (all-or-nothing).
@@ -654,6 +784,8 @@ def merge(ws: Path, run_id: str) -> MergeReport:
         report.rendered = render.render_all(ws)
         for event in amend_events:
             workspace.append_history(ws, {"event": "amend", "run_id": run_id, **event})
+        for event in revise_events:
+            workspace.append_history(ws, {"event": "revise", "run_id": run_id, **event})
         for prefix, number in next_num.items():
             marks[prefix] = max(marks.get(prefix, 0), number)
         workspace.save_id_marks(ws, marks)
