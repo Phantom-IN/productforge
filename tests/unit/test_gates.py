@@ -9,10 +9,10 @@ from pflib.errors import CheckFailed
 
 
 def test_unbuilt_conditions_fail_as_not_built(new_ws: Path) -> None:
-    report = gates.evaluate(new_ws, "ARCHITECTURE_LOCKED")
+    report = gates.evaluate(new_ws, "PHASE_PLAN_READY")
     by_id = {r.id: r for r in report.results}
-    assert by_id["G-AR-REQUIREMENTS-ADDRESSED"].status == gates.STATUS_NOT_BUILT
-    assert by_id["G-AR-REQUIREMENTS-ADDRESSED"].detail == "not built yet (Phase 14)"
+    assert by_id["G-PP-ROOT-DOCS"].status == gates.STATUS_NOT_BUILT
+    assert by_id["G-PP-ROOT-DOCS"].detail == "not built yet (Phase 15)"
     assert not report.passed
 
 

@@ -160,6 +160,20 @@ closing PRODUCT_MODEL.
 `/productforge scope` reports this gate but never advances; `/productforge architect` asks before
 closing SCOPE_DEFINED.
 
+## How the ARCHITECTURE_LOCKED conditions are measured
+
+| Condition | Passes when |
+|---|---|
+| `G-AR-REQUIREMENTS-ADDRESSED` | every active `R` is in an active ADR's `Satisfies` or under `## Convention-covered requirements` |
+| `G-AR-INFERENCES-PROPOSED` | every active `A` has exactly one active `AP` |
+| `G-AR-INVARIANTS` | ≥ 1 invariant, each `Enforced by` a test, middleware, db-constraint, lint or review |
+| `G-AR-REPO-STRUCTURE` | `## Repository structure` holds a fenced tree that parses to ≥ 2 paths |
+| `G-AR-STACK-COMPLETE` | `## Stack` has a table with every choice named (no TBD, `?`, unknown) |
+| `G-AR-MANDATORY-TOPICS` | each mandatory topic has an ADR with that `Topic` or a line under `## Not applicable topics` |
+
+`/productforge architect` reports this gate but never advances; `/productforge finalize` asks
+before closing ARCHITECTURE_LOCKED.
+
 ## Scope
 
 DISCOVERY cannot close without an accepted scope (`G-SCOPE-SET`). `/productforge <url> --scope "…"`

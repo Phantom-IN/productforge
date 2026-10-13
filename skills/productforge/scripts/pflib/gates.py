@@ -153,6 +153,7 @@ CONDITION_MODULES = (
     "pflib.conditions_discovery",
     "pflib.conditions_product_model",
     "pflib.conditions_scope",
+    "pflib.conditions_architecture",
 )
 
 

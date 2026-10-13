@@ -22,3 +22,5 @@ _No inferences yet._
 <!-- pf:generated:end -->
 
 ## Records
+
+## Proposals

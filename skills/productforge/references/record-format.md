@@ -170,6 +170,10 @@ Entities (`E`), roles (`RL`) and permission rules (`PR`) use small grammars insi
   `Override decision` (one of the five decisions) needs `Override reason`. Scores and overrides are
   amendable (`### AMEND SC-NNN`); priorities and decisions are never written — `pf.py score`
   computes them. `R` `Priority` is `must`/`should`; `UD` names its `Unknown`.
+- **Architecture** — `ADR` `Alternatives` are `;`-separated (≥ 2), `Topic` is a mandatory topic
+  or `other`, `Status` is `accepted` | `global` | `superseded-by ADR-…`; `INV` `Enforced by` starts
+  with `test`, `middleware`, `db-constraint`, `lint` or `review`; one `AP` per `A` (amendable:
+  `Proposed implementation`, `Decision`).
 - Optional `Human-readable key` and `Stable after creation` (`yes`/`no`/`unknown`) feed the
   generated identity table; `RL` `Scope` is `workspace`, `team`, `resource` or `system`.
 
@@ -223,6 +227,16 @@ tolerant: a malformed record yields one finding and the rest of the file is stil
 | `FEATURE_UNSCORED` | error | A feature has no score card once scoring has started |
 | `DUPLICATE_SCORE` | error | A feature has more than one active score card |
 | `FEATURE_WITHOUT_REQUIREMENT` | error | A feature built in V1 is in no requirement |
+| `ADR_NO_ALTERNATIVES` | error | An ADR lists fewer than two alternatives |
+| `INVARIANT_UNENFORCED` | error | An invariant names no enforcement mechanism |
+| `ARCHITECTURE_DISCLAIMER_MISSING` | error | ARCHITECTURE.md does not say it is ours |
+| `STACK_INCOMPLETE` | error | The stack table is missing or has open choices |
+| `BAD_REPO_TREE` | error | The repository structure is not a parseable tree |
+| `UNJUSTIFIED_COMPONENT` | warn | A component cites no requirement, inference or ADR |
+| `REQUIREMENT_UNADDRESSED` | error | A requirement is addressed by no ADR or convention |
+| `INFERENCE_UNPROPOSED` | error | An inference has no proposal, or more than one |
+| `ADR_TOPIC_MISSING` | error | A mandatory topic has no ADR and no not-applicable reason |
+| `SUPERSEDED_DECISION_CITED` | warn | A proposal still cites a superseded ADR |
 | `BAD_STATUS` | error | Status is not one of the allowed values (or rejected without Reason) |
 | `SUPERSEDED_TARGET_MISSING` | error | superseded-by targets a missing or other-type record |
 | `PROVISIONAL_ID_IN_CANONICAL` | error | A provisional ID (X-?n) appears in a canonical file |

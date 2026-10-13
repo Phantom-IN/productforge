@@ -99,6 +99,15 @@ versions follow [Semantic Versioning](https://semver.org/).
   `references/prioritisation-model.md`; stage procedures moved out of SKILL.md into
   `references/commands-product-model.md` and `references/commands-scope.md`; SCOPE_DEFINED and
   SCOPE_DEFINED_FAILING fixtures.
+- Phase 14: architecture design — `spec/ARCHITECTURE.md` and `spec/adr.md` templates (generated
+  decisions and requirement-coverage views), AP proposals in `## Proposals`, `pflib/architecture.py`
+  (stack, components, coverage, topics), `pflib/repotree.py`; validators (`ADR_NO_ALTERNATIVES`,
+  `INVARIANT_UNENFORCED`, `ARCHITECTURE_DISCLAIMER_MISSING`, `STACK_INCOMPLETE`, `BAD_REPO_TREE`,
+  `UNJUSTIFIED_COMPONENT` (warn), `REQUIREMENT_UNADDRESSED`, `INFERENCE_UNPROPOSED`,
+  `ADR_TOPIC_MISSING`, `SUPERSEDED_DECISION_CITED` (warn)); the ARCHITECTURE_LOCKED gate;
+  `pf.py set-preferences` (`architecture.preferences`, `architecture.deployment_target`); AP
+  proposals amendable; systems-architect design pass; `references/architecture-playbook.md`,
+  `references/commands-architecture.md`; ARCHITECTURE_LOCKED fixtures (11 ADRs, 7 invariants).
 
 ### Fixed
 - Briefing more runs than `agents.max_pending_runs` is refused (`RUN_LIMIT`); `pf.py staging list` /

@@ -62,6 +62,8 @@ DEFAULTS: dict[str, ConfigKey] = {
     "competitors.max_sources": _k(10, "Source budget per competitor (warned above it)"),
     "scope.build_threshold": _k(6, "Priority at or above which a feature is built in V1"),
     "scope.defer_threshold": _k(-4, "Priority at or above which a feature is deferred (else drop)"),
+    "architecture.preferences": _k([], "Stack preferences for /productforge architect (--stack)"),
+    "architecture.deployment_target": _k("docker", "Deployment target: docker, serverless or k8s"),
     "quotes.max_words": _k(25, "Maximum verbatim quote length from any source"),
     **{
         f"scope.weights.{name}": _k(weight, f"Prioritisation weight: {label}")

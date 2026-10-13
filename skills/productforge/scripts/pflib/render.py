@@ -324,6 +324,26 @@ def product_spec_regions(index: WorkspaceIndex) -> dict[str, str]:
     return {"funnel": "\n".join(funnel) + "\n", "defaults": accepted}
 
 
+def architecture_regions(index: WorkspaceIndex) -> dict[str, str]:
+    from pflib import architecture, domain
+
+    adrs = sorted((a for _, a in index.records("ADR")), key=lambda a: a.id)
+    if not adrs:
+        return {"decisions": "_No decisions yet._\n", "coverage": "_No decisions yet._\n"}
+    rows = ["| ADR | Decision | Topic | Status | Satisfies |", "|---|---|---|---|---|"]
+    for a in adrs:
+        cells = [a.id, a.title, a.get("Topic"), a.get("Status"), a.get("Satisfies")]
+        rows.append("| " + " | ".join(_cell(c) for c in cells) + " |")
+    reqs = {r.id: r for r in domain.active(index, "R")}
+    cov = architecture.coverage(index.ws, index)
+    cov_rows = ["| R | Requirement | Addressed by |", "|---|---|---|"]
+    for rid, by in sorted(cov.by_requirement.items()):
+        cov_rows.append(
+            f"| {rid} | {_cell(reqs[rid].title)} | {_cell(', '.join(by)) if by else '**none**'} |"
+        )
+    return {"decisions": "\n".join(rows) + "\n", "coverage": "\n".join(cov_rows) + "\n"}
+
+
 RENDERERS: dict[str, Renderer] = {
     FEATURE_MATRIX: Renderer(feature_regions, {"hierarchy": "## Hierarchy", "matrix": "## Matrix"}),
     SURFACES: Renderer(surface_regions, {"surface-features": "## Surface → features"}),
@@ -334,6 +354,10 @@ RENDERERS: dict[str, Renderer] = {
     ),
     catalog.PERMISSIONS_PATH: Renderer(permission_regions, {"permissions": "## Matrix"}),
     catalog.INTEGRATIONS_PATH: Renderer(integration_regions, {"integrations": "## Summary"}),
+    catalog.ARCHITECTURE_PATH: Renderer(
+        architecture_regions,
+        {"decisions": "## Decisions", "coverage": "## Requirement coverage"},
+    ),
     catalog.PARITY_PATH: Renderer(
         parity_regions, {"parity": "## Matrix", "overrides": "## Overrides"}
     ),

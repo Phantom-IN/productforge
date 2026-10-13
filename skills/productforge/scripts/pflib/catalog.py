@@ -424,6 +424,7 @@ COMPETITORS_PATH = "research/COMPETITORS.md"
 UNKNOWNS_PATH = "research/UNKNOWNS.md"
 PARITY_PATH = "spec/PARITY_MATRIX.md"
 PRODUCT_SPEC_PATH = "spec/PRODUCT_SPEC.md"
+ARCHITECTURE_PATH = "spec/ARCHITECTURE.md"
 
 # Closed value sets per (prefix, field), checked by validators (BAD_ENUM).
 ENUMS: dict[tuple[str, str], tuple[str, ...]] = {
@@ -439,6 +440,8 @@ ENUMS: dict[tuple[str, str], tuple[str, ...]] = {
     ("SC", "Override decision"): ("BUILD NOW", "BUILD SIMPLIFIED", "USE EXTERNAL SERVICE", "DEFER",
                                   "DROP"),
     ("R", "Priority"): ("must", "should"),
+    ("ADR", "Topic"): ("identity", "tenancy", "authn", "authz", "storage", "realtime", "async",
+                       "search", "files", "deployment", "other"),
     ("FS", "Signal"): ("table-stakes", "differentiator", "rare", "absent-in-target"),
     ("A", "Area"): ("realtime", "async", "search", "storage", "files", "authn", "authz", "tenancy",
                     "integrations", "notifications", "audit", "offline", "performance",

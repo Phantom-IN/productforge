@@ -469,3 +469,30 @@ def test_scope_editor_and_scope_command() -> None:
         "`scope`"
         not in SKILL.read_text(encoding="utf-8").split("### Stage commands not yet available", 1)[1]
     )
+
+
+def test_systems_architect_design_pass_and_architect_command() -> None:
+    agent = " ".join((AGENTS / "systems-architect.md").read_text(encoding="utf-8").split())
+    for phrase in ("## Inference pass", "## Design pass",
+                   "Never state anything about the target's internals", "simplest thing",
+                   "Alternatives` (≥ 2", "## Not applicable topics",
+                   "Exactly one `AP` per inference",
+                   "Enforced by: <test | middleware | db-constraint | lint | review>",
+                   "## Repository structure", "## Convention-covered requirements",
+                   "This is our architecture, not a claim about", "superseded-by ADR-?1",
+                   "### AMEND AP-NNN"):  # fmt: skip
+        assert phrase in agent, phrase
+    section = " ".join(commands_text().split("### `/productforge architect`", 1)[1].split()[:400])
+    for phrase in ('"$PF" set-preferences', "--role systems-architect", "--template spec/adr.md",
+                   "--template spec/ARCHITECTURE.md", "AskUserQuestion", "that ADR only",
+                   "never advance here", "/productforge finalize"):  # fmt: skip
+        assert phrase in section, phrase
+    playbook = (REFERENCES / "architecture-playbook.md").read_text(encoding="utf-8")
+    assert len(playbook.splitlines()) < 300
+    for topic in ("identity", "tenancy", "authn", "authz", "storage", "realtime", "async",
+                  "search", "files", "deployment"):  # fmt: skip
+        assert f"| {topic} |" in playbook, topic
+    assert (
+        "`architect`"
+        not in SKILL.read_text(encoding="utf-8").split("### Stage commands not yet available", 1)[1]
+    )

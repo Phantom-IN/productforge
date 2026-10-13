@@ -208,3 +208,5 @@ a Tier ≤ 2 source states it; how *we* implement it is decided later (ARCHITECT
 - Target implementation: UNKNOWN
 - Our requirement: Every API list endpoint must page with cursors, at most 100 items per page
 - Derived from: I-01, F-025
+
+## Proposals

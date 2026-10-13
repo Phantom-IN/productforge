@@ -108,6 +108,7 @@ python3.11 skills/productforge/scripts/pf.py workflow-candidates --workspace /tm
 python3.11 skills/productforge/scripts/pf.py competitor-candidates --workspace /tmp/tl --json
 python3.11 skills/productforge/scripts/pf.py score --write --workspace /tmp/tl --json
 python3.11 skills/productforge/scripts/pf.py override F-012 --decision DEFER --reason "…" --workspace /tmp/tl --json
+python3.11 skills/productforge/scripts/pf.py set-preferences --stack "Next.js, PostgreSQL" --workspace /tmp/tl --json
 python3.11 skills/productforge/scripts/pf.py deps --available "anthropic-skills:pdf" --workspace /tmp/tl
 python3.11 skills/productforge/scripts/pf.py delegate anthropic-skills:pdf --task "…" --workspace /tmp/tl
 python3.11 skills/productforge/scripts/pf.py deps --json          # which skills/plugins are reused

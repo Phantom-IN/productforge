@@ -386,6 +386,24 @@ def _cmd_override(args: argparse.Namespace) -> dict[str, Any]:
                                  args.reason)  # fmt: skip
 
 
+def _add_set_preferences(p: argparse.ArgumentParser) -> None:
+    p.add_argument("--stack", help='comma-separated stack preferences, e.g. "Next.js, PostgreSQL"')
+    p.add_argument("--deployment", choices=("docker", "serverless", "k8s"))
+
+
+def _cmd_set_preferences(args: argparse.Namespace) -> dict[str, Any]:
+    ws = workspace.resolve_workspace(args.workspace)
+    values: dict[str, Any] = {}
+    if args.stack is not None:
+        values["architecture.preferences"] = [s.strip() for s in args.stack.split(",") if s.strip()]
+    if args.deployment is not None:
+        values["architecture.deployment_target"] = args.deployment
+    if values:  # without arguments: just report what is stored
+        config.write_config(ws, values)
+    keys = ("architecture.preferences", "architecture.deployment_target")
+    return {"architecture": {k.split(".", 1)[1]: config.resolve(k, ws) for k in keys}}
+
+
 def _cmd_render(args: argparse.Namespace) -> dict[str, Any]:
     ws = workspace.resolve_workspace(args.workspace)
     return {"rendered": render.render_all(ws, only=args.artifact)}
@@ -614,6 +632,12 @@ SUBCOMMANDS: list[tuple[str, str, Callable[[argparse.ArgumentParser], None], Han
         _cmd_competitor_candidates,
     ),
     ("score", "compute feature priorities and decisions", _add_score, _cmd_score),
+    (
+        "set-preferences",
+        "store stack preferences for /productforge architect",
+        _add_set_preferences,
+        _cmd_set_preferences,
+    ),
     (
         "override",
         "record the user's decision for a feature (amends its score card)",

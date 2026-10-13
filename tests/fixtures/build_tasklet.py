@@ -874,6 +874,141 @@ def scope_defined(pm: dict[str, str], failing: bool = False) -> dict[str, str]:
         return {rel: (ws / rel).read_text(encoding="utf-8") for rel in files}
 
 
+# ---- Phase 14: our architecture (ADRs, invariants, proposals, repository structure)
+def adr(i: int, title: str, topic: str, context: str, decision: str, alts: str, reason: str,
+        tradeoffs: str, satisfies: str) -> tuple[str, str]:  # fmt: skip
+    from pflib import catalog
+
+    rel = f"spec/decisions/ADR-{i:03d}-{catalog.slugify(title)}.md"
+    return rel, (
+        f"### ADR-{i:03d} — {title}\n- Topic: {topic}\n- Context: {context}\n- Decision: {decision}\n"
+        f"- Alternatives: {alts}\n- Reason: {reason}\n- Trade-offs: {tradeoffs}\n"
+        f"- Satisfies: {satisfies}\n- Status: accepted\n"
+    )
+
+
+ADRS = [
+    adr(1, "UUIDv7 keys with per-workspace task numbers", "identity", "Tasks need stable IDs in URLs and the API (R-001, R-007)", "Every record has a UUIDv7 primary key; tasks also get a per-workspace sequence number shown to users", "auto-increment integers; UUIDv4; ULID", "Time-ordered, unguessable and safe to expose; the sequence gives a human-readable key", "Two identifiers per task; the sequence needs a per-workspace counter", "R-001, R-007"),
+    adr(2, "Shared database with workspace row-level security", "tenancy", "Every record belongs to exactly one workspace (R-007, A-006)", "One PostgreSQL database; every tenant table has workspace_id and a row-level security policy", "database per workspace; schema per workspace; application-only filtering", "Isolation enforced by the database at small-team scale without per-tenant operations", "All queries run with a workspace session setting; cross-workspace reports need a privileged role", "R-007, R-008, A-006"),
+    adr(3, "Sign-in through a hosted identity provider", "authn", "Magic links and Google sign-in are expected (R-009, A-014)", "Use a hosted identity provider for emailed one-time links and Google OIDC; our API verifies its tokens", "build magic links ourselves; passwords plus Google; Google only", "Sign-in is security-critical and commodity; the provider covers both methods", "A vendor dependency and per-user cost", "R-009, A-014"),
+    adr(4, "Role checks in one policy module", "authz", "Owner, admin, member and guest rights follow the permissions matrix (R-008, A-005)", "Every API handler calls a single policy module that maps role × resource × action from the permissions matrix", "per-handler checks; an external policy engine; database-only policies", "One place to read, test and change rights; RLS stays the tenancy backstop", "The module must be called everywhere — enforced by an invariant", "R-008, A-005"),
+    adr(5, "PostgreSQL as the primary store", "storage", "Tasks, projects, comments and an append-only history (R-001, R-003, R-004, A-004, A-012)", "PostgreSQL holds all relational data, the activity history and the job queue", "MySQL; a document database; SQLite", "Relational model, row-level security and a job queue in one managed service; matches the stack preference", "Vertical scaling limits are far beyond V1", "R-001, R-003, R-004, A-004, A-012"),
+    adr(6, "Polling instead of push in V1", "realtime", "Boards should reflect others' changes (R-002, A-001); push was simplified (SC-009)", "Boards refetch on window focus and every 30 s; changes carry an updated_at cursor", "WebSockets; server-sent events; a hosted realtime service", "Meets the 30 s acceptance signal with no new infrastructure", "Up to 30 s staleness; more requests per open board", "R-002, A-001"),
+    adr(7, "A PostgreSQL-backed job queue with an outbox", "async", "Notifications and future digests run outside requests (R-006, A-003, A-009)", "Mutations write outbox rows in the same transaction; a worker process claims jobs with SKIP LOCKED and runs idempotent handlers", "a hosted queue; Redis-backed jobs; cron scripts", "No extra service, transactional with the change that caused it", "Throughput is bounded by the database; fine at V1 scale", "R-006, A-003, A-009"),
+    adr(8, "Object storage with signed URLs", "files", "Attachments must be durable and private to task readers (R-010, A-010)", "Files go to S3-compatible object storage; the API issues short-lived signed URLs after a policy check", "database blobs; a local disk volume; a hosted file service", "Durable and cheap; signed URLs keep the policy check in our API", "Signed URLs can be shared until they expire (5 minutes)", "R-010, A-010"),
+    adr(9, "Containers with managed PostgreSQL", "deployment", "Small-team scale; data encrypted at rest (A-011)", "Docker images for web, api and worker on a container platform; managed PostgreSQL and object storage with encryption at rest", "Kubernetes; serverless functions; a single VM", "Fewest moving parts that still separate web, api and worker", "Platform lock-in for networking and secrets", "A-011, R-007"),
+    adr(10, "TypeScript with Next.js and a Node API", "other", "One language across web, api and worker; the user prefers Next.js and PostgreSQL", "Next.js for the web app, a Node.js API service and worker sharing TypeScript packages", "Python API with a React SPA; Ruby on Rails; Go API", "Matches the preference and lets web, api and worker share types and the policy module", "Node's single thread needs care for CPU-heavy work (none in V1)", "R-001, R-005"),
+    adr(11, "Billing through a payment provider", "other", "Owners and admins manage subscriptions; we never store card data (R-011)", "Use a payment provider's hosted checkout and subscription webhooks; we store only the plan and status", "build card processing; invoices by hand; a reseller", "Card data never touches our system", "Webhook handling must be idempotent", "R-011"),
+]  # fmt: skip
+
+
+def inv(i: int, title: str, rule: str, reason: str, enforced: str, derived: str) -> str:
+    return (
+        f"\n### INV-{i:02d} — {title}\n- Rule: {rule}\n- Reason: {reason}\n"
+        f"- Enforced by: {enforced}\n- Derived from: {derived}\n"
+    )
+
+
+INVARIANTS = [
+    inv(1, "Every query is scoped to one workspace", "No query reads or writes rows of another workspace", "Tenancy is the product's boundary", "db-constraint — row-level security policies on every tenant table", "R-007, ADR-002"),
+    inv(2, "Every request is authorized", "Every API handler calls the policy module before touching data", "Roles decide what members may do", "middleware — the router refuses handlers without a policy declaration", "R-008, ADR-004"),
+    inv(3, "Every task change is recorded", "Every mutation of a task appends an activity entry in the same transaction", "History is a product promise", "test — integration tests assert one entry per mutation", "R-004, ADR-005"),
+    inv(4, "IDs are stable and never reused", "Primary keys and task numbers never change or get reused", "URLs and API clients rely on them", "db-constraint — immutable columns and monotonic sequences", "ADR-001"),
+    inv(5, "Jobs are idempotent", "Running a job twice has the same effect as running it once", "Workers retry after crashes", "test — every handler has a run-twice test", "ADR-007"),
+    inv(6, "Secrets stay encrypted", "Credentials and tokens are stored only encrypted or hashed", "A leak must not expose working credentials", "review — a checklist item on every change that stores a secret", "ADR-009"),
+    inv(7, "Files are served only after a policy check", "No file is reachable except through a signed URL issued after a policy check", "Attachments are private to task readers", "test — direct object-storage access is denied in integration tests", "R-010, ADR-008"),
+]  # fmt: skip
+
+
+def proposal(i: int, a: str, impl: str, decision: str) -> str:
+    return (
+        f"\n### AP-{i:03d} — Proposal for {a}\n- Inference: {a}\n- Proposed implementation: {impl}\n"
+        f"- Decision: {decision}\n"
+    )
+
+
+PROPOSALS = [
+    proposal(1, "A-001", "Refetch on focus and every 30 s using updated_at cursors", "ADR-006"),
+    proposal(2, "A-002", "Deferred (SC-019); PostgreSQL full-text search when it lands", "ADR-005"),
+    proposal(3, "A-003", "Outbox rows on assignment; the worker creates notifications", "ADR-007"),
+    proposal(4, "A-004", "An append-only activity table written in the mutation's transaction", "ADR-005"),
+    proposal(5, "A-005", "The policy module on every handler; RLS as the tenancy backstop", "ADR-004"),
+    proposal(6, "A-006", "workspace_id on every tenant table with row-level security", "ADR-002"),
+    proposal(7, "A-007", "Not in V1 (SC-027); the outbox would deliver webhooks later", "ADR-007"),
+    proposal(8, "A-008", "Not in V1 (SC-028); a sync job on the queue later", "ADR-007"),
+    proposal(9, "A-009", "Not in V1 (SC-017); a scheduled job on the queue later", "ADR-007"),
+    proposal(10, "A-010", "Object storage with signed URLs after a policy check", "ADR-008"),
+    proposal(11, "A-011", "Managed PostgreSQL and object storage with encryption at rest", "ADR-009"),
+    proposal(12, "A-012", "An archived_at column; archived projects are filtered, never deleted", "ADR-005"),
+    proposal(13, "A-013", "Not in V1 (SC-030); an inbound webhook handler later", "ADR-007"),
+    proposal(14, "A-014", "The hosted identity provider's magic links and Google OIDC", "ADR-003"),
+    proposal(15, "A-015", "Not in V1 (SC-025); keyset pagination when the API ships", "ADR-010"),
+]  # fmt: skip
+
+ARCH_SECTIONS = {
+    "## Overview": "```mermaid\nflowchart LR\n  Browser --> Web[Next.js web]\n  Web --> API[Node API]\n  API --> DB[(PostgreSQL)]\n  Worker --> DB\n  API --> Files[(Object storage)]\n  API --> IdP[Identity provider]\n  API --> Pay[Payment provider]\n```\n",
+    "## Stack": "| Concern | Choice | ADR |\n|---|---|---|\n| Web | Next.js (TypeScript) | ADR-010 |\n| API and worker | Node.js (TypeScript) | ADR-010 |\n| Database and jobs | PostgreSQL | ADR-005, ADR-007 |\n| Sign-in | Hosted identity provider | ADR-003 |\n| Files | S3-compatible object storage | ADR-008 |\n| Payments | Payment provider | ADR-011 |\n| Deployment | Docker on a container platform | ADR-009 |\n",
+    "## Components": "- Web: Next.js app for boards, projects and settings (R-001, R-002, ADR-010)\n- API: HTTP API with the policy module (R-008, ADR-004)\n- Worker: runs queued jobs such as notifications (R-006, ADR-007)\n- Database: PostgreSQL with row-level security (R-007, ADR-002, ADR-005)\n",
+    "## Data storage": "PostgreSQL holds everything relational, the activity history and the job queue (ADR-005, ADR-007).\n",
+    "## Identity & tenancy": "UUIDv7 keys plus per-workspace task numbers (ADR-001); one database with row-level security per workspace (ADR-002).\n",
+    "## Authentication": "A hosted identity provider; the API verifies its tokens (ADR-003).\n",
+    "## Authorization": "One policy module mirrors the permissions matrix (ADR-004, INV-02).\n",
+    "## Async processing": "Transactional outbox and a PostgreSQL job queue (ADR-007, INV-05).\n",
+    "## Realtime": "Polling every 30 s and on focus in V1 (ADR-006).\n",
+    "## Search": "Not in V1 (SC-019).\n",
+    "## File storage": "Object storage with signed URLs (ADR-008, INV-07).\n",
+    "## Integrations": "Identity provider (ADR-003) and payment provider (ADR-011); third-party integrations are deferred.\n",
+    "## Observability": "Structured logs with request and workspace IDs; error tracking for web, api and worker.\n",
+    "## Security": "Encryption at rest (ADR-009), secrets encrypted (INV-06), authorization on every request (INV-02).\n",
+    "## Deployment": "Docker images for web, api and worker; managed PostgreSQL and object storage (ADR-009).\n",
+    "## Repository structure": "```text\ntasklet-alt/\n├── apps/\n│   ├── web/          # Next.js UI\n│   ├── api/          # HTTP API and policy module\n│   └── worker/       # job runner\n├── packages/\n│   ├── db/           # schema, migrations, RLS policies\n│   └── shared/       # types and the policy table\n├── infra/\n│   └── docker/\n├── tests/\n│   ├── integration/\n│   └── e2e/\n└── docs/\n```\n",
+    "## Deviations from the target model": "- Guests are not part of V1 (UD-002 decides guests are allowed, but guest access is deferred, SC-018).\n",
+    "## Not applicable topics": "- search: global search is deferred in V1 (SC-019)\n",
+    "## Convention-covered requirements": "- R-005: comments and mentions are plain CRUD in the API on PostgreSQL (ADR-005, ADR-010)\n",
+}  # fmt: skip
+
+
+def architecture_locked(sc: dict[str, str], failing: bool = False) -> dict[str, str]:
+    """SCOPE_DEFINED advanced to ARCHITECTURE_LOCKED (SCOPE_DEFINED locked) with our design.
+
+    ``failing``: the design names no invariants yet — the gate fails exactly G-AR-INVARIANTS while
+    validation stays clean (every other architecture condition is mirrored by a validator).
+    """
+    from pflib import render, state
+
+    files = dict(sc)
+    adrs, proposals = ADRS, PROPOSALS
+    arch = spec_file("ARCHITECTURE.md", {"## Invariants": "" if failing else "".join(INVARIANTS)})
+    arch = arch.replace("{{our_name}}", "tasklet-alt")
+    for heading, body in ARCH_SECTIONS.items():
+        start = arch.index(f"\n{heading}\n") + len(heading) + 2
+        end = arch.index("\n## ", start)
+        arch = arch[:start] + "\n" + body + arch[end:]
+    with tempfile.TemporaryDirectory() as tmp:
+        ws = Path(tmp)
+        for rel, text in files.items():
+            (ws / rel).parent.mkdir(parents=True, exist_ok=True)
+            (ws / rel).write_text(text, encoding="utf-8")
+        st = state.load(ws)
+        st.locks["SCOPE_DEFINED"] = state.snapshot_locks(ws, state.State.SCOPE_DEFINED)
+        state.transition(st, state.State.ARCHITECTURE_LOCKED, "2026-10-13T12:00:00Z")
+        state.save(ws, st)
+        extra = dict(adrs)
+        extra["spec/ARCHITECTURE.md"] = arch
+        extra["research/architecture-inference.md"] = files[
+            "research/architecture-inference.md"
+        ] + "".join(proposals)
+        extra[".productforge/config.json"] = (
+            '{\n  "architecture.preferences": [\n    "Next.js",\n    "PostgreSQL"\n  ]\n}\n'
+        )
+        for rel, text in extra.items():
+            (ws / rel).parent.mkdir(parents=True, exist_ok=True)
+            (ws / rel).write_text(text, encoding="utf-8")
+        files.update(extra)
+        render.render_all(ws)
+        return {rel: (ws / rel).read_text(encoding="utf-8") for rel in files}
+
+
 def spec_file(name: str, sections: dict[str, str]) -> str:
     """A template (``spec/`` unless a folder is given) with record blocks under the headings."""
     rel = name if "/" in name else f"spec/{name}"
@@ -998,12 +1133,15 @@ def snapshots() -> dict[str, dict[str, str]]:
     )
     failing["research/product-surfaces.md"] = SURFACES_HEAD + SURFACES[0]
     pm = product_model(full)
+    sc = scope_defined(pm)
     return {
         "DISCOVERY": full,
         "DISCOVERY_FAILING": failing,
         "PRODUCT_MODEL": pm,
         "PRODUCT_MODEL_FAILING": product_model(full, failing=True),
-        "SCOPE_DEFINED": scope_defined(pm),
+        "SCOPE_DEFINED": sc,
+        "ARCHITECTURE_LOCKED": architecture_locked(sc),
+        "ARCHITECTURE_LOCKED_FAILING": architecture_locked(sc, failing=True),
         "SCOPE_DEFINED_FAILING": scope_defined(pm, failing=True),
     }
 

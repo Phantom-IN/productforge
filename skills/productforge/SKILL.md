@@ -21,8 +21,8 @@ to a realistic MVP, designs an **independent** architecture, and writes a phase-
 
 It is **not** a website cloner — read `references/philosophy.md` when unsure how to behave.
 
-> **Build status:** DISCOVERY, PRODUCT_MODEL and SCOPE_DEFINED are live; `architect` and
-> `finalize` arrive in Phases 14–15 and say so.
+> **Build status:** every stage through ARCHITECTURE_LOCKED is live; `finalize` arrives in
+> Phase 15 and says so.
 
 ## Hard constraints
 
@@ -277,6 +277,10 @@ Read `references/commands-product-model.md` and follow the section for the comma
 
 Read `references/commands-scope.md` and follow it.
 
+### ARCHITECTURE_LOCKED command: `architect [--stack "…"] [--deployment …]`
+
+Read `references/commands-architecture.md` and follow it.
+
 ### `/productforge status`
 
 Run `python3.11 "$PF" status --workspace <ws> --json` (omit `--workspace` if unknown). With no
@@ -295,4 +299,4 @@ stage, stale stages, the IDEA-style counts, claim confidence, gate progress and 
 ### Stage commands not yet available
 
 After dispatch (so refusals and transitions still behave correctly), these say "not available in
-this build" and stop: `architect` (Phase 14), `finalize` (Phase 15).
+this build" and stop: `finalize` (Phase 15).

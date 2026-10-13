@@ -383,6 +383,7 @@ AMENDABLE_EXTRA: dict[str, tuple[str, ...]] = {
            "Engineering complexity", "Infrastructure complexity", "Security impact",
            "Operational cost", "Time to implement", "External availability", "Future",
            "Override decision", "Override reason", "Simplification", "External service"),
+    "AP": ("Proposed implementation", "Decision"),  # follows a superseded ADR
 }  # fmt: skip
 
 
