@@ -5,6 +5,11 @@ versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added (v1.1)
+- `ENTITY_LOOKS_LIKE_UI_STATE` (warn) and a "not an entity" rule for the domain architect;
+  optional ADR `Deviates from` with `ADR_DEVIATES_FROM_REQUIREMENT` (warn, `reopen` hint), shown in
+  the requirement-coverage view.
+
 ## [1.0.0] — 2026-10-13
 
 First release. ProductForge turns a public software product into an evidence-backed,

@@ -22,6 +22,21 @@ def adr_alternatives(ctx: Context, loc: Loc) -> list[Finding]:
     return [finding("ADR_NO_ALTERNATIVES", loc.rel, rec.id, msg)]
 
 
+@record_check("ADR")
+def adr_deviation(ctx: Context, loc: Loc) -> list[Finding]:
+    rec = loc.record
+    if not records.is_active(rec):
+        return []
+    reqs = [r for r in records.parse_refs(rec.get("Deviates from"))
+            if (r_loc := ctx.get(r)) is not None and records.is_active(r_loc.record)]  # fmt: skip
+    if not reqs:
+        return []
+    msg = (f"{rec.id} deviates from {', '.join(reqs)}; keep the spec consistent with "
+           '`pf.py reopen SCOPE_DEFINED --reason "…"` and amend the requirement, or accept the '
+           "deviation knowingly")  # fmt: skip
+    return [finding("ADR_DEVIATES_FROM_REQUIREMENT", loc.rel, rec.id, msg)]
+
+
 @record_check("INV")
 def invariant_enforced(ctx: Context, loc: Loc) -> list[Finding]:
     rec = loc.record

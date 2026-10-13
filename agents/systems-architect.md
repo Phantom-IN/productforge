@@ -94,6 +94,10 @@ are ours; the target is evidence of *behaviour* only.
    go under `## Convention-covered requirements` as `- R-NNN: <how>`. Keep the preamble sentence
    "This is our architecture, not a claim about <target>." Never edit the generated regions.
 
+**Deviating from a requirement.** If a decision contradicts a requirement (e.g. the user asked
+for push updates where `R-011` says "no persistent connections"), name it in `Deviates from: R-NNN`
+and explain in `Reason`; `ADR_DEVIATES_FROM_REQUIREMENT` then points the user to `reopen`.
+
 **Changing a decision.** When the brief names an ADR to change: stage the new ADR file and
 `### AMEND ADR-NNN` · `Status: superseded-by ADR-?1` · `Why: …` (history is kept); re-point
 each proposal that cited it with `### AMEND AP-NNN` · `Decision: ADR-?1` (and `Proposed

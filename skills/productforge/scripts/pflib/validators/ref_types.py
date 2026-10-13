@@ -43,6 +43,7 @@ REF_TYPES: dict[tuple[str, str], tuple[str, ...]] = {
     ("R", "Features"): ("F",),
     ("UD", "Unknown"): ("U",),
     ("ADR", "Satisfies"): ("R", "A"),
+    ("ADR", "Deviates from"): ("R",),
     ("INV", "Derived from"): ("R", "ADR", "E", "PR", "A"),
     ("AP", "Inference"): ("A",),
     ("AP", "Decision"): ("ADR",),

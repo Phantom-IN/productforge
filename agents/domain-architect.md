@@ -34,8 +34,10 @@ Read first, every run: your brief; `references/agent-contract.md` (the rules eve
 
 1. **Candidates.** Read `research/FEATURE_MATRIX.md`, the workflows in `research/workflows/`
    (especially `[implied-system]` steps and "Engineering requirements surfaced") and the claims.
-   List nouns that have identity and a lifecycle; merge synonyms (one entity per concept); skip
-   values and settings that live inside another entity.
+   List nouns that have identity and a lifecycle; merge synonyms (one entity per concept).
+   **Not an entity:** UI state and settings — preferences, the current selection, filter or sort
+   state, layouts, view toggles, computed summaries. Record them as fields of the entity that owns
+   them (`ENTITY_LOOKS_LIKE_UI_STATE` warns on names like these).
 2. **Each entity** `### E-?n — <Name>`: `Responsibility`; `Identity` (the observable scheme, e.g.
    `team key + number (ENG-123) in URLs` — else `Opaque … ID (format not public)`);
    `Human-readable key`; `Stable after creation` (`yes`/`no`/`unknown`); `Relationships` per the

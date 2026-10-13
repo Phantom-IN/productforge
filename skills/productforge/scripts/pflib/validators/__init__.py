@@ -78,6 +78,8 @@ CODES: dict[str, tuple[str, str]] = {
     "INFERENCE_UNPROPOSED": (ERROR, "An inference has no proposal, or more than one"),
     "ADR_TOPIC_MISSING": (ERROR, "A mandatory topic has no ADR and no not-applicable reason"),
     "SUPERSEDED_DECISION_CITED": (WARN, "A proposal still cites a superseded ADR"),
+    "ADR_DEVIATES_FROM_REQUIREMENT": (WARN, "A decision deviates from a requirement"),
+    "ENTITY_LOOKS_LIKE_UI_STATE": (WARN, "An entity's name suggests UI state, not an entity"),
     "PHASE_HEADER_FIELDS": (ERROR, "A phase lacks its title line or Status / Depends on / Goal"),
     "PHASE_HEADING_MISSING": (ERROR, "A phase lacks one of the §16.2 headings"),
     "PHASE_HEADING_ORDER": (ERROR, "A phase's §16.2 headings are out of order"),

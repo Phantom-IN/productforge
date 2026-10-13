@@ -25,6 +25,16 @@ def relationships(ctx: Context, loc: Loc) -> list[Finding]:
     return out
 
 
+@record_check("E")
+def ui_state(ctx: Context, loc: Loc) -> list[Finding]:
+    word = domain.looks_like_ui_state(loc.record) if records.is_active(loc.record) else None
+    if word is None:
+        return []
+    msg = (f"{loc.record.id} {loc.record.title!r} looks like UI state ({word}), not an entity; "
+           "model it as a field or setting of the entity that owns it")  # fmt: skip
+    return [finding("ENTITY_LOOKS_LIKE_UI_STATE", loc.rel, loc.record.id, msg)]
+
+
 @workspace_check
 def inverse_relationships(ctx: Context) -> list[Finding]:
     ents = {loc.record.id: loc for loc in ctx.records("E") if records.is_active(loc.record)}

@@ -173,7 +173,8 @@ Entities (`E`), roles (`RL`) and permission rules (`PR`) use small grammars insi
 - **Architecture** — `ADR` `Alternatives` are `;`-separated (≥ 2), `Topic` is a mandatory topic
   or `other`, `Status` is `accepted` | `global` | `superseded-by ADR-…`; `INV` `Enforced by` starts
   with `test`, `middleware`, `db-constraint`, `lint` or `review`; one `AP` per `A` (amendable:
-  `Proposed implementation`, `Decision`).
+  `Proposed implementation`, `Decision`); an ADR that contradicts a requirement names it in
+  `Deviates from` (R IDs; `ADR_DEVIATES_FROM_REQUIREMENT` warns with the `reopen` hint).
 - Optional `Human-readable key` and `Stable after creation` (`yes`/`no`/`unknown`) feed the
   generated identity table; `RL` `Scope` is `workspace`, `team`, `resource` or `system`.
 
@@ -237,6 +238,8 @@ tolerant: a malformed record yields one finding and the rest of the file is stil
 | `INFERENCE_UNPROPOSED` | error | An inference has no proposal, or more than one |
 | `ADR_TOPIC_MISSING` | error | A mandatory topic has no ADR and no not-applicable reason |
 | `SUPERSEDED_DECISION_CITED` | warn | A proposal still cites a superseded ADR |
+| `ADR_DEVIATES_FROM_REQUIREMENT` | warn | A decision deviates from a requirement |
+| `ENTITY_LOOKS_LIKE_UI_STATE` | warn | An entity's name suggests UI state, not an entity |
 | `PHASE_HEADER_FIELDS` | error | A phase lacks its title line or Status / Depends on / Goal |
 | `PHASE_HEADING_MISSING` | error | A phase lacks one of the §16.2 headings |
 | `PHASE_HEADING_ORDER` | error | A phase's §16.2 headings are out of order |

@@ -527,3 +527,10 @@ def test_finalize_traces_and_completes() -> None:
     for phrase in ('"$PF" trace --write', "pf.py explain", '"$PF" complete --confirmed',
                    "AskUserQuestion"):  # fmt: skip
         assert phrase in section, phrase
+
+
+def test_v11_agent_rules() -> None:
+    domain = " ".join((AGENTS / "domain-architect.md").read_text(encoding="utf-8").split())
+    assert "Not an entity:" in domain and "ENTITY_LOOKS_LIKE_UI_STATE" in domain
+    systems = " ".join((AGENTS / "systems-architect.md").read_text(encoding="utf-8").split())
+    assert "Deviates from: R-NNN" in systems and "ADR_DEVIATES_FROM_REQUIREMENT" in systems

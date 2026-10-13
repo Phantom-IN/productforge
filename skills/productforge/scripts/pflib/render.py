@@ -338,9 +338,10 @@ def architecture_regions(index: WorkspaceIndex) -> dict[str, str]:
     cov = architecture.coverage(index.ws, index)
     cov_rows = ["| R | Requirement | Addressed by |", "|---|---|---|"]
     for rid, by in sorted(cov.by_requirement.items()):
-        cov_rows.append(
-            f"| {rid} | {_cell(reqs[rid].title)} | {_cell(', '.join(by)) if by else '**none**'} |"
-        )
+        cell = _cell(", ".join(by)) if by else "**none**"
+        if cov.deviations.get(rid):
+            cell += f" · **deviated from by {', '.join(cov.deviations[rid])}**"
+        cov_rows.append(f"| {rid} | {_cell(reqs[rid].title)} | {cell} |")
     return {"decisions": "\n".join(rows) + "\n", "coverage": "\n".join(cov_rows) + "\n"}
 
 

@@ -146,6 +146,19 @@ def relationship_tree(index: WorkspaceIndex) -> list[str]:
     return lines
 
 
+# Words that name UI state rather than a thing with its own identity (v1 dogfood: "dashboard filter
+# state", "per-user view preference", "rolling traffic summary").
+UI_STATE_WORDS = ("preference", "selection", "filter state", "view state", "ui state", "layout",
+                  "panel", "widget", "toggle", "sort order", "summary",
+                  "display setting")  # fmt: skip
+
+
+def looks_like_ui_state(entity: records.Record) -> str | None:
+    """The UI-state word an entity's name uses, if any (a hint, not a rule)."""
+    name = entity.title.lower()
+    return next((w for w in UI_STATE_WORDS if re.search(rf"\b{re.escape(w)}s?\b", name)), None)
+
+
 def is_mutable(entity: records.Record, features: dict[str, records.Record]) -> bool:
     """Users change it: it lists mutable fields, or a linked feature's name says so."""
     mutable = entity.get("Mutable fields").strip().lower()

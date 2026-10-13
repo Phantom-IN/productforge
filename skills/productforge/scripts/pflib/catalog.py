@@ -392,8 +392,8 @@ CATALOG: tuple[ArtifactSpec, ...] = (
             _rs(
                 "ADR",
                 "Context, Decision, Alternatives, Reason, Trade-offs, Satisfies, Status",
-                optional="Topic",
-                ref_fields="Satisfies",
+                optional="Topic, Deviates from",
+                ref_fields="Satisfies, Deviates from",
                 union_fields="Satisfies",
                 section=None,
             ),

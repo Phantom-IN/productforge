@@ -86,6 +86,7 @@ class Coverage:
     multi_proposed: list[str] = field(default_factory=list)  # A IDs with several proposals
     topics_missing: list[str] = field(default_factory=list)
     by_requirement: dict[str, list[str]] = field(default_factory=dict)  # R → ADRs / "convention"
+    deviations: dict[str, list[str]] = field(default_factory=dict)  # R → ADRs that deviate
 
 
 def coverage(ws: Path, index: WorkspaceIndex | None = None) -> Coverage:
@@ -101,6 +102,9 @@ def coverage(ws: Path, index: WorkspaceIndex | None = None) -> Coverage:
         if r.id in conventions:
             by.append("convention")
         out.by_requirement[r.id] = by
+        dev = [a.id for a in adrs if r.id in records.parse_refs(a.get("Deviates from"))]
+        if dev:
+            out.deviations[r.id] = dev
         if not by:
             out.unaddressed.append(r.id)
     proposals: dict[str, int] = {}
