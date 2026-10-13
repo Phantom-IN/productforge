@@ -154,6 +154,7 @@ CONDITION_MODULES = (
     "pflib.conditions_product_model",
     "pflib.conditions_scope",
     "pflib.conditions_architecture",
+    "pflib.conditions_plans",
 )
 
 

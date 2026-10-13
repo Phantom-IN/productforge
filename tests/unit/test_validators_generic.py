@@ -43,7 +43,7 @@ def test_every_declared_code_has_an_invalid_case_and_vice_versa() -> None:
 def test_reference_documents_exactly_the_declared_codes() -> None:
     text = REFERENCE.read_text(encoding="utf-8")
     section = text.split("## Validator finding codes", 1)[1].split("\n## ", 1)[0]
-    documented = set(re.findall(r"^\| `([A-Z_]+)` \|", section, re.M))
+    documented = set(re.findall(r"^\| `([A-Z0-9_]+)` \|", section, re.M))
     assert documented == set(validators.CODES)
 
 

@@ -1009,6 +1009,179 @@ def architecture_locked(sc: dict[str, str], failing: bool = False) -> dict[str, 
         return {rel: (ws / rel).read_text(encoding="utf-8") for rel in files}
 
 
+# ---- Phase 15: the generated project (root documents and phase plans)
+# number, slug, name, depends, goal, tasks [(path, what)], acceptance, references
+PHASES = [
+    ("00", "repository-foundation", "Repository foundation", "none", "A runnable monorepo skeleton with web, api and worker apps and a test harness.",
+     [("package.json", "workspace scripts for build, test and lint"), ("apps/web/", "Next.js app shell"), ("apps/api/", "Node API shell with a health route"),
+      ("apps/worker/", "worker process shell"), ("tests/integration/", "test harness against a disposable database")],
+     ["`npm test` runs and passes on a clean checkout", "web, api and worker start locally", "CI-ready lint passes"], "§3, §4, §5, ADR-010"),
+    ("01", "database-and-tenancy", "Database and tenancy", "00", "PostgreSQL schema with workspace row-level security.",
+     [("packages/db/migrations/", "workspaces, members and RLS policies"), ("packages/db/src/session.ts", "per-request workspace setting"),
+      ("tests/integration/tenancy.test.ts", "cross-workspace reads are denied")],
+     ["every tenant table has workspace_id and an RLS policy", "a query without a workspace setting returns no rows", "UUIDv7 keys are generated"], "§6, §18, ADR-001, ADR-002, ADR-005, INV-01, INV-04, R-007"),
+    ("02", "sign-in", "Sign-in", "01", "Members sign in through the identity provider.",
+     [("apps/api/src/auth/", "token verification and sessions"), ("apps/web/app/sign-in/", "magic-link and Google sign-in pages")],
+     ["a magic link signs a member in once", "Google sign-in works", "unauthenticated API calls are refused"], "§7, ADR-003, R-009"),
+    ("03", "authorization-policy", "Authorization policy", "02", "One policy module enforces the permissions matrix.",
+     [("packages/shared/src/policy.ts", "role × resource × action table"), ("apps/api/src/policy/", "router middleware requiring a policy per handler"),
+      ("tests/integration/policy.test.ts", "one test per permission cell")],
+     ["handlers without a policy declaration fail to register", "every permission cell has a passing test", "guests cannot create tasks"], "§8, ADR-004, INV-02, R-008"),
+    ("04", "workspaces-and-members", "Workspaces and members", "03", "Owners create workspaces and invite members.",
+     [("apps/api/src/workspaces/", "workspace and invitation endpoints"), ("apps/web/app/settings/members/", "member list and invite form")],
+     ["an owner invites a member by email", "the invited member joins with the member role", "members of another workspace see nothing"], "§6, §8, R-007, ADR-002"),
+    ("05", "projects", "Projects", "04", "Members group tasks into projects with an owner.",
+     [("apps/api/src/projects/", "project endpoints"), ("apps/web/app/projects/", "project list and detail pages")],
+     ["a member creates a project", "a project has exactly one owner", "archived projects are hidden but restorable"], "§9, R-003, ADR-005"),
+    ("06", "tasks-and-statuses", "Tasks and statuses", "05", "Tasks move through To do, In progress and Done with a history.",
+     [("apps/api/src/tasks/", "task endpoints with per-workspace numbers"), ("packages/db/migrations/", "tasks and activity tables"),
+      ("tests/integration/tasks.test.ts", "one activity entry per mutation")],
+     ["a task is created in To do", "every task change appends one activity entry", "task numbers are never reused"], "§6, §9, R-001, R-004, INV-03, INV-04"),
+    ("07", "board-and-polling", "Board and polling", "06", "The board shows tasks by status and stays current within 30 s.",
+     [("apps/web/app/board/", "board columns and drag between statuses"), ("apps/api/src/tasks/changes.ts", "changes since a cursor")],
+     ["moving a task updates its status", "another browser sees the change within 30 s", "the board refetches on focus"], "§12, R-002, ADR-006"),
+    ("08", "comments-and-mentions", "Comments and mentions", "06", "Members discuss tasks and mention each other.",
+     [("apps/api/src/comments/", "comment endpoints with mention parsing"), ("apps/web/app/board/comments/", "comment thread on the task panel")],
+     ["a member comments on a task", "a mention is stored with the comment", "comments follow the task's permissions"], "§9, R-005"),
+    ("09", "jobs-and-notifications", "Jobs and notifications", "08", "Assignments and mentions notify members in the app.",
+     [("apps/worker/src/jobs/", "outbox claim loop and notification handler"), ("apps/api/src/notifications/", "notification list and read state"),
+      ("tests/integration/jobs.test.ts", "run-twice tests for every handler")],
+     ["assigning a task notifies the assignee within 5 s", "running a job twice creates one notification", "notifications are visible only to their recipient"], "§11, R-006, ADR-007, INV-05"),
+    ("10", "attachments", "Attachments", "06", "Members attach files stored in object storage.",
+     [("apps/api/src/files/", "upload and signed-URL endpoints"), ("tests/integration/files.test.ts", "direct storage access is denied")],
+     ["a member attaches a file to a task", "downloads use signed URLs that expire in 5 minutes", "a non-reader cannot download the file"], "§16, R-010, ADR-008, INV-07"),
+    ("11", "billing", "Billing", "04", "Owners manage the subscription through the payment provider.",
+     [("apps/api/src/billing/", "checkout session and subscription webhooks"), ("apps/web/app/settings/billing/", "plan and billing page")],
+     ["an owner upgrades through hosted checkout", "subscription webhooks are idempotent", "no card data reaches our servers"], "§10, R-011, ADR-011"),
+    ("12", "deployment-and-hardening", "Deployment and hardening", "07, 09, 10, 11", "Production images, encrypted stores and observability.",
+     [("infra/docker/", "images for web, api and worker"), ("docs/runbook.md", "deploy, rollback and secrets"), ("tests/e2e/", "smoke test of the core flow")],
+     ["images build and start on the container platform", "stores are encrypted at rest", "the e2e smoke test passes against staging"], "§14, §15, §17, ADR-009, INV-06"),
+]  # fmt: skip
+
+
+def phase_file(n: str, slug: str, name: str, deps: str, goal: str, tasks: list[tuple[str, str]],
+               accept: list[str], refs: str) -> tuple[str, str]:  # fmt: skip
+    body = (
+        f"# Phase {n} — {name}\n\n**Status:** Not started\n**Depends on:** {deps}\n**Goal:** {goal}\n\n"
+        f"## Context\n\nBuilds {name.lower()} for tasklet-alt V1 ({refs.split(',')[0]}).\n\n"
+        f"## Scope\n\n**In:**\n- {goal}\n\n**Out / deferred:**\n- Anything the parity matrix defers.\n\n## Tasks\n\n"
+        + "".join(f"{i}. `{path}`: {what}.\n" for i, (path, what) in enumerate(tasks, start=1))
+        + "\n## Data & schema changes\n\n- As described in the tasks.\n\n## API / contracts\n\n- As described in the tasks.\n\n"
+        "## Acceptance criteria\n\n"
+        + "".join(f"- [ ] {a}\n" for a in accept)
+        + "\n## Test plan\n\n- Unit/integration: the tests named in the tasks.\n- Manual verification: walk the acceptance criteria locally.\n\n"
+        f"## References\n\n- IMPLEMENTATION_PLAN {refs}\n\n## Open questions / risks\n\n- None.\n\n"
+        "## Definition of done\n\n- [ ] Code merged, tests green, lint clean\n- [ ] Invariants upheld\n"
+        '- [ ] plans/README.md status updated to "Done"\n'
+    )
+    return f"plans/phase-{n}-{slug}.md", body
+
+
+PLAN_BODIES = {
+    1: "Provenance: generated by ProductForge from public research of Tasklet (https://tasklet.example); our design is independent.\n\ntasklet-alt is task tracking for small teams. Parity: 14 BUILD NOW, 1 BUILD SIMPLIFIED, 3 USE EXTERNAL SERVICE, 11 DEFER, 2 DROP (spec/PARITY_MATRIX.md).",
+    2: "V1 covers R-001 to R-011; search, recurring tasks, integrations and the public API are deferred (SC-019, SC-007, SC-025).",
+    3: "Next.js web, a Node API and a worker over PostgreSQL (ADR-005, ADR-010).",
+    4: "| Concern | Choice | ADR |\n|---|---|---|\n| Web | Next.js | ADR-010 |\n| API and worker | Node.js | ADR-010 |\n| Database | PostgreSQL | ADR-005 |",
+    5: "```text\ntasklet-alt/\n├── apps/\n│   ├── web/\n│   ├── api/\n│   └── worker/\n├── packages/\n│   ├── db/\n│   └── shared/\n├── infra/\n│   └── docker/\n├── tests/\n└── docs/\n```",
+    6: "Workspaces, members, projects, tasks, comments, attachments and activity (E-01 to E-11); UUIDv7 keys (ADR-001).",
+    7: "A hosted identity provider (ADR-003).", 8: "One policy module (ADR-004, INV-02).",
+    9: "Workspaces, projects, tasks, board, comments, notifications, attachments, billing.",
+    10: "Identity provider and payment provider (ADR-003, ADR-011).", 11: "Outbox and job queue (ADR-007).",
+    12: "Polling every 30 s (ADR-006).", 13: "Not in V1 (SC-019).", 14: "INV-01, INV-02, INV-06.",
+    15: "Structured logs and error tracking.", 16: "Managed PostgreSQL and object storage (ADR-005, ADR-008).",
+    17: "Containers on a platform (ADR-009).", 18: "INV-01 to INV-07.",
+    20: "Unit and integration tests per phase; an end-to-end smoke test in phase 12.", 21: "Workspace, member, project, task.",
+}  # fmt: skip
+
+
+def project_docs(n_invariants: int) -> dict[str, str]:
+    root = Path(__file__).resolve().parents[2] / "skills/productforge/templates"
+
+    def fill(s: str) -> str:
+        for key, value in (("our_name", "tasklet-alt"), ("product_name", "Tasklet"),
+                           ("target_url", "https://tasklet.example")):  # fmt: skip
+            s = s.replace("{{" + key + "}}", value)
+        return s
+
+    plan = fill((root / "project/IMPLEMENTATION_PLAN.md").read_text())
+    breakdown = "| # | Phase | Depends on | Delivers |\n|---|---|---|---|\n" + "".join(
+        f"| {n} | {name} | {deps} | {goal} |\n" for n, _, name, deps, goal, *_ in PHASES
+    )
+    for i, body in {**PLAN_BODIES, 19: breakdown}.items():
+        start = plan.index(f"\n## {i}. ")
+        end = plan.find("\n## ", start + 1)
+        head = plan[start : plan.index("\n", start + 1) + 1]
+        plan = (
+            plan[:start]
+            + head
+            + "\n"
+            + body.rstrip("\n")
+            + "\n"
+            + (plan[end:] if end != -1 else "")
+        )
+    claude = fill((root / "project/CLAUDE.md").read_text())
+    rules = "".join(
+        f"{i}. **{title}** — {why}. Enforced by: {how} (INV-{i:02d}).\n"
+        for i, (title, why, how) in enumerate(INV_RULES[:n_invariants], start=1)
+    )
+    claude = claude.replace("## Golden rules\n\n", "## Golden rules\n\n" + rules + "\n", 1)
+    readme = fill((root / "plans/plans-README.md").read_text())
+    rows = "".join(
+        f"| {n} | {name} | [phase-{n}-{slug}.md](phase-{n}-{slug}.md) | Not started | {deps} |\n"
+        for n, slug, name, deps, *_ in PHASES
+    )
+    readme = readme.replace("|---|---|---|---|---|\n", "|---|---|---|---|---|\n" + rows, 1)
+    docs = {
+        name: fill((root / f"project/{name}").read_text())
+        for name in ("README.md", "DEVELOPMENT.md", "STARTUP_PROMPT.md")
+    }
+    docs.update({"IMPLEMENTATION_PLAN.md": plan, "CLAUDE.md": claude, "plans/README.md": readme})
+    docs.update(dict(phase_file(*ph) for ph in PHASES))
+    return docs
+
+
+INV_RULES = [
+    (
+        "Every query is scoped to one workspace",
+        "tenancy is the product's boundary",
+        "db-constraint",
+    ),
+    ("Every request is authorized", "roles decide what members may do", "middleware"),
+    ("Every task change is recorded", "history is a product promise", "test"),
+    ("IDs are stable and never reused", "URLs and API clients rely on them", "db-constraint"),
+    ("Jobs are idempotent", "workers retry after crashes", "test"),
+    ("Secrets stay encrypted", "a leak must not expose working credentials", "review"),
+    (
+        "Files are served only after a policy check",
+        "attachments are private to task readers",
+        "test",
+    ),
+]
+
+
+def phase_plan_ready(ar: dict[str, str]) -> dict[str, str]:
+    """ARCHITECTURE_LOCKED advanced to PHASE_PLAN_READY with the generated project."""
+    from pflib import render, state
+
+    files = dict(ar)
+    with tempfile.TemporaryDirectory() as tmp:
+        ws = Path(tmp)
+        for rel, text in files.items():
+            (ws / rel).parent.mkdir(parents=True, exist_ok=True)
+            (ws / rel).write_text(text, encoding="utf-8")
+        st = state.load(ws)
+        st.locks["ARCHITECTURE_LOCKED"] = state.snapshot_locks(ws, state.State.ARCHITECTURE_LOCKED)
+        state.transition(st, state.State.PHASE_PLAN_READY, "2026-10-13T18:00:00Z")
+        state.save(ws, st)
+        extra = project_docs(len(INVARIANTS))
+        for rel, text in extra.items():
+            (ws / rel).parent.mkdir(parents=True, exist_ok=True)
+            (ws / rel).write_text(text, encoding="utf-8")
+        files.update(extra)
+        render.render_all(ws)
+        return {rel: (ws / rel).read_text(encoding="utf-8") for rel in files}
+
+
 def spec_file(name: str, sections: dict[str, str]) -> str:
     """A template (``spec/`` unless a folder is given) with record blocks under the headings."""
     rel = name if "/" in name else f"spec/{name}"
@@ -1134,13 +1307,15 @@ def snapshots() -> dict[str, dict[str, str]]:
     failing["research/product-surfaces.md"] = SURFACES_HEAD + SURFACES[0]
     pm = product_model(full)
     sc = scope_defined(pm)
+    ar = architecture_locked(sc)
     return {
         "DISCOVERY": full,
         "DISCOVERY_FAILING": failing,
         "PRODUCT_MODEL": pm,
         "PRODUCT_MODEL_FAILING": product_model(full, failing=True),
         "SCOPE_DEFINED": sc,
-        "ARCHITECTURE_LOCKED": architecture_locked(sc),
+        "ARCHITECTURE_LOCKED": ar,
+        "PHASE_PLAN_READY": phase_plan_ready(ar),
         "ARCHITECTURE_LOCKED_FAILING": architecture_locked(sc, failing=True),
         "SCOPE_DEFINED_FAILING": scope_defined(pm, failing=True),
     }

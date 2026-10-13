@@ -21,8 +21,7 @@ to a realistic MVP, designs an **independent** architecture, and writes a phase-
 
 It is **not** a website cloner — read `references/philosophy.md` when unsure how to behave.
 
-> **Build status:** every stage through ARCHITECTURE_LOCKED is live; `finalize` arrives in
-> Phase 15 and says so.
+> **Build status:** every stage is live; traceability (`pf.py trace`) arrives in Phase 16.
 
 ## Hard constraints
 
@@ -281,6 +280,10 @@ Read `references/commands-scope.md` and follow it.
 
 Read `references/commands-architecture.md` and follow it.
 
+### PHASE_PLAN_READY command: `finalize`
+
+Read `references/commands-finalize.md` and follow it.
+
 ### `/productforge status`
 
 Run `python3.11 "$PF" status --workspace <ws> --json` (omit `--workspace` if unknown). With no
@@ -295,8 +298,3 @@ stage, stale stages, the IDEA-style counts, claim confidence, gate progress and 
    the typed command with its reason is the confirmation: state that consequence and proceed.
 3. On yes: `python3.11 "$PF" reopen <STAGE> --reason "…" --workspace <ws> --json`; report
    `open_stage` and `stale`.
-
-### Stage commands not yet available
-
-After dispatch (so refusals and transitions still behave correctly), these say "not available in
-this build" and stop: `finalize` (Phase 15).

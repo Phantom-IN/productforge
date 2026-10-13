@@ -114,6 +114,12 @@ def tasklet_product_model(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
+def tasklet_plan(tmp_path: Path) -> Path:
+    """A writable copy of the Tasklet PHASE_PLAN_READY fixture workspace."""
+    return copy_snapshot("PHASE_PLAN_READY", tmp_path / "tasklet-pp")
+
+
+@pytest.fixture
 def tasklet_arch(tmp_path: Path) -> Path:
     """A writable copy of the Tasklet ARCHITECTURE_LOCKED fixture workspace."""
     return copy_snapshot("ARCHITECTURE_LOCKED", tmp_path / "tasklet-ar")

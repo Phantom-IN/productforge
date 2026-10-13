@@ -41,6 +41,7 @@ from pflib import (  # noqa: E402
     gates,
     merge,
     metrics,
+    plans,
     render,
     research,
     scaffold,
@@ -104,7 +105,8 @@ def _status_human(p: dict[str, Any]) -> str:
         f"Product discovered: {prod['name']}  ({prod['target_url']})",
         f"Our working name: {prod['our_name']}{rename}",
         scope_line,
-        f"Open stage: {p['open_stage']}{stale}",
+        f"Open stage: {p['open_stage']}{stale}"
+        + (" — IMPLEMENTATION: phases are being executed" if p["implementation_detected"] else ""),
         "",
         f"Research sources discovered: {s['sources']}",
         f"Major product domains: {s['domains']}",
@@ -154,6 +156,8 @@ def _cmd_status(args: argparse.Namespace) -> Any:
         },
         "next_command": commands.next_command(ws, st, report),
         "capabilities": st.capabilities,
+        "implementation_detected": st.state is state.State.PHASE_PLAN_READY
+        and plans.implementation_detected(ws, report.passed),
     }
     return CommandResult(payload, human=_status_human(payload))
 
@@ -240,7 +244,9 @@ def _cmd_check(args: argparse.Namespace) -> CommandResult:
     st = state.load(ws)
     result = validators.summary(validators.run(ws))
     report = gates.evaluate(ws, st.state.value)
-    payload = {"validate": result, "gate": report.to_dict()}
+    payload: dict[str, Any] = {"validate": result, "gate": report.to_dict()}
+    if st.state is state.State.PHASE_PLAN_READY:
+        payload["lint"] = plans.report(ws)
     done, total = report.progress
     human = _findings_human(result) + [
         f"Gate {report.stage}: {done}/{total} conditions passing"
@@ -402,6 +408,23 @@ def _cmd_set_preferences(args: argparse.Namespace) -> dict[str, Any]:
         config.write_config(ws, values)
     keys = ("architecture.preferences", "architecture.deployment_target")
     return {"architecture": {k.split(".", 1)[1]: config.resolve(k, ws) for k in keys}}
+
+
+def _cmd_lint_phases(args: argparse.Namespace) -> CommandResult:
+    ws = workspace.resolve_workspace(args.workspace)
+    out = plans.report(ws)
+    human = [
+        f"{f['severity'].upper():5} {f['code']}  {f['artifact']}: {f['message']}"
+        for f in out["findings"]
+    ]
+    human += [
+        f"Phase {p['number']} — {p['name']} (depends on {', '.join(p['depends_on']) or 'none'})"
+        for p in out["phases"]
+    ]
+    human.append(f"{out['errors']} error(s), {out['warnings']} warning(s)")
+    return CommandResult(
+        out, EXIT_CHECK_FAILED if out["errors"] else EXIT_OK, human="\n".join(human)
+    )
 
 
 def _cmd_render(args: argparse.Namespace) -> dict[str, Any]:
@@ -648,7 +671,7 @@ SUBCOMMANDS: list[tuple[str, str, Callable[[argparse.ArgumentParser], None], Han
         "lint-phases",
         "lint generated phase plans",
         _add_nothing,
-        _not_implemented("lint-phases", "15"),
+        _cmd_lint_phases,
     ),
     ("trace", "build the traceability graph", _add_trace, _not_implemented("trace", "16")),
     ("check", "validate + gate + lint + trace", _add_nothing, _cmd_check),

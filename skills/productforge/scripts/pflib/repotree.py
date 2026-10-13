@@ -8,7 +8,9 @@
     │   └── api/
     └── tests/
 
-Either box-drawing glyphs or plain indentation work. A single top-level directory that contains
+Either box-drawing glyphs or plain indentation work; several names on one line separated by
+two or more spaces are siblings, and a line holding only glyphs and a comment continues the
+previous one. A single top-level directory that contains
 everything else is the repository root and is dropped. Directories end with ``/``; ``#`` starts a
 comment. Phase lint (Phase 15) uses ``contains`` to check that phase file paths fall inside the
 declared structure.
@@ -36,13 +38,14 @@ def parse(text: str) -> set[str]:
     entries: list[tuple[int, str]] = []
     for raw in text.splitlines():
         line = raw.split("#", 1)[0].rstrip()
-        if not line.strip():
-            continue
         col = len(line) - len(line.lstrip(GLYPHS))
-        name = line[col:].strip()
-        if not name or " " in name.rstrip("/"):
-            raise TreeError(f"not a path: {raw.strip()!r}")
-        entries.append((col, name))
+        rest = line[col:].strip()
+        if not rest:
+            continue  # blank, or only tree glyphs before a comment continuation
+        for name in re.split(r"\s{2,}", rest):  # "README.md  CLAUDE.md": siblings on one line
+            if " " in name.rstrip("/"):
+                raise TreeError(f"not a path: {raw.strip()!r}")
+            entries.append((col, name))
     if not entries:
         raise TreeError("the tree is empty")
     stack: list[tuple[int, str]] = []
@@ -62,7 +65,13 @@ def parse(text: str) -> set[str]:
     return set(paths)
 
 
+def strip_dot(path: str) -> str:
+    while path.startswith("./"):
+        path = path[2:]
+    return path
+
+
 def contains(tree: set[str], path: str) -> bool:
     """True when ``path`` is declared or lies inside a declared directory."""
-    path = path.lstrip("./")
+    path = strip_dot(path)
     return any(path == p or (p.endswith("/") and path.startswith(p)) for p in tree)

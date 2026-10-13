@@ -37,6 +37,12 @@ REQUIRED_SECTIONS = [
 MAX_SKILL_LINES = 400
 
 
+def stubs(text: str) -> str:
+    """The "not yet available" section of SKILL.md ("" once every command is built)."""
+    marker = "### Stage commands not yet available"
+    return text.split(marker, 1)[1] if marker in text else ""
+
+
 def commands_text() -> str:
     """SKILL.md plus the command references it delegates stage procedures to."""
     parts = [SKILL.read_text(encoding="utf-8")]
@@ -366,8 +372,8 @@ def test_domain_architect_and_model_section() -> None:
         "skipping a pass whose",
     ):
         assert phrase in model, phrase
-    stubs = text.split("### Stage commands not yet available", 1)[1]
-    assert "| `model` |" not in stubs
+    not_yet = stubs(text)
+    assert "| `model` |" not in not_yet
 
 
 def test_systems_architect_and_integration_pass() -> None:
@@ -429,7 +435,7 @@ def test_competitor_pass_and_section() -> None:
         "neutral",
     ):
         assert phrase in section, phrase
-    assert "`competitors`" not in text.split("### Stage commands not yet available", 1)[1]
+    assert "`competitors`" not in stubs(text)
 
 
 def test_scope_editor_and_scope_command() -> None:
@@ -465,10 +471,7 @@ def test_scope_editor_and_scope_command() -> None:
         assert phrase in scope, phrase
     model = (REFERENCES / "prioritisation-model.md").read_text(encoding="utf-8")
     assert len(model.splitlines()) < 300 and "R1" in model and "calibrat" in model.lower()
-    assert (
-        "`scope`"
-        not in SKILL.read_text(encoding="utf-8").split("### Stage commands not yet available", 1)[1]
-    )
+    assert "`scope`" not in stubs(SKILL.read_text(encoding="utf-8"))
 
 
 def test_systems_architect_design_pass_and_architect_command() -> None:
@@ -492,7 +495,28 @@ def test_systems_architect_design_pass_and_architect_command() -> None:
     for topic in ("identity", "tenancy", "authn", "authz", "storage", "realtime", "async",
                   "search", "files", "deployment"):  # fmt: skip
         assert f"| {topic} |" in playbook, topic
+    assert "`architect`" not in stubs(SKILL.read_text(encoding="utf-8"))
+
+
+def test_phase_planner_and_finalize_command() -> None:
+    agent = " ".join((AGENTS / "phase-planner.md").read_text(encoding="utf-8").split())
     assert (
-        "`architect`"
-        not in SKILL.read_text(encoding="utf-8").split("### Stage commands not yet available", 1)[1]
+        "Bash"
+        not in frontmatter((AGENTS / "phase-planner.md").read_text(encoding="utf-8"))["tools"]
     )
+    for phrase in ("No new decisions", "RESEARCH REQUESTS", "one numbered rule per INV record",
+                   "exactly the 21 numbered sections", "verbatim headings", "<!-- pf:remove -->",
+                   "## Pass 1 — root documents", "## Pass 2 — phases", "in backticks"):  # fmt: skip
+        assert phrase in agent, phrase
+    section = " ".join(commands_text().split("### `/productforge finalize`", 1)[1].split())
+    for phrase in ('"$PF" lint-phases', "--role phase-planner", "--template plans/phase.md",
+                   "--template project/IMPLEMENTATION_PLAN.md", "AskUserQuestion", "Split a phase",
+                   "paste `STARTUP_PROMPT.md`", "execute phase 00"):  # fmt: skip
+        assert phrase in section, phrase
+    method = (REFERENCES / "phase-plan-method.md").read_text(encoding="utf-8")
+    assert len(method.splitlines()) < 300
+    for heading in ("## Context", "## Scope", "## Tasks", "## Data & schema changes",
+                    "## API / contracts", "## Acceptance criteria", "## Test plan",
+                    "## References", "## Open questions / risks",
+                    "## Definition of done"):  # fmt: skip
+        assert heading in method, heading

@@ -425,6 +425,18 @@ UNKNOWNS_PATH = "research/UNKNOWNS.md"
 PARITY_PATH = "spec/PARITY_MATRIX.md"
 PRODUCT_SPEC_PATH = "spec/PRODUCT_SPEC.md"
 ARCHITECTURE_PATH = "spec/ARCHITECTURE.md"
+IMPLEMENTATION_PLAN_PATH = "IMPLEMENTATION_PLAN.md"
+PLANS_README_PATH = "plans/README.md"
+PHASES_GLOB = "plans/phase-*.md"
+ROOT_DOCS = (
+    "README.md",
+    "IMPLEMENTATION_PLAN.md",
+    "CLAUDE.md",
+    "DEVELOPMENT.md",
+    "STARTUP_PROMPT.md",
+)
+# Workspace folders a generated phase may touch besides the declared repository tree.
+WORKSPACE_ROOTS = ("research/", "spec/", "plans/")
 
 # Closed value sets per (prefix, field), checked by validators (BAD_ENUM).
 ENUMS: dict[tuple[str, str], tuple[str, ...]] = {
@@ -469,7 +481,11 @@ SCAFFOLD_DIRS: tuple[str, ...] = ("research", "spec/decisions", "plans")
 
 # Template files (relative to the skill's templates/ dir) whose name differs from the
 # canonical artifact they render.
-TEMPLATE_ALIASES: dict[str, str] = {"research/research-README.md": "research/README.md"}
+TEMPLATE_ALIASES: dict[str, str] = {
+    "research/research-README.md": "research/README.md",
+    "plans/plans-README.md": "plans/README.md",
+    **{f"project/{name}": name for name in ROOT_DOCS},
+}
 
 
 def _normalise_rel(path: str) -> str:

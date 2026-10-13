@@ -237,6 +237,21 @@ tolerant: a malformed record yields one finding and the rest of the file is stil
 | `INFERENCE_UNPROPOSED` | error | An inference has no proposal, or more than one |
 | `ADR_TOPIC_MISSING` | error | A mandatory topic has no ADR and no not-applicable reason |
 | `SUPERSEDED_DECISION_CITED` | warn | A proposal still cites a superseded ADR |
+| `PHASE_HEADER_FIELDS` | error | A phase lacks its title line or Status / Depends on / Goal |
+| `PHASE_HEADING_MISSING` | error | A phase lacks one of the §16.2 headings |
+| `PHASE_HEADING_ORDER` | error | A phase's §16.2 headings are out of order |
+| `PHASE00_HAS_DEPS` | error | Phase 00 depends on another phase |
+| `PHASE_DEP_UNKNOWN` | error | A phase depends on a phase that does not exist |
+| `PHASE_DEP_FORWARD` | error | A phase depends on a later phase |
+| `PHASE_DEP_CYCLE` | error | Phase dependencies form a cycle |
+| `PHASE_SECTION_REF_DANGLING` | error | A phase cites a § that does not exist |
+| `PHASE_TASK_NO_PATH` | error | A phase task names no path |
+| `PHASE_PATH_OUTSIDE_TREE` | error | A phase task names a path outside the repository tree |
+| `PHASE_TOO_FEW_ACCEPTANCE` | error | A phase has fewer than phases.min_acceptance criteria |
+| `PHASE_TOO_MANY_TASKS` | error | A phase has more than phases.max_tasks tasks |
+| `PHASE_INDEX_MISMATCH` | error | Plans index, phase files and the plan's breakdown disagree |
+| `PHASE_ID_REF_DANGLING` | error | A phase's References cite a record that does not exist |
+| `ROOTDOC_SECTION_MISSING` | error | A generated root document lacks a required section |
 | `BAD_STATUS` | error | Status is not one of the allowed values (or rejected without Reason) |
 | `SUPERSEDED_TARGET_MISSING` | error | superseded-by targets a missing or other-type record |
 | `PROVISIONAL_ID_IN_CANONICAL` | error | A provisional ID (X-?n) appears in a canonical file |

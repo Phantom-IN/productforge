@@ -62,7 +62,7 @@ def domains(ws: Path, index: WorkspaceIndex | None = None) -> int:
 
 def funnel(ws: Path, index: WorkspaceIndex | None = None) -> dict[str, int | None]:
     """The reduction funnel (IDEA §20): observed → features → requirements → V1 → phases."""
-    from pflib import score
+    from pflib import plans, score
 
     index = index or WorkspaceIndex(ws)
     reqs = [r for _, r in index.records("R") if records.is_active(r)]
@@ -72,7 +72,7 @@ def funnel(ws: Path, index: WorkspaceIndex | None = None) -> dict[str, int | Non
         "features": sum(1 for _, f in index.records("F") if records.is_active(f)),
         "core_requirements": sum(1 for r in reqs if r.get("Priority").strip() == "must"),
         "v1_capabilities": len(v1),
-        "phases": None,  # filled by phase-plan generation (Phase 15)
+        "phases": len(plans.phase_files(ws)) or None,  # None until finalize writes phases
     }
 
 

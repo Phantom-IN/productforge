@@ -59,6 +59,7 @@ class MergeReport:
     rendered: list[str] = field(default_factory=list)  # artifacts whose generated views changed
     dropped: list[str] = field(default_factory=list)  # new sources dropped by research.max_sources
     over_cap: int = 0  # sources still above the cap (kept because other records cite them)
+    documents_removed: list[str] = field(default_factory=list)  # REMOVE_MARKER documents
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -75,6 +76,7 @@ class MergeReport:
             "sections_updated": self.sections_updated,
             "rendered": self.rendered,
             "dropped": self.dropped,
+            "documents_removed": self.documents_removed,
             "over_cap": self.over_cap,
         }
 
@@ -279,6 +281,9 @@ def _collect(
         if spec.kind == catalog.KIND_DOCUMENT:
             documents[rel] = text
             continue
+        if text.strip() == REMOVE_MARKER:
+            raise MergeError(f"{rel}: record files cannot be removed (supersede records instead)",
+                             code="BAD_REMOVE", details={"file": rel})  # fmt: skip
         found = records.parse_amendments(text, path=rel)
         amendments.extend(StagedAmendment(rel, a) for a in found)
         if found:  # amendment blocks are not prose
@@ -469,6 +474,23 @@ def _skeleton(ws: Path, rel: str, spec: ArtifactSpec) -> str:
     return seeded if seeded is not None else f"# {spec.title}\n"
 
 
+REMOVE_MARKER = "<!-- pf:remove -->"
+
+
+def _check_removable(ws: Path, rel: str) -> None:
+    """Only documents (never record files) of the open stage may be removed."""
+    from pflib import state
+
+    spec = catalog.spec_for_path(rel)
+    open_stage = state.load(ws).state.value
+    if spec is None or spec.kind != catalog.KIND_DOCUMENT or spec.owner_stage != open_stage:
+        raise MergeError(
+            f"{rel}: only documents of the open stage ({open_stage}) can be removed",
+            code="BAD_REMOVE",
+            details={"file": rel},
+        )
+
+
 def merge(ws: Path, run_id: str) -> MergeReport:
     run_dir = workspace.staging_dir(ws, run_id)
     if not run_dir.is_dir():
@@ -603,9 +625,15 @@ def merge(ws: Path, run_id: str) -> MergeReport:
             )
             report.sections_updated.append(rel)
 
-        # 5) documents (section-level merge)
+        # 5) documents (section-level merge; REMOVE_MARKER deletes an open-stage document)
+        removals: list[str] = []
         for rel, text in sorted(documents.items()):
             path = ws / rel
+            if text.strip() == REMOVE_MARKER:
+                _check_removable(ws, rel)
+                if path.is_file():
+                    removals.append(rel)
+                continue
             canonical = path.read_text(encoding="utf-8") if path.is_file() else None
             outputs[rel] = merge_document_sections(canonical, rewrite_provisional(text, mapping))
             report.documents_updated.append(rel)
@@ -619,6 +647,9 @@ def merge(ws: Path, run_id: str) -> MergeReport:
             target.parent.mkdir(parents=True, exist_ok=True)
             atomic_write_text(target, text)
             report.files_written.append(rel)
+        for rel in removals:
+            (ws / rel).unlink()
+            report.documents_removed.append(rel)
 
         report.rendered = render.render_all(ws)
         for event in amend_events:

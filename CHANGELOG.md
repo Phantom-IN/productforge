@@ -108,6 +108,14 @@ versions follow [Semantic Versioning](https://semver.org/).
   `pf.py set-preferences` (`architecture.preferences`, `architecture.deployment_target`); AP
   proposals amendable; systems-architect design pass; `references/architecture-playbook.md`,
   `references/commands-architecture.md`; ARCHITECTURE_LOCKED fixtures (11 ADRs, 7 invariants).
+- Phase 15: phase-plan generation — templates for the five root documents and the plans
+  (`templates/project/`, `templates/plans/`); `pflib/phaselint.py` (15 lint codes, a pure function
+  over texts) with `pflib/plans.py` for workspaces; `pf.py lint-phases`; `G-PP-ROOT-DOCS` and
+  `G-PP-PHASE-LINT`; IMPLEMENTATION detection in `status`; the funnel's phase count; merge can
+  remove an open-stage document (`<!-- pf:remove -->`); `agents/phase-planner.md`;
+  `references/phase-plan-method.md` and `references/commands-finalize.md`; `repotree` handles
+  sibling names and comment lines; ProductForge's own `plans/v1/` pass the lint in CI (six task
+  lines now name their files); PHASE_PLAN_READY fixture (13 phases).
 
 ### Fixed
 - Briefing more runs than `agents.max_pending_runs` is refused (`RUN_LIMIT`); `pf.py staging list` /
