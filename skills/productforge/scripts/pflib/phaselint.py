@@ -84,7 +84,7 @@ class PlanSet:
     idea_text: str | None = None  # the vision document, when phases cite "IDEA §N"
     tree: set[str] | None = None  # declared repository paths (repotree.parse)
     known_ids: set[str] | None = None  # record IDs that exist (workspace only)
-    breakdown_section: int = 19  # the plan's "Phase breakdown" section number
+    breakdown_section: int = 19  # the plan's "Phase breakdown" section number (0: not checked)
     max_tasks: int = 15
     min_acceptance: int = 3
     extra_roots: tuple[str, ...] = ()  # directories allowed besides the tree (e.g. workspace dirs)
@@ -429,7 +429,7 @@ def _index(ps: PlanSet, phases: list[Phase]) -> list[Issue]:
                         f"phase {n} links {name} but the file is {files[n]}",
                     )
                 )
-    if ps.plan_text is not None:
+    if ps.plan_text is not None and ps.breakdown_section:
         body = ""
         for line_no, line in enumerate(ps.plan_text.splitlines()):
             if re.match(rf"^##\s+{ps.breakdown_section}\.\s", line):

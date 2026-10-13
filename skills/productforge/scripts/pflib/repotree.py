@@ -74,4 +74,4 @@ def strip_dot(path: str) -> str:
 def contains(tree: set[str], path: str) -> bool:
     """True when ``path`` is declared or lies inside a declared directory."""
     path = strip_dot(path)
-    return any(path == p or (p.endswith("/") and path.startswith(p)) for p in tree)
+    return any(path in (p, p.rstrip("/")) or (p.endswith("/") and path.startswith(p)) for p in tree)
