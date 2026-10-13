@@ -9,6 +9,8 @@ versions follow [Semantic Versioning](https://semver.org/).
 - `ENTITY_LOOKS_LIKE_UI_STATE` (warn) and a "not an entity" rule for the domain architect;
   optional ADR `Deviates from` with `ADR_DEVIATES_FROM_REQUIREMENT` (warn, `reopen` hint), shown in
   the requirement-coverage view.
+- `pf.py permission-gaps` and `model.max_unknown_permission_ratio` (0.2): `/productforge model` runs
+  one targeted research pass for unknown permission cells above the limit.
 
 ## [1.0.0] — 2026-10-13
 

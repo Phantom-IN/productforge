@@ -73,6 +73,13 @@ records exist** (counts from `pf.py status --json`) unless the user asks to redo
    When `feature-plan` reports `over_soft_cap`, split it: a core run (tenancy, users, memberships,
    roles) first, then one run per domain (`--partition "<domain>"`, the core entities listed in the
    task) in batches of at most `agents.max_pending_runs`.
+   **Permission gaps.** After the domain pass, `python3.11 "$PF" permission-gaps --workspace <ws>
+   --json`. When `over_limit` is true (more than `model.max_unknown_permission_ratio` of the cells
+   are `?`), run the Research-request protocol once for the listed gaps — one targeted
+   research-agent pass ("Find what the documentation says about who may <action> <resource>: …",
+   the unknowns' questions) — then one domain-architect pass that **supersedes** a rule only where
+   new evidence settles its `?` cells (a new rule plus `### AMEND PR-NNN` · `Status: superseded-by
+   PR-?1`). Cells nothing settles stay `?`.
 2. **Integration pass** (when `integrations` is 0), one product-analyst run: `brief --role
    product-analyst --task "Integration pass: one I record per provider or mechanism."
    --input research/DISCOVERY_LEDGER.md --input research/sources.md --input research/FEATURE_MATRIX.md

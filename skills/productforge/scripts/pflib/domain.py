@@ -187,6 +187,31 @@ def matrix_rows(index: WorkspaceIndex) -> tuple[list[records.Record], list[recor
     return active(index, "RL"), rules
 
 
+def permission_gaps(index: WorkspaceIndex) -> list[dict[str, Any]]:
+    """Every active rule with ``?`` cells: which roles, and the unknowns that explain them."""
+    roles, rules = matrix_rows(index)
+    names = {r.id: r.title for r in roles}
+    unknowns = {u.id: u for _, u in index.records("U")}
+    out = []
+    for rule in rules:
+        cells, _ = parse_grants(rule.get("Grants"))
+        unknown_roles = [rid for rid in (r.id for r in roles) if cells.get(rid) == "?"]
+        if not unknown_roles:
+            continue
+        uids = records.parse_refs(rule.get("Related unknown"))
+        out.append({
+            "rule": rule.id,
+            "title": rule.title,
+            "resource": next(iter(records.parse_refs(rule.get("Resource"))), ""),
+            "action": rule.get("Action").strip(),
+            "roles": [f"{rid} {names[rid]}" for rid in unknown_roles],
+            "unknowns": [{"id": u, "question": unknowns[u].get("Question").strip()}
+                         for u in uids if u in unknowns],
+            "evidence": records.parse_refs(rule.get("Evidence")),
+        })  # fmt: skip
+    return out
+
+
 def permission_cells(index: WorkspaceIndex) -> dict[str, Any]:
     """Cell counts over active rules × active roles (missing = no cell for a role)."""
     roles, rules = matrix_rows(index)

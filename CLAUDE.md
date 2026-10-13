@@ -108,6 +108,7 @@ python3.11 skills/productforge/scripts/pf.py discover https://tasklet.example --
 python3.11 skills/productforge/scripts/pf.py research-plan --workspace /tmp/tl --json
 python3.11 skills/productforge/scripts/pf.py feature-plan --workspace /tmp/tl --json
 python3.11 skills/productforge/scripts/pf.py workflow-candidates --workspace /tmp/tl --json
+python3.11 skills/productforge/scripts/pf.py permission-gaps --workspace /tmp/tl --json
 python3.11 skills/productforge/scripts/pf.py competitor-candidates --workspace /tmp/tl --json
 python3.11 skills/productforge/scripts/pf.py score --write --workspace /tmp/tl --json
 python3.11 skills/productforge/scripts/pf.py override F-012 --decision DEFER --reason "…" --workspace /tmp/tl --json

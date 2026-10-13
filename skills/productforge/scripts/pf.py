@@ -38,6 +38,7 @@ from pflib import (  # noqa: E402
     config,
     deps,
     discover,
+    domain,
     features,
     gates,
     merge,
@@ -362,6 +363,24 @@ def _cmd_feature_plan(args: argparse.Namespace) -> dict[str, Any]:
 def _cmd_workflow_candidates(args: argparse.Namespace) -> dict[str, Any]:
     ws = workspace.resolve_workspace(args.workspace)
     return workflows.candidates(ws)
+
+
+def _cmd_permission_gaps(args: argparse.Namespace) -> dict[str, Any]:
+    ws = workspace.resolve_workspace(args.workspace)
+    index = WorkspaceIndex(ws)
+    cells = domain.permission_cells(index)
+    total = sum(cells["cells"].values()) + cells["missing"]
+    unknown = cells["cells"]["?"]
+    limit = float(config.resolve("model.max_unknown_permission_ratio", ws))
+    ratio = round(unknown / total, 3) if total else 0.0
+    return {
+        "cells": total,
+        "unknown": unknown,
+        "ratio": ratio,
+        "max_ratio": limit,
+        "over_limit": ratio > limit,
+        "gaps": domain.permission_gaps(index),
+    }
 
 
 def _cmd_competitor_candidates(args: argparse.Namespace) -> dict[str, Any]:
@@ -723,6 +742,12 @@ SUBCOMMANDS: list[tuple[str, str, Callable[[argparse.ArgumentParser], None], Han
         "propose workflows to reconstruct (deterministic)",
         _add_nothing,
         _cmd_workflow_candidates,
+    ),
+    (
+        "permission-gaps",
+        "unknown permission cells, their unknowns and the share over the limit",
+        _add_nothing,
+        _cmd_permission_gaps,
     ),
     (
         "competitor-candidates",

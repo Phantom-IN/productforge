@@ -59,6 +59,9 @@ DEFAULTS: dict[str, ConfigKey] = {
     "research.min_claims_gate": _k(40, "DISCOVERY exit requires at least this many active claims"),
     "model.max_workflows": _k(25, "Workflow reconstruction cap"),
     "competitors.max": _k(5, "Competitor pass cap"),
+    "model.max_unknown_permission_ratio": _k(
+        0.2, "Above this share of '?' permission cells, /productforge model runs a gap pass"
+    ),
     "competitors.max_sources": _k(10, "Source budget per competitor (warned above it)"),
     "scope.build_threshold": _k(6, "Priority at or above which a feature is built in V1"),
     "scope.defer_threshold": _k(-4, "Priority at or above which a feature is deferred (else drop)"),

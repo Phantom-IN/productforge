@@ -534,3 +534,12 @@ def test_v11_agent_rules() -> None:
     assert "Not an entity:" in domain and "ENTITY_LOOKS_LIKE_UI_STATE" in domain
     systems = " ".join((AGENTS / "systems-architect.md").read_text(encoding="utf-8").split())
     assert "Deviates from: R-NNN" in systems and "ADR_DEVIATES_FROM_REQUIREMENT" in systems
+
+
+def test_model_runs_the_permission_gap_pass() -> None:
+    model = " ".join(
+        commands_text().split("### `/productforge model`", 1)[1].split("\n### ", 1)[0].split()
+    )
+    for phrase in ('"$PF" permission-gaps', "over_limit", "model.max_unknown_permission_ratio",
+                   "supersedes", "stay `?`"):  # fmt: skip
+        assert phrase in model, phrase
