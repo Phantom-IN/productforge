@@ -48,6 +48,7 @@ from pflib import (  # noqa: E402
     scaffold,
     score,
     state,
+    summary,
     trace,
     validators,
     workflows,
@@ -640,6 +641,12 @@ def _cmd_explain(args: argparse.Namespace) -> CommandResult:
     return CommandResult(out, human="\n".join(human))
 
 
+def _cmd_publish_summary(args: argparse.Namespace) -> CommandResult:
+    ws = workspace.resolve_workspace(args.workspace)
+    text = summary.markdown(ws)
+    return CommandResult({"markdown": text}, human=text.rstrip("\n"))
+
+
 def _cmd_complete(args: argparse.Namespace) -> CommandResult:
     ws = workspace.resolve_workspace(args.workspace)
     st = state.load(ws)
@@ -745,6 +752,12 @@ SUBCOMMANDS: list[tuple[str, str, Callable[[argparse.ArgumentParser], None], Han
     ("trace", "build the traceability graph", _add_trace, _cmd_trace),
     ("explain", "show a record's upstream and downstream chain", _add_explain, _cmd_explain),
     ("complete", "record that PHASE_PLAN_READY is complete", _add_complete, _cmd_complete),
+    (
+        "publish-summary",
+        "a shareable blueprint summary (counts, funnel, decisions, phases)",
+        _add_nothing,
+        _cmd_publish_summary,
+    ),
     ("check", "validate + gate + lint + trace", _add_nothing, _cmd_check),
 ]
 

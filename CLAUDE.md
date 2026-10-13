@@ -14,7 +14,9 @@ ProductForge is a **Claude Code plugin** that turns a public software product UR
 phase**. The model does judgment; stdlib Python scripts (`pf.py`) do state, IDs, validation,
 scoring and traceability; files hold memory.
 
-We are building **v1** — phases in [`plans/v1/`](plans/v1/README.md).
+**v1.0.0** is released — built in the phases of [`plans/v1/`](plans/v1/README.md); follow-ups are
+listed in [`plans/v1.1/`](plans/v1.1/README.md) and the dogfood report is
+[`docs/dogfood-v1.md`](docs/dogfood-v1.md).
 
 ## Golden rules (do not violate without updating the plan)
 
@@ -90,8 +92,9 @@ python3.11 -m venv .venv && . .venv/bin/activate && pip install -U pip && pip in
 
 make test          # python3.11 -m pytest -q
 make lint          # ruff check . && mypy pf.py + pflib (+ hooks/*.py once they exist)
-make check         # py_compile runtime + test + lint + fixtures-check (examples join in Phase 17)
+make check         # py_compile runtime + test + lint + fixtures-check + example
 make fixtures-check  # pf.py validate on every tests/fixtures/workspaces/*/* snapshot
+make example       # pf.py check / lint-phases / trace on examples/tasklet (part of make check)
 make check PYTHON=.venv/bin/python      # run against a specific interpreter (default python3.11)
 
 # CLI (from repo root)

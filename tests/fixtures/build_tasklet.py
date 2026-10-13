@@ -23,6 +23,9 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent / "workspaces" / "tasklet"
+EXAMPLE = (
+    Path(__file__).resolve().parents[2] / "examples" / "tasklet"
+)  # = the PHASE_PLAN_READY snapshot
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "skills" / "productforge" / "scripts"))
 
 STATE = {
@@ -1325,8 +1328,10 @@ def snapshots() -> dict[str, dict[str, str]]:
 def main(argv: list[str]) -> int:
     check = "--check" in argv
     stale = []
-    for name, files in snapshots().items():
-        base = ROOT / name
+    built = snapshots()
+    targets = [(ROOT / name, name, files) for name, files in built.items()]
+    targets.append((EXAMPLE, "examples/tasklet", built["PHASE_PLAN_READY"]))
+    for base, name, files in targets:
         for rel, text in files.items():
             path = base / rel
             if check:

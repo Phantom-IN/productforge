@@ -5,6 +5,29 @@ versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-10-13
+
+First release. ProductForge turns a public software product into an evidence-backed,
+Phase-Plan-Method project specification through five enforced stages — DISCOVERY, PRODUCT_MODEL,
+SCOPE_DEFINED, ARCHITECTURE_LOCKED, PHASE_PLAN_READY — with script-owned IDs, merges, confidence
+rules, scoring, gates, phase lint and traceability, seven role agents, reuse of installed skills
+behind consent-gated capability adapters, and a stage guard hook. Dogfooded on a real product
+through PRODUCT_MODEL and on a synthetic one end to end (`docs/dogfood-v1.md`).
+
+### Added (Phase 17)
+- `examples/tasklet/` — a complete generated workspace (from the fixtures; `make example` in
+  `make check`); `pf.py publish-summary` (shareable summary from script output, published via
+  `report.publish` only on request); version 1.0.0 across `pflib`, `plugin.json` and
+  `marketplace.json` (`test_versions.py`); `docs/dogfood-v1.md`, `docs/roadmap.md`,
+  `plans/v1.1/README.md`; README rewritten for users; `CONTRIBUTING.md`, `SECURITY.md`.
+
+### Calibration
+- Kept `research.min_sources_gate` 15, `research.min_claims_gate` 40 and the near-duplicate ratio
+  0.92 (dogfood evidence in `docs/dogfood-v1.md`); `scope.build_threshold` 6 /
+  `scope.defer_threshold` −4 as calibrated in Phase 13.
+
+### Phases 00–16
+
 ### Added
 - Phase 00 scaffold: plugin + marketplace manifests, repository layout (IMPLEMENTATION_PLAN.md §4),
   `productforge` skill stub (`status` only), `pf.py` CLI skeleton with every §8 subcommand stubbed,

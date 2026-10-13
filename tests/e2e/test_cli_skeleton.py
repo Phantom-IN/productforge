@@ -33,7 +33,7 @@ NO_WORKSPACE = {"workspace": None, "message": "No ProductForge workspace found"}
 def test_version(pf_cli: Cli) -> None:
     code, out, _ = pf_cli("--version")
     assert code == 0
-    assert out.strip() == __version__ == "0.1.0"
+    assert out.strip() == __version__  # test_versions.py pins the release number
 
 
 def test_help_lists_every_section_8_subcommand(pf_cli: Cli) -> None:

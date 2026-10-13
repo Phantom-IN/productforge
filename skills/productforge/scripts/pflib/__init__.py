@@ -7,4 +7,4 @@ See IMPLEMENTATION_PLAN.md §2 (layer 3) and §19.
 
 from __future__ import annotations
 
-__version__ = "0.1.0"
+__version__ = "1.0.0"

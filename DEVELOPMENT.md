@@ -1,7 +1,6 @@
 # DEVELOPMENT — ProductForge
 
-How to work on ProductForge locally. Commands become real as phases land; Phase 00 makes everything
-in "Setup" and "Everyday loop" work.
+How to work on ProductForge locally.
 
 ## Prerequisites
 
@@ -29,7 +28,8 @@ There are no environment variables. All knobs live in `skills/productforge/scrip
 ```bash
 make test        # pytest -q
 make lint        # ruff + mypy
-make check       # compile + test + lint + fixtures-check (examples join in Phase 17)
+make check       # compile + test + lint + fixtures-check + example
+make example     # pf.py check / lint-phases / trace on examples/tasklet
 ```
 
 `make` defaults to `PYTHON=python3.11`. To use a venv or check another version (as CI does with 3.12), pass it in:
@@ -49,6 +49,8 @@ python3.11 $PF init https://tasklet.example --out /tmp/tasklet --name "Tasklet A
 python3.11 $PF status --workspace /tmp/tasklet
 python3.11 $PF validate --workspace /tmp/tasklet --json
 python3.11 $PF check --workspace examples/tasklet
+python3.11 $PF explain R-010 --workspace examples/tasklet
+python3.11 $PF publish-summary --workspace examples/tasklet
 ```
 
 ## Running the plugin in Claude Code
@@ -88,7 +90,9 @@ Tests fake `$HOME` and never call the real `claude` CLI.
   byte-identical — append new ones. When a phase adds an artifact or gate, extend the snapshot for that state and every
   later one (`make fixtures-check` verifies each snapshot passes `validate` for its state).
 - `tests/fixtures/invalid/<CODE>.md` — one overlay per validator finding code, applied to a copy of
-  the Tasklet DISCOVERY snapshot by `conftest.apply_overlay`; it must produce exactly that code.
+  a Tasklet snapshot (`base:`) by `conftest.apply_overlay`; it must produce exactly that code.
+- `tests/fixtures/hooks/` — recorded PreToolUse payloads for the stage guard tests.
+- `examples/tasklet/` — generated from the PHASE_PLAN_READY snapshot by the same builder.
 - `tests/fixtures/http/` — canned `robots.txt`, sitemaps and HTML served by a local `http.server`
   in discover tests.
 - Never put real third-party content in fixtures or `examples/`.

@@ -36,3 +36,7 @@ Re-running resumes: skip a pass whose output exists and lints clean (`pf.py lint
    mark the plan complete; on yes, `python3.11 "$PF" complete --confirmed --workspace <ws> --json`.
    Finish with the exact next step: "Open a new Claude Code session in `<ws>`, paste
    `STARTUP_PROMPT.md`, then say `execute phase 00`."
+7. **Optional, only on request:** to share a summary, `python3.11 "$PF" publish-summary
+   --workspace <ws> --json` and publish its `markdown` through `report.publish` (Delegated run
+   protocol); when `report.publish` resolves to `none`, show the markdown instead. To explore the
+   workspace as a graph, use `graph.explore` the same way — never automatically.
