@@ -82,6 +82,12 @@ Installs run `claude plugin install <plugin>@<marketplace> --scope project` and 
 plugin. Host-provided skills (`anthropic-skills:*`) are detected by the orchestrator, not from disk.
 Tests fake `$HOME` and never call the real `claude` CLI.
 
+## Plugin evals
+
+`evals/` holds `claude plugin eval` cases (see `evals/README.md`). They run real model sessions,
+so they are on demand, not part of `make check`:
+`claude plugin eval . --runs 1 --ablation none --allow-tools "Bash(python3.11:*)" --no-publish`.
+
 ## Fixtures
 
 - `tests/fixtures/workspaces/tasklet/<STATE>/` — a synthetic product ("Tasklet") frozen at each
