@@ -116,8 +116,13 @@ CAPTURE_JS = r"""
     in_item: !!el.closest(ITEM), in_nav: !!el.closest(NAV)});
   const send = (e) => { try { window.__pfRecord(e); } catch (_) { /* recorder gone */ } };
   document.addEventListener("click", (ev) => {
-    const el = ev.target.closest ? (ev.target.closest(ACTIONABLE) || ev.target) : null;
-    if (el) send({type: "click", ...describe(el)});
+    if (!ev.target.closest) return;
+    const actionable = ev.target.closest(ACTIONABLE);
+    if (actionable) { send({type: "click", ...describe(actionable)}); return; }
+    // Plain text, a chart, a table cell: its text is the user's data (a referrer, a count, a
+    // name), never a UI label — keep where it was clicked, not what it says.
+    const el = ev.target;
+    send({type: "click", ...describe(el), name: "", in_item: true});
   }, true);
   document.addEventListener("submit", (ev) => {
     const form = ev.target;

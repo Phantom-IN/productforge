@@ -125,3 +125,19 @@ def test_live_sessions_cannot_be_ingested(
     with pytest.raises(Exception) as exc:
         observe.ingest(ws, SID)
     assert getattr(exc.value, "code", None) == "OBSERVE_ACTIVE"
+
+
+def test_page_payloads_are_page_loads_not_endpoints(tmp_path: Path) -> None:
+    folder = tmp_path / "obs-20261014-150000"
+    folder.mkdir()
+    lines = [
+        {"seq": 1, "type": "request", "method": "GET", "route": "/websites/:id", "status": 200,
+         "resource_type": "fetch", "content_type": "text/x-component"},
+        {"seq": 2, "type": "request", "method": "GET", "route": "/api/websites/:id/stats",
+         "status": 200, "resource_type": "fetch", "content_type": "application/json",
+         "response_shape": {"pageviews": "number"}},
+    ]  # fmt: skip
+    (folder / "events.jsonl").write_text("".join(json.dumps(x) + "\n" for x in lines))
+    s = observe.summarise(folder)
+    assert [e["route"] for e in s["endpoints"]] == ["/api/websites/:id/stats"]
+    assert s["page_loads"] == [{"route": "/websites/:id", "count": 1}]

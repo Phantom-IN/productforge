@@ -210,6 +210,7 @@ def main(folder: Path) -> int:
         page.wait_for_url("**/tasks")
         page.wait_for_selector("li.task")
         settle()
+        page.click("#owner-line")  # plain text: where it was clicked is kept, never what it says
         page.fill("#title", TITLE)
         page.fill("#due", "2026-11-01")
         page.click("#new-task button[type=submit]")

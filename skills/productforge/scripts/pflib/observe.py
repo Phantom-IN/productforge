@@ -344,6 +344,9 @@ def prune(ws: Path, now: datetime | None = None) -> list[str]:
 # -- summary and ingestion ------------------------------------------------------------------------
 SUMMARY = "summary.json"
 ACTION_TYPES = ("click", "submit", "change")
+# Responses that are pages, not API: server-rendered HTML and React Server Components payloads
+# (Next.js fetches `text/x-component` for every client-side navigation).
+PAGE_TYPES = ("text/html", "text/x-component")
 MAX_DETAIL_WORDS = 60  # field shapes and labels only; well under any quotation concern
 
 
@@ -436,13 +439,16 @@ def summarise(folder: Path, prefix: str = "") -> dict[str, Any]:
 
     endpoints: dict[tuple[str, str], dict[str, Any]] = {}
     permissions: list[dict[str, Any]] = []
+    page_loads: dict[str, int] = {}
     errors: list[dict[str, Any]] = []
     last_action: dict[str, Any] | None = None
     for e in events:
         kind = e.get("type")
         if kind in ACTION_TYPES:
             last_action = e
-        if kind == "request" and e.get("resource_type") != "document":
+        if kind == "request" and str(e.get("content_type") or "") in PAGE_TYPES:
+            page_loads[str(e.get("route"))] = page_loads.get(str(e.get("route")), 0) + 1
+        elif kind == "request" and e.get("resource_type") != "document":
             ep_key = (str(e.get("method")), str(e.get("route")))
             fresh: dict[str, Any] = {
                 "method": ep_key[0],
@@ -507,6 +513,7 @@ def summarise(folder: Path, prefix: str = "") -> dict[str, Any]:
         "actions": sorted(actions.values(), key=lambda a: a["first_seq"] or 0),
         "steps": steps,
         "endpoints": sorted(endpoints.values(), key=lambda x: x["first_seq"] or 0),
+        "page_loads": [{"route": r, "count": n} for r, n in page_loads.items()],
         "realtime": list(realtime.values()),
         "permissions": permissions,
         "errors": errors,
