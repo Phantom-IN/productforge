@@ -463,6 +463,7 @@ def _add_observe(p: argparse.ArgumentParser) -> None:
     p.add_argument("--confirmed", action="store_true", help="the user agreed (consent)")
     p.add_argument("--url", help="start: the page to open (default: the target URL)")
     p.add_argument("--label", help="start: what the user is about to do")
+    p.add_argument("--role", help="start: the role of the account the user signs in with")
     p.add_argument("--port", type=int, help="start: control-panel port (default: observe.port)")
     p.add_argument("--reason", help="discard: why the session's raw files are deleted")
 
@@ -472,7 +473,7 @@ def _cmd_observe(args: argparse.Namespace) -> dict[str, Any]:
     if args.action == "consent":
         return observe.record_consent(ws, args.confirmed)
     if args.action == "start":
-        return observe.start(ws, url=args.url, label=args.label, port=args.port)
+        return observe.start(ws, url=args.url, label=args.label, port=args.port, role=args.role)
     if args.action == "status":
         return observe.session_status(ws, args.session)
     if args.action == "stop":

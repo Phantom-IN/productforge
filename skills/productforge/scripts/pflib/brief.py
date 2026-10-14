@@ -97,6 +97,17 @@ def _check_pending(ws: Path) -> None:
         )
 
 
+def _check_observe_input(rel: str) -> None:
+    """Agents read a session's ``summary.json``, never its raw files (§23.1)."""
+    parts = Path(rel).as_posix().strip("/").split("/")
+    if parts[:2] == [workspace.PF_DIR, workspace.OBSERVE] and parts[-1] != "summary.json":
+        raise UsageError(
+            f"{rel}: briefs list an observe session's summary.json, never its raw files "
+            "(events, HAR, screens); run `pf.py observe ingest <session>` first",
+            code="BRIEF_RAW_SESSION",
+        )
+
+
 def render(
     ws: Path,
     role: str,
@@ -126,6 +137,8 @@ def render(
         _check_pending(ws)
         run_id, run_dir = workspace.create_staging_run(ws, role)
 
+    for rel in inputs or []:
+        _check_observe_input(rel)
     input_lines = [
         str(ws / rel) + ("" if (ws / rel).exists() else " (does not exist yet)")
         for rel in inputs or []

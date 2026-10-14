@@ -502,6 +502,7 @@
     "ended": "test finished",
     "events": 50,
     "id": "obs-20261014-140548",
+    "role": "Member",
     "started_at": "2026-10-14T14:05:48Z",
     "url": "http://127.0.0.1:59447/"
   },

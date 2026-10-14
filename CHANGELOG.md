@@ -26,6 +26,11 @@ versions follow [Semantic Versioning](https://semver.org/).
   that caused them, errors) and merges one `observed-session` source (Tier 1) plus `OB` records into
   `research/observations.md`; claims and model records may cite `OB` (D → OB → S in `explain`).
   Codes `OB_KIND_UNKNOWN`, `OB_NOT_FROM_SESSION`, `OB_ARTIFACT_MISSING` (warn).
+- Observation passes for the research agent, product analyst, UX analyst, systems architect and
+  domain architect (shared rules in the agent contract; `references/commands-observe.md`):
+  screen-level `[observed]` steps citing `OB`, API-shape inferences, 403s settling permission
+  cells for the session's `--role`. `INTERNALS_FROM_OBSERVATION` (error) keeps internals UNKNOWN
+  on observed evidence alone; briefs refuse raw session files (`BRIEF_RAW_SESSION`).
 
 ## [Unreleased]
 

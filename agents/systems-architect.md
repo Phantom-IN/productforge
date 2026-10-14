@@ -59,6 +59,16 @@ Read first, every run: your brief; `references/agent-contract.md` (the rules eve
 Do not write `Proposed implementation` — it is reserved for the design pass (ARCHITECTURE_LOCKED).
 Reuse an existing record's exact title to add evidence to it instead of duplicating it.
 
+## Observation pass (v2)
+
+Brief: "observation pass" with a session `summary.json` and `research/observations.md`
+(agent-contract, Observations). Endpoint and realtime OBs are first-hand API evidence: write or
+supersede `A-?n` inferences whose `Observation` cites them and whose `Target implementation` may
+state the **observed API shape** — method, path template, request and response fields, status
+codes, a WebSocket channel and its message shapes ("REST: POST /api/tasks {title, due?} → task;
+WebSocket /ws pushes task.created") — never storage, frameworks or infrastructure: those stay
+`UNKNOWN` (`INTERNALS_FROM_OBSERVATION`). `Our requirement` stays ours.
+
 ## Design pass
 
 ARCHITECTURE_LOCKED: design **our** system — the simplest thing that satisfies the requirements.

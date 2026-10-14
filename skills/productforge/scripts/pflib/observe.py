@@ -204,7 +204,8 @@ def _host(url: str | None) -> str:
 
 
 def start(ws: Path, url: str | None = None, label: str | None = None, port: int | None = None,
-          home: Path | None = None, headless: bool = False) -> dict[str, Any]:  # fmt: skip
+          home: Path | None = None, headless: bool = False,
+          role: str | None = None) -> dict[str, Any]:  # fmt: skip
     require_consent(ws)
     st = state.load(ws)
     if st.state.value not in OBSERVE_STAGES:
@@ -242,7 +243,7 @@ def start(ws: Path, url: str | None = None, label: str | None = None, port: int 
     folder = root / sid
     folder.mkdir()
     meta: dict[str, Any] = {
-        "session": sid, "url": start_url, "label": label, "status": "starting",
+        "session": sid, "url": start_url, "label": label, "role": role, "status": "starting",
         "started_at": workspace.iso(workspace.utc_now()), "config": cfg,
         "consent_sha256": st.observe_consent.get("text_sha256"),
     }  # fmt: skip
@@ -498,6 +499,7 @@ def summarise(folder: Path, prefix: str = "") -> dict[str, Any]:
             "id": folder.name,
             "url": meta.get("url"),
             "started_at": meta.get("started_at"),
+            "role": meta.get("role"),
             "ended": last.get("reason"),
             "events": len(events),
         },  # fmt: skip
@@ -618,6 +620,8 @@ def source_record(summary: dict[str, Any], st: state.WorkspaceState) -> str:
     parts = urlsplit(start)
     url = f"{parts.scheme}://{parts.netloc}/?pf_observe={sid}"
     day = str(summary["session"]["started_at"] or workspace.iso(workspace.utc_now()))[:10]
+    role = summary["session"].get("role")
+    as_role = f", signed in as {role}" if role else ""
     counts = (f"{len(summary['screens'])} screens, {len(summary['endpoints'])} endpoints, "
               f"{len(summary['realtime'])} realtime channels")  # fmt: skip
     return "\n".join([
@@ -630,8 +634,8 @@ def source_record(summary: dict[str, Any], st: state.WorkspaceState) -> str:
         f"- Relevant area: {st.scope.get('text') or 'observed product behaviour'}",
         f"- Published: {day}",
         f"- Last inspected: {day}",
-        f"- Notes: Recorded in observe mode with the user's own account ({counts}); redacted on "
-        "write; raw files stay on this computer.",
+        f"- Notes: Recorded in observe mode with the user's own account{as_role} ({counts}); "
+        "redacted on write; raw files stay on this computer.",
     ]) + "\n"  # fmt: skip
 
 

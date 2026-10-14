@@ -234,7 +234,7 @@ tolerant: a malformed record yields one finding and the rest of the file is stil
 | `GENERATED_REGION_EDITED` | error | A generated region differs from a fresh render |
 | `BAD_STEPS` | error | A workflow has no numbered steps, or they are not numbered 1..n |
 | `BAD_STEP_TAG` | error | A workflow step lacks an [observed] or [implied-system] tag |
-| `OBSERVED_STEP_NO_EVIDENCE` | error | An [observed] workflow step cites no S-/D- evidence |
+| `OBSERVED_STEP_NO_EVIDENCE` | error | An [observed] workflow step cites no S-/D-/OB- evidence |
 | `NO_SYSTEM_STEPS` | warn | A workflow lists no [implied-system] steps |
 | `WORKFLOW_CONFIDENCE` | error | A CONFIRMED workflow's observed steps lack Tier ≤ 2 evidence |
 | `BAD_RELATIONSHIP` | error | A relationship does not follow 'E-NN (<card>, <required>)' |
@@ -252,6 +252,7 @@ tolerant: a malformed record yields one finding and the rest of the file is stil
 | `BAD_FEATURE_SIGNAL` | error | A feature signal's Feature or Competitors do not fit its kind |
 | `TABLE_STAKES_UNDERSUPPORTED` | error | A table-stakes signal names fewer than 2 competitors |
 | `COMPLAINT_SOURCE_TIER` | error | Competitor complaints do not cite Tier 3–4 sources |
+| `INTERNALS_FROM_OBSERVATION` | error | Internals asserted on observed-session evidence alone |
 | `OB_KIND_UNKNOWN` | error | An observation's Kind is outside the closed set |
 | `OB_NOT_FROM_SESSION` | error | An observation's Evidence is not an observed-session source |
 | `OB_ARTIFACT_MISSING` | warn | An observation's local artifact is gone (not discarded) |
