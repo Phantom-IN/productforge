@@ -1,0 +1,74 @@
+{
+  "buttons": [
+    "Refresh",
+    "Add task"
+  ],
+  "counts": {
+    "buttons": 2,
+    "inputs": 2,
+    "links": 4
+  },
+  "dialogs": [],
+  "forms": 1,
+  "headings": [
+    {
+      "in_item": false,
+      "in_nav": false,
+      "level": 1,
+      "name": "Tasks"
+    },
+    {
+      "in_item": false,
+      "in_nav": false,
+      "level": 2,
+      "name": "New task"
+    }
+  ],
+  "inputs": [
+    {
+      "input_type": "text",
+      "name": "Title",
+      "required": true,
+      "role": "textbox"
+    },
+    {
+      "input_type": "date",
+      "name": "Due date",
+      "required": false,
+      "role": "textbox"
+    }
+  ],
+  "landmarks": [
+    "banner",
+    "navigation",
+    "main"
+  ],
+  "links": [
+    {
+      "href": "http://127.0.0.1:59447/tasks",
+      "in_item": false,
+      "in_nav": true,
+      "name": "Tasks"
+    },
+    {
+      "href": "http://127.0.0.1:59447/settings",
+      "in_item": false,
+      "in_nav": true,
+      "name": "Settings"
+    },
+    {
+      "count": 2,
+      "href": "http://127.0.0.1:59447/tasks/:id",
+      "in_item": true,
+      "in_nav": false,
+      "name": "<item>"
+    }
+  ],
+  "lists": 0,
+  "route": "/tasks",
+  "screen": 2,
+  "tables": [],
+  "tabs": [],
+  "title": "Tasklet \u2014 Tasks",
+  "url": "http://127.0.0.1:59447/tasks"
+}

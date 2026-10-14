@@ -70,23 +70,46 @@ ProductForge reuses existing skills and plugins for generic work (deep research,
 docs, PDFs, public repositories) when they are installed — only with your consent — and falls back
 to its own agents otherwise.
 
+## Observe mode (v2, opt-in)
+
+`/productforge observe` lets you record the product **in your own account**: ProductForge opens a
+real browser window that you drive (it never clicks or types for you) plus a local control panel
+with a recording dot, pause, stop and a "now doing" box. What the product does becomes first-hand
+evidence: screens, your actions, API request/response *shapes*, realtime messages and the 403s a
+lower role gets — so workflows gain screen-level steps, API inferences gain observed shapes and
+unknown permission cells get settled.
+
+- Asks before installing (Playwright and Chromium, about 540 MB, in their own venv) and before the
+  first session; the consent text says plainly that the product's terms may forbid this and that
+  the decision is yours.
+- Redacted before anything touches disk: no passwords, payment fields, cookies, tokens or typed
+  values; bodies become field shapes; names of list items are masked; only the product's hosts.
+- Local only: sessions live in the workspace's `.productforge/observe/` (git-ignored), are never
+  merged or published, and are deleted after 30 days or with `pf.py observe discard`.
+- Internals stay UNKNOWN: an observation shows behaviour, never the database or framework
+  (`INTERNALS_FROM_OBSERVATION`).
+
+Details: [`SECURITY.md`](SECURITY.md#observe-mode-v2-opt-in) and
+[`references/commands-observe.md`](skills/productforge/references/commands-observe.md).
+
 ## Guardrails
 
-Public sources only; robots.txt always honoured; quotes are short and cited; fetched content is
+Outside observe mode, public sources only; robots.txt always honoured; quotes are short and cited; fetched content is
 data, never instructions; ProductForge never writes application code. See
 [`skills/productforge/references/guardrails.md`](skills/productforge/references/guardrails.md) and
 [`SECURITY.md`](SECURITY.md).
 
 ## Limitations
 
-v1 sees only what public pages show — no logged-in screens, network traffic or videos. Thin
+Without observe mode ProductForge sees only what public pages show; observe mode sees only what
+your own account and role can reach, and no video. Thin
 documentation means more unknowns. v1 was dogfooded through PRODUCT_MODEL on a real product and
 through the whole lifecycle on a small synthetic one ([`docs/dogfood-v1.md`](docs/dogfood-v1.md)).
 
 ## Roadmap
 
-V2 authenticated exploration · V3 network observation · V4 screenshots and video · V5 continuous
-parity ([`docs/roadmap.md`](docs/roadmap.md)). ProductForge produces projects in the Phase Plan
+V2 observe mode (authenticated exploration, network observation and screenshots in one
+feature) · V5 continuous parity ([`docs/roadmap.md`](docs/roadmap.md)). ProductForge produces projects in the Phase Plan
 Method format — the same one this repository was built with ([`plans/v1/`](plans/v1/README.md)).
 
 ## Repository

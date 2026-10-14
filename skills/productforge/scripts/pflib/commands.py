@@ -29,6 +29,10 @@ COMMAND_STAGE: dict[str, State] = {
     "finalize": State.PHASE_PLAN_READY,
 }
 ALWAYS_ALLOWED = ("status", "reopen")
+# Commands that add evidence in any of several open stages and never trigger a transition.
+MULTI_STAGE: dict[str, tuple[State, ...]] = {
+    "observe": (State.DISCOVERY, State.PRODUCT_MODEL),  # v2 observe mode, §23.6
+}
 
 # The command suggested to work on (or enter) each stage.
 PRIMARY_COMMAND: dict[State, str] = {
@@ -99,9 +103,21 @@ def check_command(ws: Path, cmd: str) -> Decision:
     open_ = st.state
     if cmd in ALWAYS_ALLOWED:
         return Decision(ALLOWED, cmd, open_.value, None, f"{cmd} is always allowed", None)
+    if cmd in MULTI_STAGE:
+        stages_ = MULTI_STAGE[cmd]
+        names = " and ".join(s.value for s in stages_)
+        if open_ in stages_:
+            why = f"{cmd} adds evidence in {names}; {open_.value} is open"
+            return Decision(ALLOWED, cmd, open_.value, open_.value, why, cmd)
+        last = stages_[-1]
+        return Decision(REFUSED, cmd, open_.value, last.value,
+                        f"{cmd} adds evidence only while {names} is open; re-open "
+                        f'{last.value} with `/productforge reopen {last.value} --reason "…"` to '
+                        "observe again (later stages become stale).",
+                        f"reopen {last.value}")  # fmt: skip
     target = COMMAND_STAGE.get(cmd)
     if target is None:
-        known = ", ".join([*COMMAND_STAGE, *ALWAYS_ALLOWED])
+        known = ", ".join([*COMMAND_STAGE, *MULTI_STAGE, *ALWAYS_ALLOWED])
         raise UsageError(
             f"unknown productforge command {cmd!r} (known: {known})", code="UNKNOWN_COMMAND"
         )

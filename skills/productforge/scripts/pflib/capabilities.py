@@ -23,10 +23,18 @@ SKILL_DIR = Path(__file__).resolve().parent.parent.parent
 REGISTRY_PATH = SKILL_DIR / "capabilities.json"
 ADAPTERS_DIR = SKILL_DIR / "adapters"
 
-KINDS = frozenset({"skill", "agent", "tool", "builtin", "none"})
+KINDS = frozenset(
+    {"skill", "agent", "tool", "local", "builtin", "none"}
+)  # local: a program PF runs
 FALLBACK_KINDS = frozenset({"builtin", "none"})
 TRUSTS = frozenset({"first-party", "phantom-in", "third-party"})
-DETECT_KEYS = frozenset({"host", "plugin", "skill"})
+DETECT_KEYS = frozenset({"host", "plugin", "skill", "venv"})
+VENV_READY = ".productforge-ready"  # written by `pf.py deps install` once a venv install succeeded
+
+
+def venv_path(spec: str, home: Path) -> Path:
+    """``~/.productforge/observe-venv`` → an absolute path under ``home``."""
+    return home / spec[2:] if spec.startswith("~/") else Path(spec)
 
 
 @dataclass(frozen=True)
@@ -51,6 +59,7 @@ class Capability:
     required: bool
     used_in: tuple[str, ...]
     providers: tuple[Provider, ...]
+    offer_on_init: bool = True  # False: offered only by the command that needs it (observe mode)
 
     def provider(self, provider_id: str) -> Provider | None:
         return next((p for p in self.providers if p.id == provider_id), None)
@@ -123,7 +132,10 @@ def load_registry(path: Path = REGISTRY_PATH, adapters_dir: Path = ADAPTERS_DIR)
                     raise _schema_error(
                         f"{cap_id}/{prov.id}: adapter file {prov.adapter!r} missing"
                     )
-            if prov.install is not None:
+            if prov.install is not None and "venv" in prov.install:
+                if not prov.install.get("packages"):
+                    raise _schema_error(f"{cap_id}/{prov.id}: a venv install lists packages")
+            elif prov.install is not None:
                 market = prov.install.get("marketplace", "")
                 if market not in marketplaces or not prov.install.get("plugin"):
                     raise _schema_error(
@@ -143,7 +155,7 @@ def load_registry(path: Path = REGISTRY_PATH, adapters_dir: Path = ADAPTERS_DIR)
             raise _schema_error(f"{cap_id}: only the last provider may be a fallback")
         caps[cap_id] = Capability(
             cap_id, raw.get("description", ""), required, tuple(raw.get("used_in", [])),
-            tuple(providers),
+            tuple(providers), raw.get("offer") != "on-request",
         )  # fmt: skip
     return Registry(1, marketplaces, caps)
 
@@ -213,6 +225,18 @@ def detect(
             if "host" in prov.detect:
                 ok = prov.id in host or _short(prov.id) in host_short
                 out[prov.id] = Detection(ok, source="host" if ok else "")
+            elif "venv" in prov.detect:
+                venv = venv_path(prov.detect["venv"], home)
+                ready = venv / VENV_READY
+                ok = ready.is_file() and (venv / "bin" / "python").exists()
+                version = None
+                if ok:
+                    try:
+                        version = json.loads(ready.read_text(encoding="utf-8")).get("version")
+                    except (OSError, json.JSONDecodeError, AttributeError):
+                        version = None
+                out[prov.id] = Detection(ok, version, str(venv) if ok else None,
+                                         "venv" if ok else "")  # fmt: skip
             elif "plugin" in prov.detect:
                 pid = prov.detect["plugin"]
                 if pid in cli:
@@ -320,6 +344,8 @@ def offers(
     for cap_id, res in resolved.items():
         current = reg.capability(cap_id).provider(res.provider)
         on_fallback = current is not None and current.is_fallback
+        if not reg.capability(cap_id).offer_on_init:
+            continue
         if on_fallback and res.installable and cap_id not in pins and cap_id not in offered:
             out.append(cap_id)
     return out
@@ -363,6 +389,15 @@ def install_commands(
 ) -> list[list[str]]:
     if prov.install is None:
         raise UsageError(f"{prov.id} is not installable", code="CAP_NOT_INSTALLABLE")
+    if "venv" in prov.install:
+        venv = venv_path(prov.install["venv"], home)
+        python = str(venv / "bin" / "python")
+        pip = [python, "-m", "pip", "install", "--upgrade", *prov.install["packages"]]
+        browsers = [
+            [python, "-m", "playwright", "install", "--no-shell", b]
+            for b in prov.install.get("browsers", [])
+        ]
+        return [["python3.11", "-m", "venv", str(venv)], pip, *browsers]
     market = prov.install["marketplace"]
     if market not in reg.marketplaces:
         raise CheckFailed(f"marketplace {market!r} is not trusted by the registry",
@@ -380,6 +415,20 @@ def install_commands(
 
 def consent_text(reg: Registry, prov: Provider, scope: str, cmds: list[list[str]]) -> str:
     assert prov.install is not None
+    if "venv" in prov.install:
+        run = "; ".join(" ".join(c) for c in cmds)
+        note = prov.install.get("note", "")
+        return (
+            f"Install {prov.id} into its own virtual environment ({prov.install['venv']}) — "
+            f"{', '.join(prov.install['packages'])}"
+            + (
+                f" plus the {', '.join(prov.install.get('browsers', []))} browser"
+                if prov.install.get("browsers")
+                else ""
+            )
+            + f". {note} This runs: {run}. "
+            + "Nothing is installed into your projects or the system Python."
+        ).replace("  ", " ")
     market = reg.marketplaces[prov.install["marketplace"]]
     run = "; ".join(" ".join(c) for c in cmds)
     return (

@@ -82,6 +82,23 @@ Installs run `claude plugin install <plugin>@<marketplace> --scope project` and 
 plugin. Host-provided skills (`anthropic-skills:*`) are detected by the orchestrator, not from disk.
 Tests fake `$HOME` and never call the real `claude` CLI.
 
+## Observe mode (v2)
+
+The recorder (`observe/recorder.py`) is the only code that needs Playwright; it runs with the
+observe venv's Python, never the dev venv's. `observe/redact.py` and `observe/server.py` are stdlib
+and tested in the normal suite.
+
+```bash
+# one-time, with the user's consent: venv + Playwright + Chromium (~540 MB)
+python3.11 skills/productforge/scripts/pf.py deps install browser.observe --confirmed
+# tests/observe/test_recorder_local_site.py runs the real recorder on a local fixture site
+# (headless; a test stand-in drives it) and is skipped without the venv
+PF_OBSERVE_VENV=~/.productforge/observe-venv python3.11 -m pytest -q tests/observe
+```
+
+Playwright keeps Chromium in a per-user cache under `$HOME` (`~/Library/Caches/ms-playwright` on
+macOS), so the install and the tests must see the same `HOME`.
+
 ## Plugin evals
 
 `evals/` holds `claude plugin eval` cases (see `evals/README.md`). They run real model sessions,

@@ -1,0 +1,45 @@
+{
+  "buttons": [
+    "Sign in"
+  ],
+  "counts": {
+    "buttons": 1,
+    "inputs": 2,
+    "links": 0
+  },
+  "dialogs": [],
+  "forms": 1,
+  "headings": [
+    {
+      "in_item": false,
+      "in_nav": false,
+      "level": 1,
+      "name": "Sign in to Tasklet"
+    }
+  ],
+  "inputs": [
+    {
+      "input_type": "email",
+      "name": "Email",
+      "required": true,
+      "role": "textbox"
+    },
+    {
+      "input_type": "password",
+      "name": "Password",
+      "required": true,
+      "role": "textbox"
+    }
+  ],
+  "landmarks": [
+    "main"
+  ],
+  "links": [],
+  "lists": 0,
+  "route": "/",
+  "screen": 1,
+  "tables": [],
+  "tabs": [],
+  "title": "Tasklet \u2014 Sign in",
+  "url": "http://127.0.0.1:59447/"
+}

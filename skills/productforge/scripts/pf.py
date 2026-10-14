@@ -43,6 +43,7 @@ from pflib import (  # noqa: E402
     gates,
     merge,
     metrics,
+    observe,
     plans,
     render,
     research,
@@ -449,6 +450,41 @@ def _cmd_lint_phases(args: argparse.Namespace) -> CommandResult:
     )
 
 
+OBSERVE_ACTIONS = ("consent", "start", "status", "stop", "ingest", "discard")
+
+
+def _add_observe(p: argparse.ArgumentParser) -> None:
+    p.add_argument("action", choices=OBSERVE_ACTIONS, help="observe-mode action")
+    p.add_argument(
+        "session",
+        nargs="?",
+        help="session ID (status/stop: default latest; ingest/discard: required)",
+    )
+    p.add_argument("--confirmed", action="store_true", help="the user agreed (consent)")
+    p.add_argument("--url", help="start: the page to open (default: the target URL)")
+    p.add_argument("--label", help="start: what the user is about to do")
+    p.add_argument("--role", help="start: the role of the account the user signs in with")
+    p.add_argument("--port", type=int, help="start: control-panel port (default: observe.port)")
+    p.add_argument("--reason", help="discard: why the session's raw files are deleted")
+
+
+def _cmd_observe(args: argparse.Namespace) -> dict[str, Any]:
+    ws = workspace.resolve_workspace(args.workspace)
+    if args.action == "consent":
+        return observe.record_consent(ws, args.confirmed)
+    if args.action == "start":
+        return observe.start(ws, url=args.url, label=args.label, port=args.port, role=args.role)
+    if args.action == "status":
+        return observe.session_status(ws, args.session)
+    if args.action == "stop":
+        return observe.stop(ws, args.session)
+    if not args.session:
+        raise UsageError(f"observe {args.action} needs a session ID", code="OBSERVE_NO_SESSION")
+    if args.action == "ingest":
+        return observe.ingest(ws, args.session)
+    return observe.discard(ws, args.session, args.reason)
+
+
 def _cmd_render(args: argparse.Namespace) -> dict[str, Any]:
     ws = workspace.resolve_workspace(args.workspace)
     return {"rendered": render.render_all(ws, only=args.artifact)}
@@ -756,6 +792,7 @@ SUBCOMMANDS: list[tuple[str, str, Callable[[argparse.ArgumentParser], None], Han
         _cmd_competitor_candidates,
     ),
     ("score", "compute feature priorities and decisions", _add_score, _cmd_score),
+    ("observe", "observe mode: consent, sessions, ingestion (§23)", _add_observe, _cmd_observe),
     (
         "set-preferences",
         "store stack preferences for /productforge architect",

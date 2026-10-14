@@ -3,6 +3,39 @@
 All notable changes to ProductForge are documented here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — v2 observe mode (in progress)
+
+### Added
+- `browser.observe` capability, offered on request only: a consent-gated install of Playwright and
+  Chromium (~540 MB) into `~/.productforge/observe-venv`; `pf.py observe consent` records the
+  user's consent with a hash of the exact text shown.
+- Recorder (`observe/recorder.py`) and localhost control panel (`observe/server.py`,
+  `observe/panel/`): a visible Chromium window the user drives; navigations, clicks, submits,
+  field changes (never values), per-screen accessibility snapshots, screenshots, API request and
+  response *shapes* (read at the CDP response stage so a redirect cannot lose them), realtime
+  message shapes, console errors and dialogs. The panel binds to 127.0.0.1 and needs a random
+  token; the browser profile is temporary.
+- `pf.py observe start [--url] [--label] [--port]`, `observe status`, `observe stop`.
+- Redaction (`observe/redact.py`): header allowlist; URLs without credentials, fragments, query
+  values or id/e-mail/token segments; JSON shapes with data keys collapsed; GraphQL reduced to
+  operation, name and top-level fields; free text with URLs, quoted text, e-mails, IPs and tokens
+  masked; repeated item names stored as `<item>`. Screenshot policy on · blur · off with password,
+  payment and iframe masks. `pf.py observe discard <session> --reason`; `observe.retain_days` (30).
+- Observation records: `pf.py observe ingest <session>` summarises a session (`summary.json`:
+  screens, actions, labelled steps, endpoints, realtime channels, 401/403 responses with the action
+  that caused them, errors) and merges one `observed-session` source (Tier 1) plus `OB` records into
+  `research/observations.md`; claims and model records may cite `OB` (D → OB → S in `explain`).
+  Codes `OB_KIND_UNKNOWN`, `OB_NOT_FROM_SESSION`, `OB_ARTIFACT_MISSING` (warn).
+- Observation passes for the research agent, product analyst, UX analyst, systems architect and
+  domain architect (shared rules in the agent contract; `references/commands-observe.md`):
+  screen-level `[observed]` steps citing `OB`, API-shape inferences, 403s settling permission
+  cells for the session's `--role`. `INTERNALS_FROM_OBSERVATION` (error) keeps internals UNKNOWN
+  on observed evidence alone; briefs refuse raw session files (`BRIEF_RAW_SESSION`).
+- `/productforge observe` (DISCOVERY or PRODUCT_MODEL, never a transition): recorder check →
+  consent → record → ingest → observation passes; the stage guard protects session folders;
+  README and SECURITY.md describe what is stored and what never is. `docs/dogfood-v2.md` holds
+  the automated results and the runbook for the first real session.
+
 ## [Unreleased]
 
 ### Added (v1.1)

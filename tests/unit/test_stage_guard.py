@@ -42,6 +42,7 @@ def denied(out: dict | None) -> str | None:  # type: ignore[type-arg]
         ("research/workflows/W-001-create-a-task.md", "pf.py merge"),
         ("research/product-overview.md", "reopen DISCOVERY"),
         (".productforge/state.json", "only `pf.py`"),
+        (".productforge/observe/obs-20261014-120000/events.jsonl", "only the recorder"),
         ("README.md", "PHASE_PLAN_READY, but the open stage is PRODUCT_MODEL"),
     ],
 )

@@ -1,0 +1,37 @@
+{
+  "buttons": [],
+  "counts": {
+    "buttons": 0,
+    "inputs": 0,
+    "links": 1
+  },
+  "dialogs": [],
+  "forms": 0,
+  "headings": [
+    {
+      "in_item": false,
+      "in_nav": false,
+      "level": 1,
+      "name": "Task details"
+    }
+  ],
+  "inputs": [],
+  "landmarks": [
+    "main"
+  ],
+  "links": [
+    {
+      "href": "http://127.0.0.1:59447/tasks",
+      "in_item": false,
+      "in_nav": false,
+      "name": "Back to tasks"
+    }
+  ],
+  "lists": 0,
+  "route": "/tasks/:id",
+  "screen": 3,
+  "tables": [],
+  "tabs": [],
+  "title": "Tasklet \u2014 Task",
+  "url": "http://127.0.0.1:59447/tasks/:id"
+}

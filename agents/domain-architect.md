@@ -65,6 +65,17 @@ record under a new title and supersede the old one with an amendment
 (`### AMEND PR-009` · `Status: superseded-by PR-?1` · `Why: …`); one active rule per resource ×
 action.
 
+## Observation pass (v2)
+
+Brief: "observation pass" with one or more session `summary.json` files and `research/observations.md`
+(agent-contract, Observations). Response shapes show entities' attributes and relations (field
+names, nested objects, `<id>` keys) — behaviour-level identity, not a database schema. Each
+session's source names the **role** the user signed in as: a permission OB (401/403 after an
+action) makes that role's cell ✗ for the rule the action belongs to; a recorded success makes it
+✓. Settle a `?` cell by staging the corrected rule under a new title with the OB in `Evidence`
+and superseding the old one (`### AMEND PR-NNN` · `Status: superseded-by PR-?1` · `Why: …`).
+A cell no session exercised stays as it is.
+
 ## Reply
 
 Reply with only the summary block from the contract; put missing evidence under

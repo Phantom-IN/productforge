@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -97,12 +98,24 @@ def install(
             exit_code = EXIT_CHECK_FAILED
             break
     payload["executed"] = True
+    local = prov.install is not None and "venv" in prov.install
+    if local and exit_code == EXIT_OK:
+        assert prov.install is not None
+        venv = capabilities.venv_path(prov.install["venv"], home)
+        ready = {
+            "provider": prov.id,
+            "version": prov.install.get("version", "1"),
+            "packages": prov.install["packages"],
+            "at": workspace.iso(workspace.utc_now()),
+        }
+        (venv / capabilities.VENV_READY).write_text(json.dumps(ready) + "\n", encoding="utf-8")
     payload["message"] = (
-        "installed: start a new Claude Code session to load it; this run continues with the "
-        "built-in fallback"
+        ("installed: ready now" if local else
+         "installed: start a new Claude Code session to load it; this run continues with the "
+         "built-in fallback")
         if exit_code == EXIT_OK
         else "install failed; see results"
-    )
+    )  # fmt: skip
     if ws is not None:
         workspace.append_history(
             ws,

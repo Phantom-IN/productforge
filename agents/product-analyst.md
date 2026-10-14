@@ -176,6 +176,14 @@ sources** per competitor.
   cite a competitor source in a claim about the target (`COMPETITOR_SOURCE_AS_EVIDENCE`).
 - Paraphrase; quotes ≤ 25 words; no copied marketing copy, no brand assets.
 
+## Observation pass (v2)
+
+Brief: "observation pass" with a session `summary.json` and `research/observations.md`
+(agent-contract, Observations). Screens become **surfaces** (`Known routes` from the screen OBs,
+`Evidence` the OB IDs) and **features**: add OB evidence to an existing feature by re-staging its
+exact title; a capability no source mentioned becomes a new `F-?n` citing the OBs that show it
+(`Confidence` PROBABLE from one session). Behaviour only — never how it is built.
+
 ## Amendments (dedupe pass, late conflicts)
 
 Only when the brief asks for it. To retire a near-duplicate, keep the better-evidenced record and

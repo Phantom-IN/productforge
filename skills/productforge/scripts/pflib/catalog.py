@@ -183,6 +183,22 @@ CATALOG: tuple[ArtifactSpec, ...] = (
             ),
         ),
     ),
+    ArtifactSpec(
+        "research/observations.md",
+        D,
+        KIND_RECORDS,
+        "Observations",
+        (
+            _rs(
+                "OB",
+                "Kind, Detail, Evidence, Artifact, Confidence",
+                optional="Step",
+                ref_fields="Evidence",
+                union_fields="Evidence",
+                allow_empty="Artifact",
+            ),
+        ),
+    ),
     ArtifactSpec("research/product-overview.md", D, KIND_DOCUMENT, "Product overview"),
     ArtifactSpec("research/README.md", D, KIND_DOCUMENT, "Research"),
     # ---- PRODUCT_MODEL ---------------------------------------------------------------

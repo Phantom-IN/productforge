@@ -37,6 +37,12 @@ CATEGORIES: tuple[Category, ...] = (
     Category("official-demo", 2, True, "Official demo videos and webinars"),
     Category("official-talk", 2, True, "Talks and podcasts given by the target's staff"),
     Category("official-tutorial", 2, True, "Official tutorials and guides outside the docs"),
+    Category(
+        "observed-session",
+        1,
+        True,
+        "A session the user recorded in observe mode, in their own account (§23)",
+    ),  # fmt: skip
     # ---- external ----
     Category("tutorials", 3, False, "Reliable third-party tutorials"),
     Category("review-sites", 3, False, "Product review platforms"),

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ProductForge Observe</title>
+<style>
+  :root {
+    --bg: #f6f6f4; --card: #ffffff; --text: #1d1d1b; --muted: #6b6b66; --line: #e2e1dc;
+    --rec: #d93a2b; --paused: #b7791f; --done: #4a5568; --accent: #2f5d50;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #161615; --card: #20201e; --text: #ecebe6; --muted: #a09f98; --line: #34332f;
+            --rec: #ff5a47; --paused: #e0a537; --done: #a0aec0; --accent: #7fbfa8; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  main { max-width: 560px; margin: 0 auto; padding: 24px 16px 40px; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+          padding: 16px; margin-bottom: 14px; }
+  .state { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 16px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--done); flex: none; }
+  .recording .dot { background: var(--rec); animation: pulse 1.4s ease-in-out infinite; }
+  .recording .state-text { color: var(--rec); }
+  .paused .dot { background: var(--paused); }
+  .paused .state-text { color: var(--paused); }
+  @keyframes pulse { 50% { opacity: .35; } }
+  .elapsed { margin-left: auto; color: var(--muted); font-weight: 400;
+             font-variant-numeric: tabular-nums; }
+  .buttons { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  button { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line);
+           background: var(--card); color: var(--text); cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--muted); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.stop { border-color: var(--rec); color: var(--rec); }
+  label { display: block; font-weight: 600; margin-bottom: 6px; }
+  .row { display: flex; gap: 8px; }
+  input { flex: 1; min-width: 0; font: inherit; padding: 8px 10px; border-radius: 8px;
+          border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+  .current { color: var(--muted); margin-top: 8px; font-size: 14px; }
+  .counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; }
+  .count b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+  .count span { color: var(--muted); font-size: 13px; }
+  .note { color: var(--muted); font-size: 13px; }
+  .error { color: var(--rec); font-size: 14px; min-height: 1em; }
+</style>
+</head>
+<body>
+<main>
+  <h1>ProductForge Observe</h1>
+  <p class="sub">Use the product in the other tab yourself. ProductForge only watches. It never
+    clicks or types for you.</p>
+
+  <section class="card" id="status-card">
+    <div class="state"><span class="dot"></span><span class="state-text" id="state">Connecting…</span>
+      <span class="elapsed" id="elapsed"></span></div>
+    <div class="buttons">
+      <button id="pause">Pause</button>
+      <button id="resume">Resume</button>
+      <button id="stop" class="stop">Stop session</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <label for="label-input">Now doing</label>
+    <div class="row">
+      <input id="label-input" maxlength="120" placeholder="e.g. Create a funnel from two events">
+      <button id="set-label">Set</button>
+    </div>
+    <div class="current" id="current-label">No step named yet.</div>
+  </section>
+
+  <section class="card">
+    <div class="counts" id="counts"></div>
+  </section>
+
+  <p class="error" id="error"></p>
+  <p class="note">Saved on this computer only, in the workspace's <code>.productforge/observe/</code>
+    folder. Typed values, passwords, cookies and tokens are never stored.</p>
+</main>
+<script src="panel.js?t=__TOKEN__"></script>
+</body>
+</html>

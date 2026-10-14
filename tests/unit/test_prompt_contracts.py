@@ -543,3 +543,40 @@ def test_model_runs_the_permission_gap_pass() -> None:
     for phrase in ('"$PF" permission-gaps', "over_limit", "model.max_unknown_permission_ratio",
                    "supersedes", "stay `?`"):  # fmt: skip
         assert phrase in model, phrase
+
+
+OBSERVATION_AGENTS = ("research-agent", "product-analyst", "ux-analyst", "systems-architect",
+                      "domain-architect")  # fmt: skip
+
+
+@pytest.mark.parametrize("agent", OBSERVATION_AGENTS)
+def test_every_observation_pass_cites_ob_ids_and_forbids_internals(agent: str) -> None:
+    text = (AGENTS / f"{agent}.md").read_text(encoding="utf-8")
+    section = text.split("## Observation pass (v2)", 1)[1].split("\n## ", 1)[0]
+    assert "OB" in section and "summary.json" in section
+    assert re.search(r"never .*(storage|built|internals)|Behaviour only|behaviour", section)
+
+
+def test_the_contract_keeps_agents_on_summaries_and_behaviour() -> None:
+    text = (REPO / "skills/productforge/references/agent-contract.md").read_text(encoding="utf-8")
+    section = text.split("## Observations (observe mode, v2)", 1)[1].split("\n## ", 1)[0]
+    for phrase in ("summary.json", "never `events.jsonl`", "INTERNALS_FROM_OBSERVATION",
+                   "One session supports PROBABLE", "never reconstruct"):  # fmt: skip
+        assert phrase in section, phrase
+
+
+def test_observe_procedure_asks_before_consent_install_and_names_the_role() -> None:
+    text = (REPO / "skills/productforge/references/commands-observe.md").read_text(encoding="utf-8")
+    for phrase in ("AskUserQuestion", "observe consent --confirmed", "Never consent for the user",
+                   "--confirmed", "never clicks or types", "--role", "observe ingest",
+                   "lower role", "summary.json"):  # fmt: skip
+        assert phrase in text, phrase
+
+
+def test_skill_routes_observe_and_never_clicks_for_the_user() -> None:
+    skill = (REPO / "skills/productforge/SKILL.md").read_text(encoding="utf-8")
+    assert "| `observe` |" in skill and "### `/productforge observe`" in skill
+    assert "references/commands-observe.md" in skill and "Never click for the user" in skill
+    procedure = (REPO / "skills/productforge/references/commands-observe.md").read_text()
+    recorder, consent = procedure.index("## 1. Recorder"), procedure.index("## 2. Consent")
+    assert recorder < consent and "nothing has changed" in procedure  # no recorder → no change

@@ -29,7 +29,9 @@ PARTITIONS: dict[str, tuple[str, ...]] = {
         "talks-podcasts", "github", "product-hunt", "reddit", "forums", "social",
     ),
 }  # fmt: skip
-UNPARTITIONED = ("unverified", "provider-report")
+UNPARTITIONED = ("unverified", "provider-report", "observed-session")  # never researched
+# Official categories the DISCOVERY coverage gate asks about (observed sessions are optional).
+COVERAGE_OFFICIAL = tuple(c for c in taxonomy.OFFICIAL if c not in UNPARTITIONED)
 SHARES = {"official-docs": 45, "official-core": 25, "external": 30}  # percent of remaining budget
 SCOPE_AREA_LIMIT = 8  # §10.5: more major areas than this → recommend a scope
 
@@ -136,7 +138,7 @@ def plan(ws: Path) -> dict[str, Any]:
         "max_sources": max_sources,
         "remaining_budget": remaining,
         "covered": {c: ids for c, ids in cov.items() if ids},
-        "uncovered_official": [c for c in taxonomy.OFFICIAL if not cov[c]],
+        "uncovered_official": [c for c in COVERAGE_OFFICIAL if not cov[c]],
         "partitions": partitions,
         "major_areas": len(areas),
         "claims": len(metrics.active_claims(ws, index)),

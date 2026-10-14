@@ -8,6 +8,8 @@ from pflib.records import Document
 from pflib.validators import Context, Finding, artifact_check, finding
 from pflib.validators.confidence_checks import source_index
 
+STEP_EVIDENCE = ("S-", "D-", "OB-")  # an [observed] step cites a source, claim or observation
+
 CONFIRMED_OBSERVED_SHARE = 0.5  # a CONFIRMED workflow: ≥ half its observed steps on Tier ≤ 2
 
 
@@ -35,9 +37,9 @@ def workflow_steps(ctx: Context, rel: str, spec: ArtifactSpec, doc: Document) ->
             if not ids.is_provisional(ref) and ctx.get(ref) is None:
                 out.append(finding("DANGLING_REF", rel, rec.id,
                                    f"{rec.id} step {step.number} cites missing {ref}"))  # fmt: skip
-        if step.tag == "observed" and not any(r.startswith(("S-", "D-")) for r in step.refs):
+        if step.tag == "observed" and not any(r.startswith(STEP_EVIDENCE) for r in step.refs):
             out.append(finding("OBSERVED_STEP_NO_EVIDENCE", rel, rec.id,
-                               f"{rec.id} step {step.number} is [observed] but cites no S-/D- "
+                               f"{rec.id} step {step.number} is [observed] but cites no S-/D-/OB- "
                                "evidence; cite it or mark it [implied-system]"))  # fmt: skip
     implied = [s for s in steps if s.tag == "implied-system"]
     explained = "none" in (doc.section_text("Engineering requirements surfaced") or "").lower()

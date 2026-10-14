@@ -48,6 +48,7 @@ def test_real_registry_is_valid_and_every_capability_has_a_fallback() -> None:
         "graph.explore",
         "report.publish",
         "diagram.render",
+        "browser.observe",
     }
     for cap in reg.capabilities.values():
         assert cap.providers[-1].kind == ("builtin" if cap.required else "none")
@@ -109,6 +110,7 @@ def test_nothing_installed_resolves_everything_to_fallbacks(tmp_path: Path) -> N
         "graph.explore": "none",
         "report.publish": "none",
         "diagram.render": "builtin",
+        "browser.observe": "none",
     }
     assert resolved["repo.intel"].installable == ["contributor-scout:repository-intelligence"]
     assert caps.offers(reg, resolved, {}, []) == ["repo.intel"]

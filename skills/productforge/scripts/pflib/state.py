@@ -71,6 +71,8 @@ class WorkspaceState:
     locks: dict[str, dict[str, dict[str, Any]]] = field(default_factory=dict)
     # {"resolved": {capability: {provider, version, resolved_at}}, "offered": [capability]}
     capabilities: dict[str, Any] = field(default_factory=dict)
+    # {"at": ISO time, "text_sha256": hash of the consent text the user agreed to} (observe mode)
+    observe_consent: dict[str, Any] = field(default_factory=dict)
     schema_version: int = SCHEMA_VERSION
 
     def to_dict(self) -> dict[str, Any]:
@@ -83,6 +85,7 @@ class WorkspaceState:
             "stages": self.stages,
             "locks": self.locks,
             "capabilities": self.capabilities,
+            **({"observe_consent": self.observe_consent} if self.observe_consent else {}),
         }
 
     @classmethod
@@ -102,6 +105,7 @@ class WorkspaceState:
             stages=data["stages"],
             locks=data["locks"],
             capabilities=data.get("capabilities", {}),
+            observe_consent=data.get("observe_consent", {}),
             schema_version=data["schema_version"],
         )
 

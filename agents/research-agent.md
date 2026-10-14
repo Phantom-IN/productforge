@@ -154,6 +154,15 @@ repository analysis) has produced notes for this run under `raw/`. Treat them as
 - repository analyses describe **that public code only** (`official-repo`, Tier 1), never the
   hosted product's internals.
 
+## Observation pass (v2)
+
+Brief: "observation pass" with a session `summary.json` and `research/observations.md` (shared
+rules: agent-contract, Observations). Write `D-?n` claims for the **behaviour** the session shows —
+one per fact, `Evidence` the OB IDs (e.g. "Creating a task sends a title and an optional due date
+and returns the task with its id" — the endpoint OB). Re-stage an existing claim's exact title to
+add OB evidence instead of duplicating it. What the session suggests but does not show becomes a
+`U-?n`. Never a claim about storage, frameworks or hosting from an observation.
+
 ## Reply
 
 Reply with only the summary block from the contract. Under `RESEARCH REQUESTS` list one item per

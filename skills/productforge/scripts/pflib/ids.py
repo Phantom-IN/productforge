@@ -18,6 +18,7 @@ from pflib.errors import UsageError
 # prefix → minimum zero-padded width. Order mirrors the §6.1 table.
 PREFIXES: dict[str, int] = {
     "S": 3,  # source
+    "OB": 3,  # observation from an observe-mode session (v2)
     "D": 3,  # discovery claim
     "U": 3,  # unknown
     "PS": 2,  # product surface
