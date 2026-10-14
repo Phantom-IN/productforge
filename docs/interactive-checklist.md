@@ -51,9 +51,9 @@ goes on to spawn agents; nothing after the dialog is being tested.
    **"Close PRODUCT_MODEL and open SCOPE_DEFINED?"** with "Advance to SCOPE_DEFINED
    (Recommended)" and "Stay in PRODUCT_MODEL".
 2. Choose **Stay**. Expected: it stops without advancing. Confirm in a shell:
-   `python3.11 $PF status --workspace ck-model --json | grep '"state"'` → `PRODUCT_MODEL`.
+   `python3.11 $PF status --workspace ck-model --json | grep '"open_stage"'` → `PRODUCT_MODEL`.
 3. `/productforge scope` again and choose **Advance**. Expected: one `advance` call, then the scope
-   section starts (Esc here is fine). Confirm: state is `SCOPE_DEFINED`, **not**
+   section starts (Esc here is fine). Confirm: `open_stage` is `SCOPE_DEFINED`, **not**
    `ARCHITECTURE_LOCKED`, and `.productforge/history.log` has exactly one new `advance` event.
 
 ### 2. The scope recommendation appears without `--scope` (`ck-disc`)
