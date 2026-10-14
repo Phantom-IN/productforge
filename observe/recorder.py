@@ -75,7 +75,8 @@ CAPTURE_JS = r"""
 (() => {
   if (window.__pfCapture) return;
   window.__pfCapture = true;
-  const clean = (s) => (s || "").replace(/\s+/g, " ").trim().slice(0, 80);
+  const clean = (s) => { const v = (s || "").replace(/\s+/g, " ").trim().slice(0, 80);
+    return /^(:r[0-9a-z]+:|«r[0-9a-z]+»|_r_[0-9a-z]+_)$/i.test(v) ? "" : v; };  // React useId ids
   const TAG_ROLE = {A: "link", BUTTON: "button", SELECT: "combobox", TEXTAREA: "textbox",
                     SUMMARY: "button", OPTION: "option", IMG: "img"};
   const INPUT_ROLE = {checkbox: "checkbox", radio: "radio", submit: "button", button: "button",
@@ -144,7 +145,8 @@ CAPTURE_JS = r"""
 # table cell text.
 INVENTORY_JS = r"""
 () => {
-  const clean = (s) => (s || "").replace(/\s+/g, " ").trim().slice(0, 80);
+  const clean = (s) => { const v = (s || "").replace(/\s+/g, " ").trim().slice(0, 80);
+    return /^(:r[0-9a-z]+:|«r[0-9a-z]+»|_r_[0-9a-z]+_)$/i.test(v) ? "" : v; };  // React useId ids
   const visible = (el) => {
     const r = el.getBoundingClientRect();
     return r.width > 0 && r.height > 0;

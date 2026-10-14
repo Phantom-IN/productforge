@@ -141,3 +141,11 @@ def test_page_payloads_are_page_loads_not_endpoints(tmp_path: Path) -> None:
     s = observe.summarise(folder)
     assert [e["route"] for e in s["endpoints"]] == ["/api/websites/:id/stats"]
     assert s["page_loads"] == [{"route": "/websites/:id", "count": 1}]
+
+
+def test_generated_observation_titles_are_never_near_duplicates(tasklet_discovery: Path) -> None:
+    ws = tasklet_discovery
+    ingested(ws)
+    titles = [r.title for _, r in WorkspaceIndex(ws).records("OB")]
+    assert "Endpoint `GET /api/tasks`" in titles
+    assert not [f for f in validators.run(ws) if f.code == "NEAR_DUPLICATE_TITLE"]

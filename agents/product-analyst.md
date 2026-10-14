@@ -180,8 +180,10 @@ sources** per competitor.
 
 Brief: "observation pass" with a session `summary.json` and `research/observations.md`
 (agent-contract, Observations). Screens become **surfaces** (`Known routes` from the screen OBs,
-`Evidence` the OB IDs) and **features**: add OB evidence to an existing feature by re-staging its
-exact title; a capability no source mentioned becomes a new `F-?n` citing the OBs that show it
+`Evidence` the OB IDs) and **features**. Re-staging an existing title only **adds IDs** (merge
+keeps the old field values and reports a conflict); to change fields — routes, capabilities,
+confidence — stage the corrected record under a new title and supersede the old one
+(`### AMEND PS-NNN` · `Status: superseded-by PS-?1` · `Why: …`); a capability no source mentioned becomes a new `F-?n` citing the OBs that show it
 (`Confidence` PROBABLE from one session). Behaviour only — never how it is built.
 
 ## Amendments (dedupe pass, late conflicts)

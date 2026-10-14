@@ -156,12 +156,18 @@ def misplaced_records(ctx: Context) -> list[Finding]:
     ]
 
 
+# Titles written by scripts from distinct keys (observe ingest): never near-duplicates.
+GENERATED_TITLES = frozenset({"OB"})
+
+
 @workspace_check
 def near_duplicate_titles(ctx: Context) -> list[Finding]:
     out: list[Finding] = []
     by_prefix: dict[str, list[Loc]] = {}
     for loc in ctx.records():
         if loc.schema is not None and records.is_active(loc.record):  # superseded = resolved
+            if loc.schema.prefix in GENERATED_TITLES:
+                continue
             by_prefix.setdefault(loc.schema.prefix, []).append(loc)
     for locs in by_prefix.values():
         normed = [(loc, records.normalise_text(loc.record.title)) for loc in locs]

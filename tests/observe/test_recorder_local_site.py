@@ -109,6 +109,8 @@ def test_pause_records_nothing_and_labels_tag_steps(session: tuple[Path, dict[st
     assert after[0]["name"] == "<item>" and after[0]["in_item"] is True  # a task title: masked
     owner = [e for e in evs if e["type"] == "click" and e.get("selector") == "p#owner-line"]
     assert owner and owner[0]["name"] == ""  # plain text clicked: its words are data
+    sort = [e for e in evs if e["type"] == "click" and e.get("selector") == "select#sort"]
+    assert sort and sort[0]["name"] == ""  # a generated id is not a label
 
 
 def test_graphql_id_keyed_maps_and_console_text(session: tuple[Path, dict[str, Any]]) -> None:
