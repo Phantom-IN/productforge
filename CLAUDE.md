@@ -124,7 +124,6 @@ python3.11 skills/productforge/scripts/pf.py deps --json          # which skills
 python3.11 skills/productforge/scripts/pf.py observe consent --workspace /tmp/tl            # v2: show/record consent
 python3.11 skills/productforge/scripts/pf.py observe start --role Member --workspace /tmp/tl # opens the recorder + panel
 python3.11 skills/productforge/scripts/pf.py observe ingest <session> --workspace /tmp/tl     # S + OB records
-python3.11 skills/productforge/scripts/pf.py observe consent --workspace /tmp/tl   # v2 observe mode: shows/records consent
 
 # load the plugin locally in Claude Code
 claude --plugin-dir .                 # then: /productforge status  (or /productforge:productforge status)
