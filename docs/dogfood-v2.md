@@ -17,6 +17,12 @@ stand-in in place of the user, through `Recorder.open` and `pf.py observe start/
 | Ingest of the recorded session | 1 `observed-session` source, 26 `OB` records, 0 errors, 0 warnings |
 | Staged observation-pass output | an OB-cited workflow revision, a `?` cell settled by a 403, an API-shape inference: clean; an internals inference: refused (`INTERNALS_FROM_OBSERVATION`) |
 
+## Sign-in note
+
+The first attempt on Umami Cloud used "Sign in with Google", which Google refuses in a browser a
+program controls; the session was discarded. ProductForge does not work around that check. The
+run used a self-hosted Umami (Docker, synthetic website and traffic) instead.
+
 ## Your 10-minute session (the acceptance run)
 
 On a product you have an account for, ideally the one in a ProductForge workspace in DISCOVERY or

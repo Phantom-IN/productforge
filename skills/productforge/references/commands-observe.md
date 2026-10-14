@@ -20,6 +20,12 @@ AskUserQuestion show the text and stop.
 
 ## 3. Record
 
+**Sign-in providers that refuse automated browsers.** Google (and some other single-sign-on
+providers) block sign-in in any browser a program controls ("This browser or app may not be
+secure"). ProductForge never hides that it controls the browser, so suggest instead: the product's
+e-mail-and-password or GitHub sign-in, or a self-hosted instance of the product (open-source
+products usually ship a Docker image). If none works, observe mode is not for that product.
+
 Ask what the user will do and which role their account has (the domain pass needs it), then
 `python3.11 "$PF" observe start [--url <start page>] --label "<first step>" --role "<role>"
 --workspace <ws> --json`. Tell the user: the browser window that opened is theirs to drive; the
