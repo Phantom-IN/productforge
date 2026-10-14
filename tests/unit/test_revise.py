@@ -61,6 +61,22 @@ def test_bad_revisions_are_refused(tasklet_product_model: Path, text: str, code:
     assert info.value.code == code and (tasklet_product_model / FLOW).read_text() == before
 
 
+def test_revise_in_a_records_artifact_is_refused_not_swallowed(tasklet_product_model: Path) -> None:
+    ws = tasklet_product_model
+    ledger = ws / "research/DISCOVERY_LEDGER.md"
+    before = ledger.read_text()
+    text = "### REVISE D-001\n- Why: a newer source\n\n## Claims\n\nCorrected wording.\n"
+    run_id = stage(ws, text, rel="research/DISCOVERY_LEDGER.md")
+    for attempt in (lambda: merge.preflight(ws, run_id), lambda: merge.merge(ws, run_id)):
+        try:
+            out = attempt()
+        except MergeError as exc:
+            assert exc.code == "BAD_REVISION" and "superseded-by" in exc.message
+        else:  # preflight reports instead of raising
+            assert out["ok"] is False and out["merge_error"]["error"] == "BAD_REVISION", out
+    assert ledger.read_text() == before
+
+
 def test_closed_stage_records_cannot_be_revised(tasklet_scope: Path) -> None:
     with pytest.raises(MergeError) as info:
         merge.merge(

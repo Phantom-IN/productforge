@@ -147,7 +147,10 @@ starts with `### REVISE <ID>` and a `- Why:` line, followed by the `##` sections
 sections and the header record stay as they are (header fields change through unions and
 amendments). Open stage only; logged as a `revise` event. Refusals write nothing:
 `REVISE_TARGET_MISSING`, `REVISE_LOCKED` (closed stage — `pf.py reopen`), `REVISE_NO_REASON`,
-`BAD_REVISION` (not a record file, or no `##` section).
+`BAD_REVISION` (not a record file, or no `##` section). A `### REVISE` heading in a records artifact
+(`DISCOVERY_LEDGER.md`, `FEATURE_INVENTORY.md`, …) is refused with `BAD_REVISION` too: records
+there change by stage-and-supersede — the corrected record with a provisional ID plus
+`### AMEND <old ID>` / `- Status: superseded-by <provisional ID>` / `- Why: …`.
 
 ```markdown
 ### REVISE W-003

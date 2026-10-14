@@ -16,6 +16,8 @@ versions follow [Semantic Versioning](https://semver.org/).
   `### REVISE <ID>` revises a record file's body in the open stage; the workflow index counts
   observed steps; titles that differ by a number are not near-duplicates; `validators.run` is
   memoised per workspace (a gate validated up to four times per `check`).
+- `### REVISE` staged in a records artifact (ledger, inventories) is refused with `BAD_REVISION`
+  and a stage-and-supersede hint, instead of passing as prose and losing its corrections.
 
 ## [1.0.0] — 2026-10-13
 
