@@ -10,13 +10,18 @@
     "research.deep": {
       "description": "Multi-source web research with parallel subagents",
       "required": true,
-      "used_in": ["DISCOVERY", "competitors"],
+      "used_in": [
+        "DISCOVERY",
+        "competitors"
+      ],
       "providers": [
         {
           "id": "anthropic-skills:deep-research",
           "kind": "skill",
           "invoke": "anthropic-skills:deep-research",
-          "detect": {"host": true},
+          "detect": {
+            "host": true
+          },
           "install": null,
           "trust": "first-party",
           "adapter": "deep-research.md"
@@ -35,13 +40,18 @@
     "web.browse": {
       "description": "Render JavaScript-heavy public pages that WebFetch sees as empty",
       "required": true,
-      "used_in": ["DISCOVERY", "workflows"],
+      "used_in": [
+        "DISCOVERY",
+        "workflows"
+      ],
       "providers": [
         {
           "id": "anthropic-skills:built-in-browser",
           "kind": "skill",
           "invoke": "anthropic-skills:built-in-browser",
-          "detect": {"host": true},
+          "detect": {
+            "host": true
+          },
           "install": null,
           "trust": "first-party",
           "adapter": "browser.md"
@@ -50,7 +60,9 @@
           "id": "anthropic-skills:chrome-browser",
           "kind": "skill",
           "invoke": "anthropic-skills:chrome-browser",
-          "detect": {"host": true},
+          "detect": {
+            "host": true
+          },
           "install": null,
           "trust": "first-party",
           "adapter": "browser.md"
@@ -69,13 +81,17 @@
     "docs.pdf": {
       "description": "Read public PDFs (security/trust documents, whitepapers)",
       "required": true,
-      "used_in": ["DISCOVERY"],
+      "used_in": [
+        "DISCOVERY"
+      ],
       "providers": [
         {
           "id": "anthropic-skills:pdf",
           "kind": "skill",
           "invoke": "anthropic-skills:pdf",
-          "detect": {"host": true},
+          "detect": {
+            "host": true
+          },
           "install": null,
           "trust": "first-party",
           "adapter": "pdf.md"
@@ -94,14 +110,22 @@
     "repo.intel": {
       "description": "Factual analysis of the target's public GitHub repositories (SDKs, open-source parts)",
       "required": true,
-      "used_in": ["DISCOVERY", "model"],
+      "used_in": [
+        "DISCOVERY",
+        "model"
+      ],
       "providers": [
         {
           "id": "contributor-scout:repository-intelligence",
           "kind": "agent",
           "invoke": "contributor-scout:repository-intelligence",
-          "detect": {"plugin": "contributor-scout@phantom-in"},
-          "install": {"plugin": "contributor-scout", "marketplace": "phantom-in"},
+          "detect": {
+            "plugin": "contributor-scout@phantom-in"
+          },
+          "install": {
+            "plugin": "contributor-scout",
+            "marketplace": "phantom-in"
+          },
           "trust": "phantom-in",
           "adapter": "repository-intelligence.md"
         },
@@ -119,13 +143,17 @@
     "graph.explore": {
       "description": "Optional knowledge-graph view over research/ and spec/",
       "required": false,
-      "used_in": ["after PRODUCT_MODEL"],
+      "used_in": [
+        "after PRODUCT_MODEL"
+      ],
       "providers": [
         {
           "id": "graphify",
           "kind": "skill",
           "invoke": "graphify",
-          "detect": {"skill": "graphify"},
+          "detect": {
+            "skill": "graphify"
+          },
           "install": null,
           "trust": "third-party",
           "adapter": "graphify.md"
@@ -144,13 +172,17 @@
     "report.publish": {
       "description": "Optional shareable page summarising the blueprint",
       "required": false,
-      "used_in": ["after finalize"],
+      "used_in": [
+        "after finalize"
+      ],
       "providers": [
         {
           "id": "artifact",
           "kind": "tool",
           "invoke": "Artifact",
-          "detect": {"host": true},
+          "detect": {
+            "host": true
+          },
           "install": null,
           "trust": "first-party",
           "adapter": "artifact-publish.md"
@@ -169,13 +201,17 @@
     "diagram.render": {
       "description": "Render architecture diagrams for review",
       "required": true,
-      "used_in": ["ARCHITECTURE_LOCKED"],
+      "used_in": [
+        "ARCHITECTURE_LOCKED"
+      ],
       "providers": [
         {
           "id": "artifact-diagramming",
           "kind": "skill",
           "invoke": "artifact-diagramming",
-          "detect": {"host": true},
+          "detect": {
+            "host": true
+          },
           "install": null,
           "trust": "first-party",
           "adapter": "artifact-diagram.md"
@@ -190,6 +226,47 @@
           "adapter": null
         }
       ]
+    },
+    "browser.observe": {
+      "description": "Observe mode: record the user's own session in a real browser ProductForge controls (IMPLEMENTATION_PLAN §23)",
+      "required": false,
+      "used_in": [
+        "DISCOVERY",
+        "PRODUCT_MODEL"
+      ],
+      "providers": [
+        {
+          "id": "productforge:observe-recorder",
+          "kind": "local",
+          "invoke": "observe/recorder.py",
+          "detect": {
+            "venv": "~/.productforge/observe-venv"
+          },
+          "install": {
+            "venv": "~/.productforge/observe-venv",
+            "packages": [
+              "playwright"
+            ],
+            "browsers": [
+              "chromium"
+            ],
+            "version": "1",
+            "note": "Downloads Chromium (about 150 MB) into the venv's Playwright cache."
+          },
+          "trust": "first-party",
+          "adapter": "observe-recorder.md"
+        },
+        {
+          "id": "none",
+          "kind": "none",
+          "invoke": null,
+          "detect": null,
+          "install": null,
+          "trust": "first-party",
+          "adapter": null
+        }
+      ],
+      "offer": "on-request"
     }
   }
 }

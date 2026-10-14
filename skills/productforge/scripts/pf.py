@@ -43,6 +43,7 @@ from pflib import (  # noqa: E402
     gates,
     merge,
     metrics,
+    observe,
     plans,
     render,
     research,
@@ -449,6 +450,24 @@ def _cmd_lint_phases(args: argparse.Namespace) -> CommandResult:
     )
 
 
+OBSERVE_LATER = {"start": "01", "status": "01", "stop": "01", "ingest": "03", "discard": "02"}
+
+
+def _add_observe(p: argparse.ArgumentParser) -> None:
+    p.add_argument("action", choices=("consent", *OBSERVE_LATER), help="observe-mode action")
+    p.add_argument("--confirmed", action="store_true", help="the user agreed (consent)")
+
+
+def _cmd_observe(args: argparse.Namespace) -> dict[str, Any]:
+    ws = workspace.resolve_workspace(args.workspace)
+    if args.action == "consent":
+        return observe.record_consent(ws, args.confirmed)
+    raise UsageError(
+        f"observe {args.action} arrives in v2 phase {OBSERVE_LATER[args.action]}",
+        code="OBSERVE_NOT_YET",
+    )
+
+
 def _cmd_render(args: argparse.Namespace) -> dict[str, Any]:
     ws = workspace.resolve_workspace(args.workspace)
     return {"rendered": render.render_all(ws, only=args.artifact)}
@@ -756,6 +775,7 @@ SUBCOMMANDS: list[tuple[str, str, Callable[[argparse.ArgumentParser], None], Han
         _cmd_competitor_candidates,
     ),
     ("score", "compute feature priorities and decisions", _add_score, _cmd_score),
+    ("observe", "observe mode: consent, sessions, ingestion (§23)", _add_observe, _cmd_observe),
     (
         "set-preferences",
         "store stack preferences for /productforge architect",

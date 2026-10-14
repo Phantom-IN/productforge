@@ -13,6 +13,7 @@ dist/
 .dogfood/
 **/.productforge/staging/
 **/.productforge/cache/
+**/.productforge/observe/
 
 # OS / editors
 .DS_Store

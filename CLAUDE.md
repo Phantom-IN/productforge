@@ -121,6 +121,7 @@ echo '{"tool_name":"Write","tool_input":{"file_path":"/tmp/tl/research/sources.m
 python3.11 skills/productforge/scripts/pf.py deps --available "anthropic-skills:pdf" --workspace /tmp/tl
 python3.11 skills/productforge/scripts/pf.py delegate anthropic-skills:pdf --task "…" --workspace /tmp/tl
 python3.11 skills/productforge/scripts/pf.py deps --json          # which skills/plugins are reused
+python3.11 skills/productforge/scripts/pf.py observe consent --workspace /tmp/tl   # v2 observe mode: shows/records consent
 
 # load the plugin locally in Claude Code
 claude --plugin-dir .                 # then: /productforge status  (or /productforge:productforge status)
