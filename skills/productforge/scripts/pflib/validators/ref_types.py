@@ -12,7 +12,7 @@ REF_TYPES: dict[tuple[str, str], tuple[str, ...]] = {
     ("D", "Related unknown"): ("U",),
     ("PS", "Evidence"): ("S", "D", "OB"),
     ("PS", "Unanswered questions"): ("U",),
-    ("U", "Available evidence"): ("S", "D", "PS"),
+    ("U", "Available evidence"): ("S", "D", "PS", "OB"),
     ("F", "Parent"): ("F",),
     ("F", "Surface"): ("PS",),
     ("F", "Evidence"): ("S", "D", "OB"),

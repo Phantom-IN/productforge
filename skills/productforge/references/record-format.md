@@ -170,7 +170,8 @@ permission · error), `Detail` (route templates, UI labels, method + path + body
 codes — never values), `Evidence` (the session's `observed-session` source, Tier 1), `Artifact`
 (the redacted local file, e.g. `.productforge/observe/<session>/screens/002.json`; local only),
 `Confidence` (CONFIRMED), optional `Step` (the user's "now doing" label). Claims (`D`) and model
-records (`PS`, `F`, `W`, `E`, `RL`, `PR`, `I`, `A`) may cite `OB` IDs in `Evidence`; confidence and
+records (`PS`, `F`, `W`, `E`, `RL`, `PR`, `I`, `A`) may cite `OB` IDs in `Evidence`, unknowns in
+`Available evidence`; confidence and
 traceability reach the session through them (D → OB → S). Codes: `OB_KIND_UNKNOWN`,
 `OB_NOT_FROM_SESSION`, `OB_ARTIFACT_MISSING` (warn — raw sessions never leave the computer; no
 warning once the session was discarded).

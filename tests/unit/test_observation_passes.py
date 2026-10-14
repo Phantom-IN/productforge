@@ -116,3 +116,15 @@ def test_briefs_take_the_summary_never_raw_session_files(ws: Path) -> None:
     ok = brief.render(ws, "ux-analyst", "Observation pass",
                       inputs=[f".productforge/observe/{SID}/summary.json"])  # fmt: skip
     assert "summary.json" in ok.text
+
+
+def test_an_unknown_may_cite_an_observation_as_available_evidence(ws: Path) -> None:
+    denied = ob(ws, "Permission `GET /api/settings` → 403")
+    text = (
+        "### U-?1 — Can an admin open workspace settings?\n"
+        "- Question: A member is refused settings (403); is an admin too?\n"
+        "- Reason it matters: decides the admin column of the settings rule\n"
+        f"- Available evidence: {denied}\n- V1 default:\n- Impact: Medium\n- Related:\n"
+    )
+    merge.merge(ws, stage(ws, "research-agent", {"research/UNKNOWNS.md": text}))
+    assert errors(ws) == []
