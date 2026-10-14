@@ -20,6 +20,8 @@ versions follow [Semantic Versioning](https://semver.org/).
   and a stage-and-supersede hint, instead of passing as prose and losing its corrections.
 - R1 parent floor: a deferred or dropped parent of a V1 feature is built (BUILD SIMPLIFIED when
   Engineering complexity ≥ 2, else BUILD NOW), up the chain; an override on the parent wins.
+- A merge report's `over_cap` counts only that run's new sources kept over `research.max_sources`
+  (a workspace already over the cap reported its old excess on every merge).
 
 ## [1.0.0] — 2026-10-13
 

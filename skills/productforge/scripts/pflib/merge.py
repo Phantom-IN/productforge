@@ -459,7 +459,9 @@ def _apply_source_cap(
             continue
         seen_keys.add(key)
         new.append(sr)
-    excess = len(existing) + len(new) - cap
+    # only this run's new sources count: a workspace already over the cap (a lowered knob) must
+    # not report its old excess on every merge (v1.1 dogfood: over_cap 48 on a scope run)
+    excess = min(len(new), len(existing) + len(new) - cap)
     if excess <= 0:
         return staged
     texts = [records.serialize_record(sr.record) for sr in staged]

@@ -55,3 +55,15 @@ def test_dedupes_do_not_count_against_the_cap(tasklet_discovery: Path) -> None:
     report = merge.merge(tasklet_discovery, stage(tasklet_discovery,
                                                   {"research/sources.md": existing}))  # fmt: skip
     assert report.dropped == [] and report.deduped == 1
+
+
+def test_a_run_without_new_sources_reports_no_excess(tasklet_discovery: Path) -> None:
+    config.write_config(tasklet_discovery, {"research.max_sources": 5})  # already 20 sources
+    claim = (
+        "### D-?1 — Boards can be filtered by assignee\n- Claim: A board filters by assignee.\n"
+        "- Evidence: S-001\n- Confidence: CONFIRMED\n- Product impact:\n- Engineering impact:\n"
+        "- Status: active\n"
+    )
+    run = stage(tasklet_discovery, {"research/DISCOVERY_LEDGER.md": claim})
+    report = merge.merge(tasklet_discovery, run)
+    assert report.over_cap == 0 and report.dropped == []
