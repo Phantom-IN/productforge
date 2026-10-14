@@ -60,7 +60,9 @@ The brief lists the computed decisions and any user overrides. Then:
 1. **Review.** Where a computed decision is wrong for V1, stage an amendment — never a new card:
    `### AMEND SC-009` · `Override decision: BUILD SIMPLIFIED` · `Override reason: …` ·
    `Simplification: …` · `Why: …`. Keep overrides rare; each needs a reason. Do not undo the
-   user's overrides.
+   user's overrides. A BUILD SIMPLIFIED card without `Simplification` (often an "R1 parent floor"
+   row: kept because a sub-feature is in V1) gets one by amendment — `### AMEND SC-073` ·
+   `Simplification: only what F-076 needs; …` · `Why: …` — no override needed.
 2. **Requirements** `### R-?n — <short title>` for every BUILD NOW / BUILD SIMPLIFIED / USE EXTERNAL
    SERVICE feature (group related features): `Statement` (our behaviour, measurable where possible),
    `Derived from` (F/W/A/D/U/E/I/PR IDs), `Acceptance signal` (how we know it works),

@@ -269,6 +269,7 @@ class StagedAmendment:
 REVISE_RE = re.compile(
     r"^### REVISE (?P<id>[A-Z]{1,3}-\d+)\s*\n(?P<why>- Why:[^\n]*\n)?(?P<body>.*)\Z", re.S
 )
+REVISE_HEADING_RE = re.compile(r"^### REVISE\b", re.M)
 
 
 @dataclass
@@ -354,6 +355,16 @@ def _collect(
                 raise MergeError(f"{rel}: revisions are not accepted here", code="BAD_REVISION")
             revisions.append(revision)
             continue
+        if spec.kind != catalog.KIND_RECORD_FILE and REVISE_HEADING_RE.search(text):
+            # v1.1 dogfood: a REVISE here used to pass as prose, and its corrections vanished
+            raise MergeError(
+                f"{rel}: `### REVISE` changes record files only (one record per file: workflows, "
+                f"ADRs, phases); records in {spec.title} change by stage-and-supersede — stage the "
+                "corrected record with a provisional ID and `### AMEND <old ID>` with "
+                "`- Status: superseded-by <provisional ID>` and a `- Why:` line",
+                code="BAD_REVISION",
+                details={"file": rel},
+            )
         found = records.parse_amendments(text, path=rel)
         amendments.extend(StagedAmendment(rel, a) for a in found)
         if found:  # amendment blocks are not prose

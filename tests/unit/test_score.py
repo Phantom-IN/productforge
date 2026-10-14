@@ -107,3 +107,26 @@ def test_malformed_scores_yield_no_decision(tasklet_scope: Path) -> None:
     )
     (row,) = [r for r in score.evaluate(tasklet_scope) if r.priority is None]
     assert row.decision is None and "Core value" in row.rule
+
+
+def _row(feature: str, decision: str, eng: int = 1, override: str | None = None) -> score.Row:
+    return score.Row(f"SC-{feature[2:]}", feature, 0.0, decision, override or decision, "R5",
+                     override, 0, eng)  # fmt: skip
+
+
+def test_parent_floor_builds_the_parents_of_v1_features() -> None:
+    rows = [_row("F-001", score.DEFER, eng=2), _row("F-002", score.BUILD_NOW),
+            _row("F-003", score.BUILD_NOW), _row("F-004", score.DROP),
+            _row("F-005", score.DEFER), _row("F-006", score.DEFER)]  # fmt: skip
+    parents = {"F-002": "F-001", "F-003": "F-001", "F-001": "F-004", "F-006": "F-005"}
+    out = {r.feature: r for r in score.parent_floor(rows, parents)}
+    assert out["F-001"].decision == score.BUILD_SIMPLIFIED  # engineering 2
+    assert out["F-001"].rule == "R1 parent floor: F-002, F-003 in V1 need it"
+    assert out["F-004"].decision == score.BUILD_NOW  # up the chain, engineering 1
+    assert out["F-005"].decision == score.DEFER  # its child is not in V1
+
+
+def test_an_override_on_the_parent_wins_over_the_floor() -> None:
+    rows = [_row("F-001", score.DEFER, override=score.DEFER), _row("F-002", score.BUILD_NOW)]
+    out = {r.feature: r for r in score.parent_floor(rows, {"F-002": "F-001"})}
+    assert out["F-001"].decision == score.DEFER
