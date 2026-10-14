@@ -10,7 +10,7 @@ module does **all** the arithmetic and applies the decision rules. Pure function
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -107,6 +107,7 @@ class Row:
     rule: str
     override: str | None
     table_stakes: int
+    engineering: int | None = None  # Engineering complexity, for the parent floor
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -135,7 +136,33 @@ def score_record(
     scores = {k: v for k, v in parsed.items() if v is not None}
     prio = priority(scores, w, n_stakes)
     computed, rule = decide(scores, prio, t)
-    return Row(sc.id, feature, prio, computed, override or computed, rule, override, n_stakes)
+    return Row(sc.id, feature, prio, computed, override or computed, rule, override, n_stakes,
+               scores["Engineering complexity"])  # fmt: skip
+
+
+def parent_floor(rows: list[Row], parents: dict[str, str]) -> list[Row]:
+    """R1 parent floor (v1.1 dogfood: sub-features landed in V1 under a deferred parent): a
+    DEFER/DROP parent of a V1 feature is built — BUILD SIMPLIFIED if Engineering complexity ≥ 2,
+    else BUILD NOW — up the chain until nothing changes. A user's override always wins."""
+    by_feature = {r.feature: r for r in rows}
+    changed = True
+    while changed:
+        changed = False
+        for feature, parent in sorted(parents.items()):
+            child, up = by_feature.get(feature), by_feature.get(parent)
+            if child is None or up is None or child.decision not in IN_V1:
+                continue
+            if up.override is not None or up.decision not in (DEFER, DROP):
+                continue
+            kids = sorted(
+                f for f, p in parents.items()
+                if p == parent and f in by_feature and by_feature[f].decision in IN_V1
+            )  # fmt: skip
+            decision = BUILD_SIMPLIFIED if (up.engineering or 0) >= 2 else BUILD_NOW
+            rule = f"R1 parent floor: {', '.join(kids)} in V1 need it"
+            by_feature[parent] = replace(up, computed=decision, decision=decision, rule=rule)
+            changed = True
+    return [by_feature.get(r.feature, r) for r in rows]
 
 
 def evaluate(ws: Path, index: Any = None) -> list[Row]:
@@ -149,7 +176,13 @@ def evaluate(ws: Path, index: Any = None) -> list[Row]:
     rows = [
         score_record(sc, w, t, stakes) for _, sc in index.records("SC") if records.is_active(sc)
     ]
-    return sorted(rows, key=lambda r: (r.feature, r.sc))
+    parents = {}
+    for _, f in index.records("F"):
+        if records.is_active(f):
+            refs = [r for r in records.parse_refs(f.get("Parent")) if r.startswith("F-")]
+            if refs:
+                parents[f.id] = refs[0]
+    return sorted(parent_floor(rows, parents), key=lambda r: (r.feature, r.sc))
 
 
 def report(ws: Path) -> dict[str, Any]:

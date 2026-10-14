@@ -18,6 +18,8 @@ versions follow [Semantic Versioning](https://semver.org/).
   memoised per workspace (a gate validated up to four times per `check`).
 - `### REVISE` staged in a records artifact (ledger, inventories) is refused with `BAD_REVISION`
   and a stage-and-supersede hint, instead of passing as prose and losing its corrections.
+- R1 parent floor: a deferred or dropped parent of a V1 feature is built (BUILD SIMPLIFIED when
+  Engineering complexity ≥ 2, else BUILD NOW), up the chain; an override on the parent wins.
 
 ## [1.0.0] — 2026-10-13
 

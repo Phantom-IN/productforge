@@ -40,9 +40,13 @@ priority = Σ weight × score (benefits) − Σ weight × score (costs)   (range
 | R5 | priority ≥ `scope.defer_threshold` | DEFER |
 | R6 | otherwise | DROP |
 | R1 | **floor**: Dependency importance 3 and the result is DEFER/DROP | BUILD SIMPLIFIED if Engineering complexity ≥ 2, else BUILD NOW |
+| R1 parent floor | a feature in V1 whose `Parent` is DEFER/DROP (no override on the parent) | the parent gets the same R1 decision, up the chain |
 
 R1 is applied last so a dependency can still go to an external service (sign-in → an identity
-provider) but is **never deferred or dropped**. `BUILD SIMPLIFIED` needs `Simplification` (what V1
+provider) but is **never deferred or dropped**. The parent floor is structural and computed by
+`pf.py score` after every card's own rule: a sub-feature in V1 means its parent capability exists
+in V1, at least simplified (a parent kept by it usually needs a `Simplification`: "only what
+F-035 and F-036 need"). Overriding the parent (`pf.py override`) wins over the floor. `BUILD SIMPLIFIED` needs `Simplification` (what V1
 leaves out); `USE EXTERNAL SERVICE` needs `External service` (the *kind* of service — choosing a
 vendor is an architecture decision).
 
