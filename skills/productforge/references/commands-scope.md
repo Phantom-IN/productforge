@@ -20,7 +20,8 @@ gaps from `pf.py check --json`).
    merge.
 2. **Score.** `python3.11 "$PF" score --write --workspace <ws> --json`. Show a compact summary:
    `counts` per decision; every override; every DEFER/DROP of a feature with `table_stakes` > 0;
-   every row whose `rule` starts with `R1` (kept because other features depend on it).
+   every row whose `rule` starts with `R1` (kept because other features depend on it, or — "R1
+   parent floor" — because one of its sub-features is in V1).
 3. **The user decides.** Ask with AskUserQuestion: "Accept this scope (Recommended)" or "Adjust".
    On **Adjust**, ask which features move to which decision and why; record each with
    `python3.11 "$PF" override <F-ID> --decision "<DECISION>" --reason "<the user's words>"
@@ -28,8 +29,10 @@ gaps from `pf.py check --json`).
    **Requirements are written only after the user accepts.** Without AskUserQuestion: show the
    summary, explain how to adjust, and stop here.
 4. **Requirements pass**, one scope-editor run: `brief --role scope-editor --task "Pass 2: review
-   the computed decisions (overrides only with reasons; keep the user's), write requirements for
-   every V1 feature, a V1 default for every unknown, and the product spec narrative."
+   the computed decisions (overrides only with reasons; keep the user's), amend a Simplification
+   onto every BUILD SIMPLIFIED card that lacks one (R1 parent-floor rows: only what their V1
+   children need), write requirements for every V1 feature, a V1 default for every unknown, and
+   the product spec narrative."
    --input spec/PARITY_MATRIX.md --input research/FEATURE_MATRIX.md --input research/workflows
    --input research/architecture-inference.md --input research/UNKNOWNS.md --input
    spec/PRODUCT_SPEC.md --template spec/PRODUCT_SPEC.md --template research/UNKNOWNS.md`.
