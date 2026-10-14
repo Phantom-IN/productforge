@@ -7,8 +7,12 @@ every priority and decision** — never state a number or a decision that `pf.py
 
 ### `/productforge scope`
 
-Re-running the command resumes: skip a step whose output exists (counts from `pf.py status --json`,
-gaps from `pf.py check --json`).
+Re-running the command resumes: skip an **agent pass** whose output exists (counts from
+`pf.py status --json`, gaps from `pf.py check --json`). Steps 2 and 3 — the score summary and the
+user's Accept/Adjust decision — run **every time** SCOPE_DEFINED is open, even when requirements
+already exist: re-running `scope` is how the user changes a decision (v1.1 checklist: a finished
+workspace skipped the question). After an Accept, step 4 runs only for what is missing (features
+in V1 with no requirement after an override, unknowns without a V1 default).
 
 1. **Score pass** (when there are no score cards, or `G-SC-ALL-SCORED` names unscored features):
    scope-editor run(s): `brief --role scope-editor --task "Pass 1: score cards for <all features |

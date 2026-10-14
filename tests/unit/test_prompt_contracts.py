@@ -580,3 +580,9 @@ def test_skill_routes_observe_and_never_clicks_for_the_user() -> None:
     procedure = (REPO / "skills/productforge/references/commands-observe.md").read_text()
     recorder, consent = procedure.index("## 1. Recorder"), procedure.index("## 2. Consent")
     assert recorder < consent and "nothing has changed" in procedure  # no recorder → no change
+
+
+def test_scope_always_asks_the_user_while_the_stage_is_open() -> None:
+    text = (REPO / "skills/productforge/references/commands-scope.md").read_text(encoding="utf-8")
+    resume = text.split("Re-running the command resumes", 1)[1].split("\n\n", 1)[0]
+    assert "run **every time**" in resume and "Accept/Adjust" in resume
