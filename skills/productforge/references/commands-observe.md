@@ -3,19 +3,20 @@
 Observe mode records the real product while **the user** drives it in their own account. Works
 in DISCOVERY and PRODUCT_MODEL. `$PF` = `<base>/scripts/pf.py`; `<ws>` = the workspace.
 
-## 1. Consent (once per workspace, again when the text changes)
+## 1. Recorder (once per computer)
+
+`python3.11 "$PF" deps --json`: if `browser.observe` resolves to `none`, run
+`deps install browser.observe --json` (prints the commands and `consent_text`, installs
+nothing), show the size and ask with AskUserQuestion; only on yes add `--confirmed`. Declined or
+no AskUserQuestion → explain how to enable it later and stop: nothing has changed and the v1
+commands are unaffected.
+
+## 2. Consent (once per workspace, again when the text changes)
 
 `python3.11 "$PF" observe consent --workspace <ws> --json`. If `consented` is false, show `text`
 verbatim and ask with AskUserQuestion: "I consent — this is my own account (Recommended)" /
 "Not now". Only on consent: `observe consent --confirmed`. Never consent for the user; without
 AskUserQuestion show the text and stop.
-
-## 2. Install (once per computer)
-
-`python3.11 "$PF" deps --json`: if `browser.observe` resolves to `none`, run
-`deps install browser.observe --json` (prints the commands and `consent_text`, installs
-nothing), show the size and ask; only on yes add `--confirmed`. Declined → stop; v1 commands are
-unaffected.
 
 ## 3. Record
 
@@ -36,7 +37,8 @@ counts from the result, never typed ones.
 
 Each run gets `pf.py brief --role <role> --task "Observation pass: <session>" --input
 .productforge/observe/<session>/summary.json --input research/observations.md` plus the role's
-usual inputs and templates; preflight, repair, merge as always:
+usual inputs and templates; spawn the runs of one row in one message (at most
+`agents.max_pending_runs`), then preflight, repair and merge them one at a time:
 
 | Open stage | Roles (in order) |
 |---|---|
@@ -48,6 +50,10 @@ usual inputs and templates; preflight, repair, merge as always:
 Permissions need a second session as a **lower role** (a member, a viewer): the same steps, a
 second account. Offer it when `pf.py permission-gaps --json` lists unknown cells for a role the
 user can sign in as. A 403 for an action is that cell's ✗; nothing else changes a cell.
+
+Finish with the end-of-command report: `pf.py status --json` counts before and after, the new OB,
+claim, step and permission-cell evidence by ID, and `pf.py check` for the open stage — the gate is
+reported, never advanced.
 
 ## 7. Afterwards
 

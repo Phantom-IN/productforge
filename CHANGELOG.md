@@ -31,6 +31,10 @@ versions follow [Semantic Versioning](https://semver.org/).
   screen-level `[observed]` steps citing `OB`, API-shape inferences, 403s settling permission
   cells for the session's `--role`. `INTERNALS_FROM_OBSERVATION` (error) keeps internals UNKNOWN
   on observed evidence alone; briefs refuse raw session files (`BRIEF_RAW_SESSION`).
+- `/productforge observe` (DISCOVERY or PRODUCT_MODEL, never a transition): recorder check →
+  consent → record → ingest → observation passes; the stage guard protects session folders;
+  README and SECURITY.md describe what is stored and what never is. `docs/dogfood-v2.md` holds
+  the automated results and the runbook for the first real session.
 
 ## [Unreleased]
 

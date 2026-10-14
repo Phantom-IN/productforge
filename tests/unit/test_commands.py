@@ -86,3 +86,13 @@ def test_next_command_follows_the_first_failing_condition(tasklet_product_model:
     report = gates.evaluate(ws, st.state.value)
     assert "G-PM-WORKFLOW-PER-DOMAIN" in report.failing()  # first mapped failing condition
     assert commands.next_command(ws, st, report) == "workflows"
+
+
+def test_observe_works_in_discovery_and_product_model_only(
+    tasklet_discovery: Path, tasklet_product_model: Path, tasklet_scope: Path
+) -> None:
+    for ws in (tasklet_discovery, tasklet_product_model):
+        d = commands.check_command(ws, "observe")
+        assert d.verdict == commands.ALLOWED and d.target_stage == d.open_stage
+    late = commands.check_command(tasklet_scope, "observe")
+    assert late.verdict == commands.REFUSED and late.suggested_command == "reopen PRODUCT_MODEL"

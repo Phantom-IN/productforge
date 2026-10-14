@@ -571,3 +571,12 @@ def test_observe_procedure_asks_before_consent_install_and_names_the_role() -> N
                    "--confirmed", "never clicks or types", "--role", "observe ingest",
                    "lower role", "summary.json"):  # fmt: skip
         assert phrase in text, phrase
+
+
+def test_skill_routes_observe_and_never_clicks_for_the_user() -> None:
+    skill = (REPO / "skills/productforge/SKILL.md").read_text(encoding="utf-8")
+    assert "| `observe` |" in skill and "### `/productforge observe`" in skill
+    assert "references/commands-observe.md" in skill and "Never click for the user" in skill
+    procedure = (REPO / "skills/productforge/references/commands-observe.md").read_text()
+    recorder, consent = procedure.index("## 1. Recorder"), procedure.index("## 2. Consent")
+    assert recorder < consent and "nothing has changed" in procedure  # no recorder → no change

@@ -63,6 +63,11 @@ def decide(payload: dict[str, object]) -> dict[str, object] | None:
 
     if rel.startswith(".productforge/staging/"):
         return None
+    if rel.startswith(".productforge/observe/"):
+        return _deny(
+            f"{rel} is an observe-mode session; only the recorder and `pf.py observe` write it "
+            "(`pf.py observe discard <session> --reason …` deletes it)."
+        )
     if rel.startswith(".productforge/"):
         return _deny(f"{rel} is ProductForge's own state; only `pf.py` changes it.")
 
