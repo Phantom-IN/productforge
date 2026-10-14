@@ -8,14 +8,16 @@ the chat.
 
 ## Setup (once)
 
+`REPO` is this repository. The Python step leaves `ck-disc` with no accepted scope, nine major
+areas and two recommended scopes. The block has no `#` comments, so it pastes into zsh as is.
+
 ```bash
-REPO=~/Documents/productforge            # this repository
+REPO=~/Documents/productforge
 PF=$REPO/skills/productforge/scripts/pf.py
 mkdir -p ~/pf-checklist && cd ~/pf-checklist
 cp -R $REPO/tests/fixtures/workspaces/tasklet/PRODUCT_MODEL ck-model
 cp -R $REPO/tests/fixtures/workspaces/tasklet/SCOPE_DEFINED ck-scope
 cp -R $REPO/tests/fixtures/workspaces/tasklet/DISCOVERY ck-disc
-# ck-disc: no accepted scope, nine major areas and two recommended scopes
 python3.11 - ck-disc <<'EOF'
 import json, pathlib, sys
 ws = pathlib.Path(sys.argv[1])
