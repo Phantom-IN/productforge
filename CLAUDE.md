@@ -15,7 +15,7 @@ phase**. The model does judgment; stdlib Python scripts (`pf.py`) do state, IDs,
 scoring and traceability; files hold memory.
 
 **v1.0.0** is released — built in the phases of [`plans/v1/`](plans/v1/README.md); follow-ups are
-listed in [`plans/v1.1/`](plans/v1.1/README.md) and the dogfood report is
+listed in [`plans/v1.1/`](plans/v1.1/README.md); v2 observe mode (§23) is in [`plans/v2/`](plans/v2/README.md) and the dogfood report is
 [`docs/dogfood-v1.md`](docs/dogfood-v1.md).
 
 ## Golden rules (do not violate without updating the plan)
@@ -121,6 +121,9 @@ echo '{"tool_name":"Write","tool_input":{"file_path":"/tmp/tl/research/sources.m
 python3.11 skills/productforge/scripts/pf.py deps --available "anthropic-skills:pdf" --workspace /tmp/tl
 python3.11 skills/productforge/scripts/pf.py delegate anthropic-skills:pdf --task "…" --workspace /tmp/tl
 python3.11 skills/productforge/scripts/pf.py deps --json          # which skills/plugins are reused
+python3.11 skills/productforge/scripts/pf.py observe consent --workspace /tmp/tl            # v2: show/record consent
+python3.11 skills/productforge/scripts/pf.py observe start --role Member --workspace /tmp/tl # opens the recorder + panel
+python3.11 skills/productforge/scripts/pf.py observe ingest <session> --workspace /tmp/tl     # S + OB records
 python3.11 skills/productforge/scripts/pf.py observe consent --workspace /tmp/tl   # v2 observe mode: shows/records consent
 
 # load the plugin locally in Claude Code
