@@ -84,7 +84,9 @@ def test_api_shapes_and_har(session: tuple[Path, dict[str, Any]]) -> None:
 def test_screens_and_screenshots(session: tuple[Path, dict[str, Any]]) -> None:
     folder, _ = session
     screens = [json.loads(p.read_text()) for p in sorted((folder / "screens").glob("*.json"))]
-    assert [s["route"] for s in screens] == ["/", "/tasks", "/tasks/:id"]
+    assert [s["route"] for s in screens] == ["/", "/tasks", "/tasks/:id", "/settings"]
+    denied = [e for e in events(folder) if e["type"] == "request" and e.get("status") == 403]
+    assert [e["route"] for e in denied] == ["/api/settings"]
     sign_in = screens[0]
     assert {("Email", "email"), ("Password", "password")} <= {
         (i["name"], i["input_type"]) for i in sign_in["inputs"]
