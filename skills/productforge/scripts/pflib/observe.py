@@ -338,3 +338,326 @@ def prune(ws: Path, now: datetime | None = None) -> list[str]:
             discard(ws, sid, f"older than observe.retain_days ({days})")
             pruned.append(sid)
     return pruned
+
+
+# -- summary and ingestion ------------------------------------------------------------------------
+SUMMARY = "summary.json"
+ACTION_TYPES = ("click", "submit", "change")
+MAX_DETAIL_WORDS = 60  # field shapes and labels only; well under any quotation concern
+
+
+def _events(folder: Path) -> list[dict[str, Any]]:
+    path = folder / "events.jsonl"
+    if not path.is_file():
+        return []
+    out = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        try:
+            e = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(e, dict):
+            out.append(e)
+    return out
+
+
+def _compact(value: Any) -> str:
+    return json.dumps(value, sort_keys=True, separators=(", ", ": "))
+
+
+def _action_text(a: dict[str, Any]) -> str:
+    name = f" “{a['name']}”" if a.get("name") else ""
+    return f"{a['type']} · {a.get('role') or a.get('tag') or 'element'}{name}"
+
+
+def summarise(folder: Path, prefix: str = "") -> dict[str, Any]:
+    """A session folder → ``{session, screens, actions, steps, endpoints, realtime, permissions,
+    errors}``: deterministic (ordered by first appearance), built only from redacted files.
+    ``prefix`` is the folder's workspace-relative path, used for ``artifact`` references."""
+    pre = f"{prefix.rstrip('/')}/" if prefix else ""
+    events = _events(folder)
+    meta = _read(folder / "session.json")
+    last: dict[str, Any] = next((e for e in reversed(events) if e.get("type") == "stopped"), {})
+    shots_after = {e.get("after"): e.get("file") for e in events if e.get("type") == "screenshot"}
+
+    screens = []
+    for path in sorted((folder / "screens").glob("*.json")):
+        s = _read(path)
+        nav = next(
+            (
+                e
+                for e in events
+                if e.get("type") == "navigate" and e.get("screen") == s.get("screen")
+            ),
+            {},
+        )  # noqa: E501
+        screens.append({
+            "screen": s.get("screen"), "route": s.get("route"), "title": s.get("title", ""),
+            "landmarks": s.get("landmarks", []),
+            "headings": [h.get("name") for h in s.get("headings", []) if h.get("name")],
+            "buttons": s.get("buttons", []),
+            "inputs": [{k: i.get(k) for k in ("name", "input_type", "required")}
+                       for i in s.get("inputs", [])],
+            "links": [{"name": link.get("name"), "route": _route_of(link.get("href")),
+                       "count": link.get("count", 1)} for link in s.get("links", [])],
+            "forms": s.get("forms", 0), "tables": s.get("tables", []),
+            "dialogs": s.get("dialogs", []), "tabs": s.get("tabs", []),
+            "artifact": f"{pre}screens/{path.name}",
+            "shot": f"{pre}{shots_after[nav['seq']]}" if nav.get("seq") in shots_after else None,
+        })  # fmt: skip
+
+    actions: dict[tuple[Any, ...], dict[str, Any]] = {}
+    ordered: list[dict[str, Any]] = []
+    for e in events:
+        if e.get("type") not in ACTION_TYPES:
+            continue
+        key = (e["type"], e.get("role"), e.get("name"), e.get("route"))
+        if key not in actions:
+            actions[key] = {"type": e["type"], "role": e.get("role"), "name": e.get("name"),
+                            "route": e.get("route"), "count": 0, "steps": [],
+                            "fields": e.get("fields"), "first_seq": e.get("seq"),
+                            "shot": f"{pre}{shots_after[e['seq']]}"
+                            if e.get("seq") in shots_after else None}  # fmt: skip
+        a = actions[key]
+        a["count"] += 1
+        if e.get("step") and e["step"] not in a["steps"]:
+            a["steps"].append(e["step"])
+        ordered.append({"seq": e.get("seq"), "action": _action_text(e), "route": e.get("route"),
+                        "step": e.get("step")})  # fmt: skip
+
+    steps: list[dict[str, Any]] = []
+    for item in ordered:
+        if not steps or steps[-1]["label"] != item["step"]:
+            steps.append({"label": item["step"], "actions": []})
+        text = f"{item['action']} on {item['route']}"
+        if not steps[-1]["actions"] or steps[-1]["actions"][-1] != text:
+            steps[-1]["actions"].append(text)
+
+    endpoints: dict[tuple[str, str], dict[str, Any]] = {}
+    permissions: list[dict[str, Any]] = []
+    errors: list[dict[str, Any]] = []
+    last_action: dict[str, Any] | None = None
+    for e in events:
+        kind = e.get("type")
+        if kind in ACTION_TYPES:
+            last_action = e
+        if kind == "request" and e.get("resource_type") != "document":
+            ep_key = (str(e.get("method")), str(e.get("route")))
+            fresh: dict[str, Any] = {
+                "method": ep_key[0],
+                "route": ep_key[1],
+                "statuses": [],
+                "count": 0,
+                "request_shape": None,
+                "response_shape": None,
+                "steps": [],
+                "first_seq": e.get("seq"),
+            }
+            ep = endpoints.setdefault(ep_key, fresh)
+            ep["count"] += 1
+            if e.get("status") not in ep["statuses"]:
+                ep["statuses"] = sorted([*ep["statuses"], e.get("status")], key=str)
+            for shape_key in ("request_shape", "response_shape"):
+                if ep[shape_key] is None and e.get(shape_key) is not None:
+                    ep[shape_key] = e[shape_key]
+            if e.get("step") and e["step"] not in ep["steps"]:
+                ep["steps"].append(e["step"])
+        if kind == "request" and e.get("status") in (401, 403):
+            permissions.append({"method": e.get("method"), "route": e.get("route"),
+                                "status": e.get("status"), "step": e.get("step"),
+                                "response_shape": e.get("response_shape"),
+                                "after": _after(last_action)})  # fmt: skip
+        if kind in ("console_error", "page_error"):
+            text = e.get("text") or e.get("message") or ""
+            found = next(
+                (x for x in errors if x["text"] == text and x["route"] == e.get("route")), None
+            )
+            if found:
+                found["count"] += 1
+            else:
+                errors.append({"kind": kind, "route": e.get("route"), "text": text, "count": 1})
+        if kind == "request" and isinstance(e.get("status"), int) and e["status"] >= 500:
+            text = f"{e.get('method')} {e.get('route')} → {e['status']}"
+            errors.append({"kind": "server_error", "route": e.get("route"), "count": 1,
+                           "text": text})  # fmt: skip
+
+    realtime: dict[str, dict[str, Any]] = {}
+    for e in events:
+        if e.get("type") != "ws_message":
+            continue
+        parts = urlsplit(str(e.get("url")))
+        ch = realtime.setdefault(parts.path or "/", {"channel": parts.path or "/",
+                                                     "host": parts.netloc, "sent": [],
+                                                     "received": []})  # fmt: skip
+        bucket = ch["sent" if e.get("direction") == "sent" else "received"]
+        if e.get("shape") not in bucket:
+            bucket.append(e.get("shape"))
+
+    return {
+        "session": {
+            "id": folder.name,
+            "url": meta.get("url"),
+            "started_at": meta.get("started_at"),
+            "ended": last.get("reason"),
+            "events": len(events),
+        },  # fmt: skip
+        "screens": screens,
+        "actions": sorted(actions.values(), key=lambda a: a["first_seq"] or 0),
+        "steps": steps,
+        "endpoints": sorted(endpoints.values(), key=lambda x: x["first_seq"] or 0),
+        "realtime": list(realtime.values()),
+        "permissions": permissions,
+        "errors": errors,
+    }
+
+
+def _after(action: dict[str, Any] | None) -> str | None:
+    return f"{_action_text(action)} on {action.get('route')}" if action else None
+
+
+def _field_text(f: dict[str, Any]) -> str:
+    required = ", required" if f.get("required") else ""
+    return f"{f.get('name') or '(unnamed)'} ({f.get('input_type')}{required})"
+
+
+def _link_text(link: dict[str, Any]) -> str:
+    times = f" ×{link['count']}" if link.get("count", 1) > 1 else ""
+    return f"{link.get('name')}{times} → `{link.get('route')}`"
+
+
+def _route_of(href: Any) -> str | None:
+    return (urlsplit(href).path or "/") if isinstance(href, str) and href else None
+
+
+def _words(text: str, limit: int = MAX_DETAIL_WORDS) -> str:
+    words = text.split()
+    return text if len(words) <= limit else " ".join(words[:limit]) + " …"
+
+
+def observation_records(summary: dict[str, Any], prefix: str) -> list[str]:
+    """OB record blocks (provisional IDs ``OB-?n``, Evidence ``S-?1``) for a summary."""
+    pre = f"{prefix.rstrip('/')}/"
+    out: list[tuple[str, str, str, str, str | None]] = []  # title, kind, detail, artifact, step
+    for s in summary["screens"]:
+        bits = [f"Route `{s['route']}` titled “{s['title']}”."]
+        for label, values in (("Landmarks", s["landmarks"]), ("Headings", s["headings"]),
+                              ("Buttons", s["buttons"]), ("Tabs", s["tabs"]),
+                              ("Dialogs", s["dialogs"])):  # fmt: skip
+            if values:
+                bits.append(f"{label}: {'; '.join(values)}.")
+        if s["inputs"]:
+            fields = [_field_text(i) for i in s["inputs"]]
+            bits.append(f"Inputs: {'; '.join(fields)}.")
+        if s["forms"]:
+            bits.append(f"Forms: {s['forms']}.")
+        for t in s["tables"]:
+            bits.append(f"Table with columns {', '.join(t.get('headers') or ['?'])} "
+                        f"({t.get('rows', 0)} rows).")  # fmt: skip
+        if s["links"]:
+            links = [_link_text(x) for x in s["links"]]
+            bits.append(f"Links: {'; '.join(links)}.")
+        out.append((f"Screen `{s['route']}`", "screen", " ".join(bits), s["artifact"], None))
+    for a in summary["actions"]:
+        detail = f"{_action_text(a)} on `{a['route']}`"
+        if a.get("fields"):
+            names = [_field_text(f) for f in a["fields"]]
+            detail += f" with fields {', '.join(names)}"
+        detail += f" (×{a['count']})."
+        title = f"{a['type'].capitalize()} {a.get('role') or 'element'} “{a.get('name') or '?'}” on `{a['route']}`"  # noqa: E501
+        out.append((title, "action", detail, a["shot"] or "", "; ".join(a["steps"]) or None))
+    for ep in summary["endpoints"]:
+        statuses = ", ".join(str(s) for s in ep["statuses"])
+        detail = f"`{ep['method']} {ep['route']}` → {statuses} (×{ep['count']})."
+        if ep["request_shape"] is not None:
+            detail += f" Request `{_compact(ep['request_shape'])}`."
+        if ep["response_shape"] is not None:
+            detail += f" Response `{_compact(ep['response_shape'])}`."
+        out.append((f"Endpoint `{ep['method']} {ep['route']}`", "endpoint", detail,
+                    f"{pre}network.har", "; ".join(ep["steps"]) or None))  # fmt: skip
+    for ch in summary["realtime"]:
+        detail = f"WebSocket `{ch['channel']}`."
+        if ch["sent"]:
+            detail += f" Sent {'; '.join(f'`{_compact(x)}`' for x in ch['sent'])}."
+        if ch["received"]:
+            detail += f" Received {'; '.join(f'`{_compact(x)}`' for x in ch['received'])}."
+        out.append((f"Realtime `{ch['channel']}`", "realtime", detail, f"{pre}events.jsonl", None))
+    for p in summary["permissions"]:
+        detail = f"`{p['method']} {p['route']}` → {p['status']}"
+        detail += f" after {p['after']}." if p["after"] else "."
+        if p["response_shape"] is not None:
+            detail += f" Response `{_compact(p['response_shape'])}`."
+        out.append((f"Permission `{p['method']} {p['route']}` → {p['status']}", "permission",
+                    detail, f"{pre}network.har", p["step"]))  # fmt: skip
+    for err in summary["errors"]:
+        detail = (
+            f"{err['kind'].replace('_', ' ')} on `{err['route']}` (×{err['count']}): {err['text']}"
+        )
+        title = f"Error on `{err['route']}`: {' '.join(err['text'].split()[:8])}"
+        out.append((title, "error", detail, f"{pre}events.jsonl", None))
+    blocks = []
+    for n, (title, kind, detail, artifact, step) in enumerate(out, 1):
+        lines = [
+            f"### OB-?{n} — {title}",
+            f"- Kind: {kind}",
+            f"- Detail: {_words(detail)}",
+            "- Evidence: S-?1",
+            f"- Artifact: {artifact}",
+            "- Confidence: CONFIRMED",
+        ]
+        if step:
+            lines.append(f"- Step: {step}")
+        blocks.append("\n".join(lines) + "\n")
+    return blocks
+
+
+def source_record(summary: dict[str, Any], st: state.WorkspaceState) -> str:
+    from pflib import urls
+
+    sid = summary["session"]["id"]
+    start = summary["session"]["url"] or st.product.get("target_url") or ""
+    parts = urlsplit(start)
+    url = f"{parts.scheme}://{parts.netloc}/?pf_observe={sid}"
+    day = str(summary["session"]["started_at"] or workspace.iso(workspace.utc_now()))[:10]
+    counts = (f"{len(summary['screens'])} screens, {len(summary['endpoints'])} endpoints, "
+              f"{len(summary['realtime'])} realtime channels")  # fmt: skip
+    return "\n".join([
+        f"### S-?1 — Observed session {sid}",
+        f"- URL: {url}",
+        f"- Canonical URL: {urls.canonicalize(url)}",
+        "- Category: observed-session",
+        "- Tier: 1",
+        "- Authority: High",
+        f"- Relevant area: {st.scope.get('text') or 'observed product behaviour'}",
+        f"- Published: {day}",
+        f"- Last inspected: {day}",
+        f"- Notes: Recorded in observe mode with the user's own account ({counts}); redacted on "
+        "write; raw files stay on this computer.",
+    ]) + "\n"  # fmt: skip
+
+
+def ingest(ws: Path, sid: str) -> dict[str, Any]:
+    """Summarise a stopped session, stage one S + its OB records, and merge them."""
+    from pflib import merge
+
+    info = session_status(ws, sid)
+    if info["status"] in LIVE:
+        raise UsageError(f"session {sid} is still recording: pf.py observe stop {sid} first",
+                         code="OBSERVE_ACTIVE")  # fmt: skip
+    folder = observe_root(ws) / info["session"]
+    prefix = folder.relative_to(ws).as_posix()
+    summary = summarise(folder, prefix)
+    _write(folder / SUMMARY, summary)
+    st = state.load(ws)
+    blocks = observation_records(summary, prefix)
+    run_id, run_dir = workspace.create_staging_run(ws, "observe")
+    (run_dir / "research").mkdir(parents=True, exist_ok=True)
+    (run_dir / "research" / "sources.md").write_text(source_record(summary, st), encoding="utf-8")
+    (run_dir / "research" / "observations.md").write_text("\n".join(blocks), encoding="utf-8")
+    report = merge.merge(ws, run_id)
+    source = report.id_map.get("S-?1") or next(
+        (v for k, v in report.id_map.items() if k.startswith("S-")), None
+    )
+    workspace.append_history(ws, {"event": "observe-ingest", "session": info["session"],
+                                  "run_id": run_id, "observations": len(blocks)})  # fmt: skip
+    return {"source": source, "observations": len(blocks), "merged": run_id,
+            "new_ids": report.new_ids, "summary": f"{prefix}/{SUMMARY}"}  # fmt: skip

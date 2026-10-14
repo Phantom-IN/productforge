@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pflib import catalog, config, metrics, records, research, taxonomy
+from pflib import catalog, config, metrics, records, research
 from pflib.gates import ConditionResult, GateCondition, register
 from pflib.index import WorkspaceIndex
 
@@ -51,16 +51,18 @@ def _coverage(ws: Path) -> ConditionResult:
     cov = research.coverage(ws, index)
     unknown_ids = set(index.ids("U"))
     explained = {c: [u for u in us if u in unknown_ids] for c, us in coverage_unknowns(ws).items()}
-    missing = [c for c in taxonomy.OFFICIAL if not cov[c] and not explained.get(c)]
+    missing = [c for c in research.COVERAGE_OFFICIAL if not cov[c] and not explained.get(c)]
     if missing:
         return ConditionResult(
             False,
             f"{len(missing)} official categories have neither a source nor an unknown on their "
             f"Coverage line: {', '.join(missing)}",
         )
-    by_u = sum(1 for c in taxonomy.OFFICIAL if not cov[c])
-    return ConditionResult(True, f"all {len(taxonomy.OFFICIAL)} official categories covered "
-                                 f"({by_u} explained by unknowns)")  # fmt: skip
+    wanted = research.COVERAGE_OFFICIAL
+    by_u = sum(1 for c in wanted if not cov[c])
+    return ConditionResult(
+        True, f"all {len(wanted)} official categories covered ({by_u} explained by unknowns)"
+    )
 
 
 def _overview(ws: Path) -> ConditionResult:

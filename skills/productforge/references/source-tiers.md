@@ -55,6 +55,7 @@ Every source record has a `Category` from this list and starts at that category'
 | `forums` | 4 | Community forums |
 | `social` | 4 | Social media posts |
 | `unverified` | 5 | Unverified claims |
+| `observed-session` | 1 | A session the user recorded in observe mode, in their own account (v2, §23); never researched, not part of the coverage gate |
 | `provider-report` | 5 | A delegated skill's report (cite its sources instead) |
 
 ## Rules

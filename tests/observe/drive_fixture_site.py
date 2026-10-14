@@ -32,7 +32,12 @@ from recorder import Recorder  # noqa: E402
 from server import PanelServer  # noqa: E402
 
 SITE = ROOT / "tests" / "fixtures" / "observe-site"
-PAGES = {"/": "index.html", "/tasks": "tasks.html", "/app.js": "app.js"}
+PAGES = {
+    "/": "index.html",
+    "/tasks": "tasks.html",
+    "/settings": "settings.html",
+    "/app.js": "app.js",
+}
 EMAIL = "ada.lovelace@tasklet.example"
 PASSWORD = "hunter2-correct-horse"
 TITLE = "Water the ferns on Thursday"
@@ -129,6 +134,9 @@ class Site(BaseHTTPRequestHandler):
             self._json(TASKS)
         elif path == "/api/members":
             self._json(MEMBERS)
+        elif path == "/api/settings":  # this account is a member, not an owner
+            body = json.dumps({"error": "forbidden", "required_role": "owner"}).encode()
+            self._send(403, body, "application/json")
         elif path.startswith("/api/tasks/"):
             self._json(TASKS[0])
         else:
@@ -216,6 +224,13 @@ def main(folder: Path) -> int:
         settle()
         page.click("a.task-link >> nth=0")
         page.wait_for_url("**/tasks/101")
+        settle()
+        panel_api(panel, "label", {"label": "Open settings"})
+        page.goto(base + "/tasks")
+        page.wait_for_selector("li.task")
+        settle()
+        page.click("nav >> text=Settings")
+        page.wait_for_selector("text=Only owners can edit")
         settle(12)
         rec.stop("test finished")
         panel.close()

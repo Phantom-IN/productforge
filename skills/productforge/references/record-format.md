@@ -45,6 +45,7 @@ Rules:
 | Prefix | Object | Width | Artifact |
 |---|---|---|---|
 | `S` | Source | 3 | `research/sources.md` |
+| `OB` | Observation (observe mode) | 3 | `research/observations.md` |
 | `D` | Discovery claim | 3 | `research/DISCOVERY_LEDGER.md` |
 | `U` | Unknown | 3 | `research/UNKNOWNS.md` |
 | `UD` | Unknown's V1 default | 3 | `research/UNKNOWNS.md` `## V1 defaults` |
@@ -158,6 +159,19 @@ amendments). Open stage only; logged as a `revise` event. Refusals write nothing
 1. [observed] Admin opens Members and invites by email — D-?1
 ```
 
+## Observations (observe mode, v2)
+
+`research/observations.md` holds `OB` records written only by `pf.py observe ingest <session>`
+(through staging and merge, like everything else): `Kind` (screen · action · endpoint · realtime ·
+permission · error), `Detail` (route templates, UI labels, method + path + body *shapes*, status
+codes — never values), `Evidence` (the session's `observed-session` source, Tier 1), `Artifact`
+(the redacted local file, e.g. `.productforge/observe/<session>/screens/002.json`; local only),
+`Confidence` (CONFIRMED), optional `Step` (the user's "now doing" label). Claims (`D`) and model
+records (`PS`, `F`, `W`, `E`, `RL`, `PR`, `I`, `A`) may cite `OB` IDs in `Evidence`; confidence and
+traceability reach the session through them (D → OB → S). Codes: `OB_KIND_UNKNOWN`,
+`OB_NOT_FROM_SESSION`, `OB_ARTIFACT_MISSING` (warn — raw sessions never leave the computer; no
+warning once the session was discarded).
+
 ## Generated regions
 
 Tables and trees that are views over records live between `<!-- pf:generated:start <name> -->` and
@@ -238,6 +252,9 @@ tolerant: a malformed record yields one finding and the rest of the file is stil
 | `BAD_FEATURE_SIGNAL` | error | A feature signal's Feature or Competitors do not fit its kind |
 | `TABLE_STAKES_UNDERSUPPORTED` | error | A table-stakes signal names fewer than 2 competitors |
 | `COMPLAINT_SOURCE_TIER` | error | Competitor complaints do not cite Tier 3–4 sources |
+| `OB_KIND_UNKNOWN` | error | An observation's Kind is outside the closed set |
+| `OB_NOT_FROM_SESSION` | error | An observation's Evidence is not an observed-session source |
+| `OB_ARTIFACT_MISSING` | warn | An observation's local artifact is gone (not discarded) |
 | `COMPETITOR_SOURCE_AS_EVIDENCE` | error | A target record cites a competitor's source |
 | `COMPETITOR_OVER_BUDGET` | warn | A competitor has more sources than competitors.max_sources |
 | `BAD_SCORE` | error | A score is not '<0-3> — <rationale>' |

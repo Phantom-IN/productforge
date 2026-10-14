@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from pflib import records, scaffold, taxonomy
+from pflib import records, research, scaffold
 
 TEMPLATES = scaffold.TEMPLATES_DIR / "research"
 
@@ -12,7 +12,7 @@ def test_overview_coverage_lists_every_official_category() -> None:
     doc = records.parse_document((TEMPLATES / "product-overview.md").read_text())
     body = doc.section_text("Coverage") or ""
     listed = re.findall(r"^- ([a-z-]+): ", body, re.M)
-    assert listed == list(taxonomy.OFFICIAL)
+    assert listed == list(research.COVERAGE_OFFICIAL)  # observed sessions are optional
 
 
 def test_overview_has_the_planned_sections() -> None:

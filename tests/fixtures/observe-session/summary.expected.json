@@ -1,0 +1,535 @@
+{
+  "actions": [
+    {
+      "count": 1,
+      "fields": null,
+      "first_seq": 5,
+      "name": "Email",
+      "role": "textbox",
+      "route": "/",
+      "shot": null,
+      "steps": [],
+      "type": "change"
+    },
+    {
+      "count": 1,
+      "fields": null,
+      "first_seq": 6,
+      "name": "Password",
+      "role": "textbox",
+      "route": "/",
+      "shot": null,
+      "steps": [],
+      "type": "change"
+    },
+    {
+      "count": 1,
+      "fields": null,
+      "first_seq": 7,
+      "name": "Sign in",
+      "role": "button",
+      "route": "/",
+      "shot": null,
+      "steps": [],
+      "type": "click"
+    },
+    {
+      "count": 1,
+      "fields": [
+        {
+          "input_type": "email",
+          "name": "Email",
+          "required": true,
+          "role": "textbox"
+        },
+        {
+          "input_type": "password",
+          "name": "Password",
+          "required": true,
+          "role": "textbox"
+        }
+      ],
+      "first_seq": 8,
+      "name": "sign-in-form",
+      "role": "form",
+      "route": "/",
+      "shot": null,
+      "steps": [],
+      "type": "submit"
+    },
+    {
+      "count": 1,
+      "fields": null,
+      "first_seq": 21,
+      "name": "Title",
+      "role": "textbox",
+      "route": "/tasks",
+      "shot": null,
+      "steps": [],
+      "type": "change"
+    },
+    {
+      "count": 1,
+      "fields": null,
+      "first_seq": 22,
+      "name": "Due date",
+      "role": "textbox",
+      "route": "/tasks",
+      "shot": null,
+      "steps": [],
+      "type": "change"
+    },
+    {
+      "count": 1,
+      "fields": null,
+      "first_seq": 23,
+      "name": "Add task",
+      "role": "button",
+      "route": "/tasks",
+      "shot": null,
+      "steps": [],
+      "type": "click"
+    },
+    {
+      "count": 1,
+      "fields": [
+        {
+          "input_type": "text",
+          "name": "Title",
+          "required": true,
+          "role": "textbox"
+        },
+        {
+          "input_type": "date",
+          "name": "Due date",
+          "required": false,
+          "role": "textbox"
+        }
+      ],
+      "first_seq": 24,
+      "name": "New task",
+      "role": "form",
+      "route": "/tasks",
+      "shot": ".productforge/observe/obs-20261014-140548/shots/0003.png",
+      "steps": [],
+      "type": "submit"
+    },
+    {
+      "count": 1,
+      "fields": null,
+      "first_seq": 30,
+      "name": "<item>",
+      "role": "link",
+      "route": "/tasks",
+      "shot": null,
+      "steps": [
+        "Open a task"
+      ],
+      "type": "click"
+    },
+    {
+      "count": 1,
+      "fields": null,
+      "first_seq": 44,
+      "name": "Settings",
+      "role": "link",
+      "route": "/tasks",
+      "shot": null,
+      "steps": [
+        "Open settings"
+      ],
+      "type": "click"
+    }
+  ],
+  "endpoints": [
+    {
+      "count": 1,
+      "first_seq": 9,
+      "method": "POST",
+      "request_shape": {
+        "email": "string",
+        "password": "string"
+      },
+      "response_shape": {
+        "token": "string",
+        "user": {
+          "id": "number",
+          "name": "string",
+          "role": "string"
+        }
+      },
+      "route": "/api/session",
+      "statuses": [
+        200
+      ],
+      "steps": []
+    },
+    {
+      "count": 2,
+      "first_seq": 16,
+      "method": "GET",
+      "request_shape": null,
+      "response_shape": [
+        {
+          "done": "bool",
+          "due": "date|null",
+          "id": "number",
+          "title": "string"
+        }
+      ],
+      "route": "/api/tasks",
+      "statuses": [
+        200
+      ],
+      "steps": [
+        "Open settings"
+      ]
+    },
+    {
+      "count": 2,
+      "first_seq": 17,
+      "method": "POST",
+      "request_shape": {
+        "graphql": {
+          "fields": [
+            "counts",
+            "viewer"
+          ],
+          "name": "TaskCounts",
+          "operation": "query"
+        },
+        "variables": {
+          "owner": "string"
+        }
+      },
+      "response_shape": {
+        "data": {
+          "counts": {
+            "done": "number",
+            "open": "number"
+          },
+          "me": {
+            "email": "string"
+          }
+        }
+      },
+      "route": "/graphql",
+      "statuses": [
+        200
+      ],
+      "steps": [
+        "Open settings"
+      ]
+    },
+    {
+      "count": 2,
+      "first_seq": 18,
+      "method": "GET",
+      "request_shape": null,
+      "response_shape": {
+        "<id>": {
+          "email": "string",
+          "name": "string",
+          "role": "string"
+        }
+      },
+      "route": "/api/members",
+      "statuses": [
+        200
+      ],
+      "steps": [
+        "Open settings"
+      ]
+    },
+    {
+      "count": 1,
+      "first_seq": 25,
+      "method": "POST",
+      "request_shape": {
+        "due": "date",
+        "title": "string"
+      },
+      "response_shape": {
+        "done": "bool",
+        "due": "date",
+        "id": "number",
+        "title": "string"
+      },
+      "route": "/api/tasks",
+      "statuses": [
+        200
+      ],
+      "steps": []
+    },
+    {
+      "count": 1,
+      "first_seq": 33,
+      "method": "GET",
+      "request_shape": null,
+      "response_shape": {
+        "done": "bool",
+        "due": "date",
+        "id": "number",
+        "title": "string"
+      },
+      "route": "/api/tasks/:id",
+      "statuses": [
+        200
+      ],
+      "steps": [
+        "Open a task"
+      ]
+    },
+    {
+      "count": 1,
+      "first_seq": 49,
+      "method": "GET",
+      "request_shape": null,
+      "response_shape": {
+        "error": "string",
+        "required_role": "string"
+      },
+      "route": "/api/settings",
+      "statuses": [
+        403
+      ],
+      "steps": [
+        "Open settings"
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "count": 1,
+      "kind": "console_error",
+      "route": "/",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "count": 2,
+      "kind": "console_error",
+      "route": "/tasks",
+      "text": "sync failed: https://127.0.0.1:59447/api/sync?token=string for <email>"
+    },
+    {
+      "count": 1,
+      "kind": "console_error",
+      "route": "/settings",
+      "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+    }
+  ],
+  "permissions": [
+    {
+      "after": "click · link “Settings” on /tasks",
+      "method": "GET",
+      "response_shape": {
+        "error": "string",
+        "required_role": "string"
+      },
+      "route": "/api/settings",
+      "status": 403,
+      "step": "Open settings"
+    }
+  ],
+  "realtime": [
+    {
+      "channel": "/ws",
+      "host": "127.0.0.1:59447",
+      "received": [
+        {
+          "channel": "string",
+          "type": "string"
+        },
+        {
+          "task": {
+            "due": "null",
+            "id": "number",
+            "title": "string"
+          },
+          "type": "string"
+        }
+      ],
+      "sent": [
+        {
+          "channel": "string",
+          "token": "string",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "screens": [
+    {
+      "artifact": ".productforge/observe/obs-20261014-140548/screens/001.json",
+      "buttons": [
+        "Sign in"
+      ],
+      "dialogs": [],
+      "forms": 1,
+      "headings": [
+        "Sign in to Tasklet"
+      ],
+      "inputs": [
+        {
+          "input_type": "email",
+          "name": "Email",
+          "required": true
+        },
+        {
+          "input_type": "password",
+          "name": "Password",
+          "required": true
+        }
+      ],
+      "landmarks": [
+        "main"
+      ],
+      "links": [],
+      "route": "/",
+      "screen": 1,
+      "shot": ".productforge/observe/obs-20261014-140548/shots/0001.png",
+      "tables": [],
+      "tabs": [],
+      "title": "Tasklet — Sign in"
+    },
+    {
+      "artifact": ".productforge/observe/obs-20261014-140548/screens/002.json",
+      "buttons": [
+        "Refresh",
+        "Add task"
+      ],
+      "dialogs": [],
+      "forms": 1,
+      "headings": [
+        "Tasks",
+        "New task"
+      ],
+      "inputs": [
+        {
+          "input_type": "text",
+          "name": "Title",
+          "required": true
+        },
+        {
+          "input_type": "date",
+          "name": "Due date",
+          "required": false
+        }
+      ],
+      "landmarks": [
+        "banner",
+        "navigation",
+        "main"
+      ],
+      "links": [
+        {
+          "count": 1,
+          "name": "Tasks",
+          "route": "/tasks"
+        },
+        {
+          "count": 1,
+          "name": "Settings",
+          "route": "/settings"
+        },
+        {
+          "count": 2,
+          "name": "<item>",
+          "route": "/tasks/:id"
+        }
+      ],
+      "route": "/tasks",
+      "screen": 2,
+      "shot": ".productforge/observe/obs-20261014-140548/shots/0002.png",
+      "tables": [],
+      "tabs": [],
+      "title": "Tasklet — Tasks"
+    },
+    {
+      "artifact": ".productforge/observe/obs-20261014-140548/screens/003.json",
+      "buttons": [],
+      "dialogs": [],
+      "forms": 0,
+      "headings": [
+        "Task details"
+      ],
+      "inputs": [],
+      "landmarks": [
+        "main"
+      ],
+      "links": [
+        {
+          "count": 1,
+          "name": "Back to tasks",
+          "route": "/tasks"
+        }
+      ],
+      "route": "/tasks/:id",
+      "screen": 3,
+      "shot": ".productforge/observe/obs-20261014-140548/shots/0004.png",
+      "tables": [],
+      "tabs": [],
+      "title": "Tasklet — Task"
+    },
+    {
+      "artifact": ".productforge/observe/obs-20261014-140548/screens/004.json",
+      "buttons": [],
+      "dialogs": [],
+      "forms": 0,
+      "headings": [
+        "Workspace settings"
+      ],
+      "inputs": [],
+      "landmarks": [
+        "main"
+      ],
+      "links": [
+        {
+          "count": 1,
+          "name": "Back to tasks",
+          "route": "/tasks"
+        }
+      ],
+      "route": "/settings",
+      "screen": 4,
+      "shot": ".productforge/observe/obs-20261014-140548/shots/0006.png",
+      "tables": [],
+      "tabs": [],
+      "title": "Tasklet — Settings"
+    }
+  ],
+  "session": {
+    "ended": "test finished",
+    "events": 50,
+    "id": "obs-20261014-140548",
+    "started_at": "2026-10-14T14:05:48Z",
+    "url": "http://127.0.0.1:59447/"
+  },
+  "steps": [
+    {
+      "actions": [
+        "change · textbox “Email” on /",
+        "change · textbox “Password” on /",
+        "click · button “Sign in” on /",
+        "submit · form “sign-in-form” on /",
+        "change · textbox “Title” on /tasks",
+        "change · textbox “Due date” on /tasks",
+        "click · button “Add task” on /tasks",
+        "submit · form “New task” on /tasks"
+      ],
+      "label": null
+    },
+    {
+      "actions": [
+        "click · link “<item>” on /tasks"
+      ],
+      "label": "Open a task"
+    },
+    {
+      "actions": [
+        "click · link “Settings” on /tasks"
+      ],
+      "label": "Open settings"
+    }
+  ]
+}

@@ -21,6 +21,11 @@ versions follow [Semantic Versioning](https://semver.org/).
   operation, name and top-level fields; free text with URLs, quoted text, e-mails, IPs and tokens
   masked; repeated item names stored as `<item>`. Screenshot policy on · blur · off with password,
   payment and iframe masks. `pf.py observe discard <session> --reason`; `observe.retain_days` (30).
+- Observation records: `pf.py observe ingest <session>` summarises a session (`summary.json`:
+  screens, actions, labelled steps, endpoints, realtime channels, 401/403 responses with the action
+  that caused them, errors) and merges one `observed-session` source (Tier 1) plus `OB` records into
+  `research/observations.md`; claims and model records may cite `OB` (D → OB → S in `explain`).
+  Codes `OB_KIND_UNKNOWN`, `OB_NOT_FROM_SESSION`, `OB_ARTIFACT_MISSING` (warn).
 
 ## [Unreleased]
 

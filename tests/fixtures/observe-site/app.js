@@ -82,3 +82,8 @@ if (document.getElementById("task-list")) {
   document.getElementById("new-task").addEventListener("submit", createTask);
 }
 if (document.getElementById("detail")) loadTask();
+if (document.getElementById("notice")) {
+  fetch("/api/settings", {headers: {"Authorization": `Bearer ${token()}`}}).then((res) => {
+    if (res.status === 403) document.getElementById("notice").textContent = "Only owners can edit";
+  });
+}

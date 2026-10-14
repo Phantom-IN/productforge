@@ -35,6 +35,7 @@ STRUCTURAL = {
 # Record types a requirement's chain passes through, by role in the report.
 ROLES = {
     "S": "sources",
+    "OB": "observations",
     "D": "claims",
     "F": "features",
     "W": "workflows",

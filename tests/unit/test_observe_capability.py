@@ -76,9 +76,9 @@ def test_consent_text_names_the_hard_rules() -> None:
         assert phrase in observe.CONSENT_TEXT, phrase
 
 
-def test_ingest_is_not_built_yet(pf_cli, tasklet_plan: Path) -> None:  # type: ignore[no-untyped-def]
+def test_ingest_needs_a_session(pf_cli, tasklet_plan: Path) -> None:  # type: ignore[no-untyped-def]
     code, out, _ = pf_cli("observe", "ingest", "--workspace", str(tasklet_plan), "--json")
-    assert code == 2 and json.loads(out)["error"] == "OBSERVE_NOT_YET"
+    assert code == 2 and json.loads(out)["error"] == "OBSERVE_NO_SESSION"
 
 
 def test_cli_status_without_a_session(pf_cli, tasklet_discovery: Path) -> None:  # type: ignore[no-untyped-def]

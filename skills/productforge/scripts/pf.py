@@ -450,14 +450,16 @@ def _cmd_lint_phases(args: argparse.Namespace) -> CommandResult:
     )
 
 
-OBSERVE_SESSION = ("start", "status", "stop", "discard")
-OBSERVE_LATER = {"ingest": "03"}
+OBSERVE_ACTIONS = ("consent", "start", "status", "stop", "ingest", "discard")
 
 
 def _add_observe(p: argparse.ArgumentParser) -> None:
-    p.add_argument("action", choices=("consent", *OBSERVE_SESSION, *OBSERVE_LATER),
-                   help="observe-mode action")  # fmt: skip
-    p.add_argument("session", nargs="?", help="session ID (status/stop; default: the latest)")
+    p.add_argument("action", choices=OBSERVE_ACTIONS, help="observe-mode action")
+    p.add_argument(
+        "session",
+        nargs="?",
+        help="session ID (status/stop: default latest; ingest/discard: required)",
+    )
     p.add_argument("--confirmed", action="store_true", help="the user agreed (consent)")
     p.add_argument("--url", help="start: the page to open (default: the target URL)")
     p.add_argument("--label", help="start: what the user is about to do")
@@ -475,14 +477,11 @@ def _cmd_observe(args: argparse.Namespace) -> dict[str, Any]:
         return observe.session_status(ws, args.session)
     if args.action == "stop":
         return observe.stop(ws, args.session)
-    if args.action == "discard":
-        if not args.session:
-            raise UsageError("observe discard needs a session ID", code="OBSERVE_NO_SESSION")
-        return observe.discard(ws, args.session, args.reason)
-    raise UsageError(
-        f"observe {args.action} arrives in v2 phase {OBSERVE_LATER[args.action]}",
-        code="OBSERVE_NOT_YET",
-    )
+    if not args.session:
+        raise UsageError(f"observe {args.action} needs a session ID", code="OBSERVE_NO_SESSION")
+    if args.action == "ingest":
+        return observe.ingest(ws, args.session)
+    return observe.discard(ws, args.session, args.reason)
 
 
 def _cmd_render(args: argparse.Namespace) -> dict[str, Any]:
