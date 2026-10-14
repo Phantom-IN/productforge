@@ -11,6 +11,11 @@ versions follow [Semantic Versioning](https://semver.org/).
   the requirement-coverage view.
 - `pf.py permission-gaps` and `model.max_unknown_permission_ratio` (0.2): `/productforge model` runs
   one targeted research pass for unknown permission cells above the limit.
+- Fixes from the v1.1 real-product run: keyed `## Coverage` merging (parallel research runs kept
+  each other's lines); `status` suggests the command for the first failing condition;
+  `### REVISE <ID>` revises a record file's body in the open stage; the workflow index counts
+  observed steps; titles that differ by a number are not near-duplicates; `validators.run` is
+  memoised per workspace (a gate validated up to four times per `check`).
 
 ## [1.0.0] — 2026-10-13
 

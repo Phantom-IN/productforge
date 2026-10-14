@@ -108,6 +108,12 @@ so they are on demand, not part of `make check`:
 Write outputs outside the repo or under `.dogfood/` (gitignored). Only the summary report
 (`docs/dogfood-*.md`) is committed — never the third-party research artifacts themselves.
 
+Headless runs (`claude -p "/productforge …"`) end background subagents after 600 s by default;
+long stages (a split domain pass, a research batch) need
+`CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0`. If a run is cut off anyway, the next command's
+"resume first" step finishes the leftover staging runs (`pf.py staging list`). On macOS, wrap long
+runs in `caffeinate -i` so the machine does not sleep mid-run.
+
 ## Debugging
 
 - `pf.py <cmd> --json` shows the exact structure the skill consumes.

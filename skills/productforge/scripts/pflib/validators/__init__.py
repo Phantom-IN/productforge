@@ -240,8 +240,43 @@ def owner_stage(f: Finding) -> str | None:
     return None
 
 
+_SKIP_DIRS = ("staging", "cache", "observe")
+_CACHE: dict[str, tuple[tuple[tuple[str, int, int], ...], list[Finding]]] = {}
+
+
+def _fingerprint(ws: Path) -> tuple[tuple[str, int, int], ...]:
+    """Every workspace file's path, size and mtime (staging and caches excluded)."""
+    out = []
+    for p in ws.rglob("*"):
+        rel = p.relative_to(ws).parts
+        if rel[:1] == (".productforge",) and len(rel) > 1 and rel[1] in _SKIP_DIRS:
+            continue
+        if p.is_file():
+            st = p.stat()
+            out.append(("/".join(rel), st.st_size, st.st_mtime_ns))
+    return tuple(sorted(out))
+
+
 def run(ws: Path, stage: str | None = None, artifact: str | None = None) -> list[Finding]:
-    """All findings for the workspace, optionally limited to one stage or artifact."""
+    """All findings for the workspace, optionally limited to one stage or artifact.
+
+    Results are memoised per workspace until any file changes, so a gate that validates in
+    several conditions (and ``pf.py check``) validates once."""
+    key, fp = str(ws.resolve()), _fingerprint(ws)
+    cached = _CACHE.get(key)
+    if cached is not None and cached[0] == fp:
+        found = list(cached[1])
+    else:
+        found = _run_all(ws)
+        _CACHE[key] = (fp, list(found))
+    if stage is not None:
+        found = [f for f in found if owner_stage(f) == stage]
+    if artifact is not None:
+        found = [f for f in found if f.artifact == artifact]
+    return found
+
+
+def _run_all(ws: Path) -> list[Finding]:
     from pflib.validators import (  # noqa: F401
         architecture,
         competitors,
@@ -273,10 +308,6 @@ def run(ws: Path, stage: str | None = None, artifact: str | None = None) -> list
                     found.extend(rcheck(ctx, loc))
     for wcheck in WORKSPACE_CHECKS:
         found.extend(wcheck(ctx))
-    if stage is not None:
-        found = [f for f in found if owner_stage(f) == stage]
-    if artifact is not None:
-        found = [f for f in found if f.artifact == artifact]
     return sorted(found, key=lambda f: (f.artifact or "", f.record_id or "", f.code, f.message))
 
 
