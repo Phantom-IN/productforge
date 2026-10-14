@@ -450,8 +450,8 @@ def _cmd_lint_phases(args: argparse.Namespace) -> CommandResult:
     )
 
 
-OBSERVE_SESSION = ("start", "status", "stop")
-OBSERVE_LATER = {"ingest": "03", "discard": "02"}
+OBSERVE_SESSION = ("start", "status", "stop", "discard")
+OBSERVE_LATER = {"ingest": "03"}
 
 
 def _add_observe(p: argparse.ArgumentParser) -> None:
@@ -462,6 +462,7 @@ def _add_observe(p: argparse.ArgumentParser) -> None:
     p.add_argument("--url", help="start: the page to open (default: the target URL)")
     p.add_argument("--label", help="start: what the user is about to do")
     p.add_argument("--port", type=int, help="start: control-panel port (default: observe.port)")
+    p.add_argument("--reason", help="discard: why the session's raw files are deleted")
 
 
 def _cmd_observe(args: argparse.Namespace) -> dict[str, Any]:
@@ -474,6 +475,10 @@ def _cmd_observe(args: argparse.Namespace) -> dict[str, Any]:
         return observe.session_status(ws, args.session)
     if args.action == "stop":
         return observe.stop(ws, args.session)
+    if args.action == "discard":
+        if not args.session:
+            raise UsageError("observe discard needs a session ID", code="OBSERVE_NO_SESSION")
+        return observe.discard(ws, args.session, args.reason)
     raise UsageError(
         f"observe {args.action} arrives in v2 phase {OBSERVE_LATER[args.action]}",
         code="OBSERVE_NOT_YET",

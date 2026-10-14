@@ -37,6 +37,10 @@ EMAIL = "ada.lovelace@tasklet.example"
 PASSWORD = "hunter2-correct-horse"
 TITLE = "Water the ferns on Thursday"
 TOKEN = "eyJhbGciOiJIUzI1NiJ9.dGFza2xldC1zZXNzaW9u.c2lnbmF0dXJlLXZhbHVlLWhlcmU"
+MEMBERS = {
+    "7": {"name": "Ada Lovelace", "email": EMAIL, "role": "owner"},
+    "8": {"name": "Grace Hopper", "email": "grace@tasklet.example", "role": "member"},
+}
 TASKS = [{"id": 101, "title": "Plan the sprint", "due": "2026-10-20", "done": False},
          {"id": 102, "title": "Ship the release", "due": None, "done": True}]  # fmt: skip
 GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
@@ -123,6 +127,8 @@ class Site(BaseHTTPRequestHandler):
             self._send(200, (SITE / "task.html").read_bytes(), "text/html; charset=utf-8")
         elif path == "/api/tasks":
             self._json(TASKS)
+        elif path == "/api/members":
+            self._json(MEMBERS)
         elif path.startswith("/api/tasks/"):
             self._json(TASKS[0])
         else:
@@ -137,6 +143,8 @@ class Site(BaseHTTPRequestHandler):
             self._json(
                 {"id": 103, "title": body.get("title"), "due": body.get("due"), "done": False}
             )
+        elif self.path == "/graphql":
+            self._json({"data": {"counts": {"open": 1, "done": 1}, "me": {"email": EMAIL}}})
         else:
             self._send(404, b"not found", "text/plain")
 
@@ -148,6 +156,26 @@ def panel_api(panel: PanelServer, name: str, body: dict[str, Any] | None = None)
     )  # fmt: skip
     with urllib.request.urlopen(req, timeout=5) as res:
         assert res.status == 200
+
+
+def short_session(folder: Path, mode: str) -> int:
+    """Open the sign-in page once with ``observe.screenshots = mode`` and stop."""
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), Site)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True, channel="chromium")
+        rec = Recorder(browser.new_context(), folder,
+                       {"allowed_hosts": ["127.0.0.1"], "screenshots": mode})  # fmt: skip
+        page = rec.open(f"http://127.0.0.1:{httpd.server_address[1]}/")
+        page.fill("#password", PASSWORD)
+        for _ in range(12):
+            page.wait_for_timeout(150)
+            rec.pump()
+        rec.stop("test finished")
+        browser.close()
+    httpd.shutdown()
+    print(json.dumps({"mode": mode}))
+    return 0
 
 
 def main(folder: Path) -> int:
@@ -193,9 +221,24 @@ def main(folder: Path) -> int:
         panel.close()
         browser.close()
     httpd.shutdown()
-    print(json.dumps({"base": base, "secrets": [EMAIL, PASSWORD, TITLE, TOKEN, "hunter2"]}))
+    secrets = [
+        EMAIL,
+        PASSWORD,
+        TITLE,
+        TOKEN,
+        "hunter2",
+        "Ada Lovelace",
+        "Grace Hopper",
+        "grace@tasklet.example",
+        "Plan the sprint",
+        "Ship the release",
+        "personal",
+    ]
+    print(json.dumps({"base": base, "secrets": secrets}))
     return 0
 
 
 if __name__ == "__main__":
+    if len(sys.argv) > 2:
+        sys.exit(short_session(Path(sys.argv[1]), sys.argv[2]))
     sys.exit(main(Path(sys.argv[1])))

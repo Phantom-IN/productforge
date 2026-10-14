@@ -71,6 +71,9 @@ DEFAULTS: dict[str, ConfigKey] = {
     "observe.screenshots": _k("on", "Observe mode screenshots: on, blur or off"),
     "observe.allowed_hosts": _k([], "Observe mode: hosts to record ([] = the target's host)"),
     "observe.max_session_minutes": _k(60, "Observe mode: a session stops after this long"),
+    "observe.retain_days": _k(
+        30, "Observe mode: raw sessions older than this are deleted on observe start (0 = keep)"
+    ),
     "quotes.max_words": _k(25, "Maximum verbatim quote length from any source"),
     **{
         f"scope.weights.{name}": _k(weight, f"Prioritisation weight: {label}")

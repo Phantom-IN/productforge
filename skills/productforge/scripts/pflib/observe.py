@@ -36,6 +36,7 @@ OBSERVE_STAGES = ("DISCOVERY", "PRODUCT_MODEL")
 SESSION_RE = re.compile(r"^obs-\d{8}-\d{6}(?:-\d+)?$")
 LIVE = ("starting", "recording", "paused", "stopping")
 PROFILE_PREFIX = "pf-observe-profile-"
+SCREENSHOT_MODES = ("on", "blur", "off")
 START_TIMEOUT_S = 45.0
 STOP_TIMEOUT_S = 20.0
 
@@ -217,6 +218,11 @@ def start(ws: Path, url: str | None = None, label: str | None = None, port: int 
         raise UsageError(f"session {running} is still recording: pf.py observe stop first",
                          code="OBSERVE_ACTIVE")  # fmt: skip
     python = recorder_python(home)
+    shots = config.resolve("observe.screenshots", ws)
+    if shots not in SCREENSHOT_MODES:
+        raise UsageError(f"observe.screenshots must be one of {', '.join(SCREENSHOT_MODES)} "
+                         f"(got {shots!r})", code="OBSERVE_BAD_CONFIG")  # fmt: skip
+    pruned = prune(ws)
     target = st.product.get("target_url")
     start_url = url or target
     if not start_url or _host(start_url) == "":
@@ -226,7 +232,7 @@ def start(ws: Path, url: str | None = None, label: str | None = None, port: int 
     )
     cfg = {
         "port": port if port is not None else config.resolve("observe.port", ws),
-        "screenshots": config.resolve("observe.screenshots", ws),
+        "screenshots": shots,
         "allowed_hosts": hosts,
         "max_session_minutes": config.resolve("observe.max_session_minutes", ws),
     }
@@ -254,7 +260,8 @@ def start(ws: Path, url: str | None = None, label: str | None = None, port: int 
         live = _read(folder / "status.json")
         if live.get("panel_url"):
             workspace.append_history(ws, {"event": "observe-start", "session": sid})
-            return {"session": sid, "panel_url": live["panel_url"], "pid": proc.pid}
+            return {"session": sid, "panel_url": live["panel_url"], "pid": proc.pid,
+                    "pruned": pruned}  # fmt: skip
         if proc.poll() is not None or live.get("status") == "failed":
             break
         time.sleep(0.2)
@@ -295,3 +302,39 @@ def stop(ws: Path, sid: str | None = None, timeout: float = STOP_TIMEOUT_S) -> d
         workspace.append_history(ws, {"event": "observe-stop", "session": info["session"]})
     _remove_profile(folder)
     return session_status(ws, info["session"])
+
+
+def discard(ws: Path, sid: str, reason: str | None) -> dict[str, Any]:
+    """Delete a session's raw files (the whole folder) and log why. Live sessions stop first."""
+    if not (reason or "").strip():
+        raise UsageError("observe discard needs --reason", code="OBSERVE_NO_REASON")
+    info = session_status(ws, sid)
+    if info["status"] in LIVE:
+        raise UsageError(f"session {sid} is still recording: pf.py observe stop {sid} first",
+                         code="OBSERVE_ACTIVE")  # fmt: skip
+    folder = observe_root(ws) / info["session"]
+    _remove_profile(folder)
+    files = sum(1 for p in folder.rglob("*") if p.is_file())
+    shutil.rmtree(folder)
+    workspace.append_history(ws, {"event": "observe-discard", "session": info["session"],
+                                  "files": files, "reason": reason})  # fmt: skip
+    return {"session": info["session"], "discarded": True, "files": files, "reason": reason}
+
+
+def prune(ws: Path, now: datetime | None = None) -> list[str]:
+    """Delete stopped sessions older than ``observe.retain_days`` (0 keeps everything)."""
+    days = int(config.resolve("observe.retain_days", ws) or 0)
+    if days <= 0:
+        return []
+    now = now or workspace.utc_now()
+    pruned = []
+    for sid in sessions(ws):
+        info = session_status(ws, sid)
+        started = info.get("started_at")
+        if info["status"] in LIVE or not started:
+            continue
+        age = now - datetime.fromisoformat(str(started).replace("Z", "+00:00"))
+        if age.days >= days:
+            discard(ws, sid, f"older than observe.retain_days ({days})")
+            pruned.append(sid)
+    return pruned

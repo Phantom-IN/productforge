@@ -16,6 +16,11 @@ versions follow [Semantic Versioning](https://semver.org/).
   message shapes, console errors and dialogs. The panel binds to 127.0.0.1 and needs a random
   token; the browser profile is temporary.
 - `pf.py observe start [--url] [--label] [--port]`, `observe status`, `observe stop`.
+- Redaction (`observe/redact.py`): header allowlist; URLs without credentials, fragments, query
+  values or id/e-mail/token segments; JSON shapes with data keys collapsed; GraphQL reduced to
+  operation, name and top-level fields; free text with URLs, quoted text, e-mails, IPs and tokens
+  masked; repeated item names stored as `<item>`. Screenshot policy on · blur · off with password,
+  payment and iframe masks. `pf.py observe discard <session> --reason`; `observe.retain_days` (30).
 
 ## [Unreleased]
 

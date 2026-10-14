@@ -10,6 +10,7 @@ async function signIn(ev) {
                                             headers: {"Content-Type": "application/json"}});
   const data = await res.json();
   sessionStorage.setItem("token", data.token);
+  sessionStorage.setItem("email", body.email);
   location.href = "/tasks";
 }
 
@@ -50,6 +51,20 @@ function live() {
   };
 }
 
+async function loadExtras() {
+  // GraphQL with an inline literal and the user's e-mail as a variable; a map keyed by user ID.
+  const query = 'query TaskCounts($owner: String!) { counts(owner: $owner, scope: "personal") ' +
+                '{ open done } me: viewer { email } }';
+  const res = await fetch("/graphql", {method: "POST",
+    headers: {"Content-Type": "application/json", "Authorization": `Bearer ${token()}`},
+    body: JSON.stringify({operationName: "TaskCounts", query,
+                          variables: {owner: sessionStorage.getItem("email")}})});
+  await res.json();
+  await (await fetch("/api/members")).json();
+  console.error(`sync failed: https://${location.host}/api/sync?token=${token()} for ` +
+                sessionStorage.getItem("email"));
+}
+
 async function loadTask() {
   const id = location.pathname.split("/").pop();
   const res = await fetch(`/api/tasks/${id}`, {headers: {"Authorization": `Bearer ${token()}`}});
@@ -61,6 +76,7 @@ const signInForm = document.getElementById("sign-in-form");
 if (signInForm) signInForm.addEventListener("submit", signIn);
 if (document.getElementById("task-list")) {
   loadTasks();
+  loadExtras();
   live();
   document.getElementById("refresh").addEventListener("click", loadTasks);
   document.getElementById("new-task").addEventListener("submit", createTask);

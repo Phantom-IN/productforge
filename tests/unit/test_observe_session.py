@@ -108,3 +108,46 @@ def test_only_our_temporary_profile_is_removed(ws: Path, tmp_path: Path) -> None
                                                         "profile_dir": str(profile)}))  # fmt: skip
         observe.stop(ws, sid)
         assert profile.exists() is survives
+
+
+def test_discard_deletes_raw_files_and_logs_the_reason(ws: Path) -> None:
+    sid = observe.start(ws)["session"]
+    with pytest.raises(UsageError) as exc:
+        observe.discard(ws, sid, "oops")
+    assert exc.value.code == "OBSERVE_ACTIVE"
+    observe.stop(ws)
+    with pytest.raises(UsageError) as exc:
+        observe.discard(ws, sid, " ")
+    assert exc.value.code == "OBSERVE_NO_REASON"
+    out = observe.discard(ws, sid, "recorded the wrong account")
+    assert out["discarded"] and not (observe.observe_root(ws) / sid).exists()
+    last = __import__("pflib").workspace.read_history(ws)[-1]
+    assert last["event"] == "observe-discard" and last["reason"] == "recorded the wrong account"
+
+
+def test_old_sessions_are_pruned_on_start(ws: Path) -> None:
+    from datetime import timedelta
+
+    from pflib import config, workspace
+
+    old = observe.start(ws)["session"]
+    observe.stop(ws)
+    meta_path = observe.observe_root(ws) / old / "session.json"
+    meta = json.loads(meta_path.read_text())
+    meta["started_at"] = workspace.iso(workspace.utc_now() - timedelta(days=31))
+    meta_path.write_text(json.dumps(meta))
+    config.write_config(ws, {"observe.retain_days": 0})
+    assert observe.prune(ws) == []
+    config.write_config(ws, {"observe.retain_days": 30})
+    out = observe.start(ws)
+    assert out["pruned"] == [old] and observe.sessions(ws) == [out["session"]]
+    observe.stop(ws)
+
+
+def test_bad_screenshot_mode_is_refused(ws: Path) -> None:
+    from pflib import config
+
+    config.write_config(ws, {"observe.screenshots": "sometimes"})
+    with pytest.raises(UsageError) as exc:
+        observe.start(ws)
+    assert exc.value.code == "OBSERVE_BAD_CONFIG"

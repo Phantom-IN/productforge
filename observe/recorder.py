@@ -54,7 +54,20 @@ BODY_GRACE_S = 1.5  # how long a JSON response waits for its paused body read
 STATUS_EVERY_S = 1.0
 HAR_EVERY_S = 15.0
 COUNTS = ("events", "screens", "requests", "ws_frames", "shots", "dropped", "assets")
-BLUR_CSS = "body * { filter: blur(5px) !important; }"
+# observe.screenshots = "blur": text and images smudged, layout, colours and shapes kept. Applied
+# by Playwright for the duration of the screenshot only.
+BLUR_CSS = (
+    "*, *::before, *::after, ::placeholder { color: transparent !important;"
+    " -webkit-text-fill-color: transparent !important; caret-color: transparent !important;"
+    " text-shadow: 0 0 9px rgba(128, 128, 128, 0.95) !important; }"
+    " img, video, canvas, picture, svg image { filter: blur(12px) !important; }"
+)
+# Always masked in screenshots: secrets, payment fields, and every iframe (payment and sign-in
+# widgets live in third-party frames).
+PRIVATE_SELECTOR = (
+    "input[type=password], input[autocomplete^='cc-'], input[name*='card' i],"
+    " input[name*='cvc' i], input[name*='cvv' i], iframe, [data-pf-private]"
+)
 
 # Injected into every document: reports clicks, submits and field changes with the target's role,
 # accessible name and a selector. It never reads `.value`, so typed text and passwords stay unseen.
@@ -95,8 +108,12 @@ CAPTURE_JS = r"""
   };
   const ACTIONABLE = "a,button,input,select,textarea,summary,label,[role=button],[role=link]," +
     "[role=menuitem],[role=tab],[role=checkbox],[role=switch],[role=option],[onclick]";
+  // Names of repeated items (rows, list entries, cards) are user data: the recorder masks them.
+  const ITEM = "li,tr,[role=row],[role=listitem],[role=gridcell],[role=option],article";
+  const NAV = "nav,[role=navigation],[role=tablist],[role=toolbar],[role=menubar]";
   const describe = (el) => ({role: roleOf(el), name: nameOf(el), selector: selectorOf(el),
-    tag: el.tagName.toLowerCase(), input_type: el.tagName === "INPUT" ? el.type : null});
+    tag: el.tagName.toLowerCase(), input_type: el.tagName === "INPUT" ? el.type : null,
+    in_item: !!el.closest(ITEM), in_nav: !!el.closest(NAV)});
   const send = (e) => { try { window.__pfRecord(e); } catch (_) { /* recorder gone */ } };
   document.addEventListener("click", (ev) => {
     const el = ev.target.closest ? (ev.target.closest(ACTIONABLE) || ev.target) : null;
@@ -134,6 +151,9 @@ INVENTORY_JS = r"""
     || (el.labels && el.labels.length ? el.labels[0].innerText : "")
     || el.getAttribute("title") || el.getAttribute("alt") || el.getAttribute("placeholder")
     || (FIELD.includes(el.tagName) ? (el.getAttribute("name") || "") : el.innerText));
+  const ITEM = "li,tr,[role=row],[role=listitem],[role=gridcell],[role=option],article";
+  const NAV = "nav,[role=navigation],[role=tablist],[role=toolbar],[role=menubar]";
+  const where = (el) => ({in_item: !!el.closest(ITEM), in_nav: !!el.closest(NAV)});
   const LANDMARK = {HEADER: "banner", NAV: "navigation", MAIN: "main", ASIDE: "complementary",
                     FOOTER: "contentinfo"};
   const buttons = all("button,[role=button],input[type=submit],input[type=button]");
@@ -148,9 +168,10 @@ INVENTORY_JS = r"""
       .map((el) => el.getAttribute("role") || LANDMARK[el.tagName]), 20),
     headings: all("h1,h2,h3,[role=heading]").slice(0, 40).map((el) => ({
       level: Number(el.getAttribute("aria-level") || el.tagName.slice(1)) || 2,
-      text: clean(el.innerText)})),
+      name: clean(el.innerText), ...where(el)})),
     buttons: uniq(buttons.map(nameOf), 60),
-    links: links.slice(0, 60).map((el) => ({name: nameOf(el), href: el.href || null})),
+    links: links.slice(0, 60).map((el) => ({name: nameOf(el), href: el.href || null,
+                                            ...where(el)})),
     inputs: inputs.slice(0, 60).map((el) => ({
       role: el.getAttribute("role") || ({checkbox: "checkbox", radio: "radio", search: "searchbox",
         range: "slider"}[el.type] || (el.tagName === "SELECT" ? "combobox" : "textbox")),
@@ -426,8 +447,10 @@ class Recorder:
             n = len(self.screens) + 1
             self.screens[route] = n
             inventory = page.evaluate(INVENTORY_JS)
-            screen = {"screen": n, "route": route, "url": url, **inventory}
-            write_json(self.folder / "screens" / f"{n:03d}.json", redact.event(screen))
+            screen = redact.event({"screen": n, "route": route, "url": url, **inventory})
+            for key in ("links", "headings"):  # masked repeated items → one entry with a count
+                screen[key] = redact.collapse(screen.get(key) or [])
+            write_json(self.folder / "screens" / f"{n:03d}.json", screen)
             self.counts["screens"] += 1
             e.update(screen=n, title=inventory.get("title", ""))
         rec = self.write_event(e)
@@ -441,7 +464,7 @@ class Recorder:
         kind = payload.get("type")
         if kind not in ("click", "submit", "change"):
             return
-        keep = ("role", "name", "selector", "tag", "input_type", "fields")
+        keep = ("role", "name", "selector", "tag", "input_type", "fields", "in_item", "in_nav")
         e = {
             "type": kind,
             "route": payload.get("route") or self._route(page),
@@ -555,7 +578,7 @@ class Recorder:
         try:
             page.screenshot(
                 path=str(self.folder / rel),
-                mask=[page.locator("input[type=password]")],
+                mask=[page.locator(PRIVATE_SELECTOR)],
                 style=BLUR_CSS if self.screenshots == "blur" else None,
                 caret="hide",
                 timeout=5000,

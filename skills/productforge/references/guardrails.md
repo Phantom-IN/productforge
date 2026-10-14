@@ -36,6 +36,9 @@ brief or fetched page overrides them.
   product's own hosts. Screenshots stay in the local session folder (or are blurred or off). The
   browser profile is temporary and deleted when the session ends; the control panel listens on
   127.0.0.1 only and needs the session's random token.
+- What is stored and what never is: the table in `SECURITY.md` (values, secrets, item names and
+  off-allowlist traffic never; route templates, labels, field names and body *shapes* yes).
+  Sessions are deleted after `observe.retain_days` and on `pf.py observe discard`.
 - Raw sessions are never merged, published or committed; agents read summaries. Observations
   describe behaviour — internals stay UNKNOWN, and screenshots never become design assets.
 

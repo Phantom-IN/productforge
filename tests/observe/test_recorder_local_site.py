@@ -104,6 +104,40 @@ def test_pause_records_nothing_and_labels_tag_steps(session: tuple[Path, dict[st
     assert not any(e.get("name") == "Refresh" for e in evs)
     after = [e for e in evs if e["type"] == "click" and e.get("step") == "Open a task"]
     assert after and after[0]["role"] == "link"
+    assert after[0]["name"] == "<item>" and after[0]["in_item"] is True  # a task title: masked
+
+
+def test_graphql_id_keyed_maps_and_console_text(session: tuple[Path, dict[str, Any]]) -> None:
+    folder, _ = session
+    evs = events(folder)
+    gql = next(e for e in evs if e.get("route") == "/graphql")
+    assert gql["request_shape"] == {
+        "graphql": {"fields": ["counts", "viewer"], "name": "TaskCounts", "operation": "query"},
+        "variables": {"owner": "string"},
+    }
+    members = next(e for e in evs if e.get("route") == "/api/members")
+    assert members["response_shape"] == {"<id>": {"email": "string", "name": "string",
+                                                  "role": "string"}}  # fmt: skip
+    sync = next(e for e in evs if e["type"] == "console_error" and "sync" in e["text"])
+    assert sync["text"].endswith("/api/sync?token=string for <email>")
+    tasks = json.loads((folder / "screens/002.json").read_text())
+    assert {"name": "<item>", "href": tasks["links"][-1]["href"], "count": 2, "in_item": True,
+            "in_nav": False} in tasks["links"]  # fmt: skip
+    assert {"Tasks", "Settings"} <= {link["name"] for link in tasks["links"]}  # nav labels kept
+
+
+@pytest.mark.parametrize("mode, shots", [("blur", True), ("off", False)])
+def test_screenshot_policy(tmp_path: Path, mode: str, shots: bool) -> None:
+    folder = tmp_path / "obs-20261014-130000"
+    folder.mkdir()
+    proc = subprocess.run(
+        [str(PYTHON), str(ROOT / "tests/observe/drive_fixture_site.py"), str(folder), mode],
+        capture_output=True, text=True, timeout=120,
+    )  # fmt: skip
+    assert proc.returncode == 0, proc.stderr[-2000:]
+    assert bool(list((folder / "shots").glob("*.png"))) is shots
+    assert any(json.loads(line)["type"] == "navigate"
+               for line in (folder / "events.jsonl").read_text().splitlines())  # fmt: skip
 
 
 def test_no_typed_value_or_secret_reaches_disk(session: tuple[Path, dict[str, Any]]) -> None:
