@@ -53,8 +53,8 @@ def test_install_prints_and_installs_nothing_without_confirmation(tmp_path: Path
     assert code == 0 and payload["executed"] is False
     venv = str(tmp_path / ".productforge/observe-venv")
     assert payload["commands"][0] == ["python3.11", "-m", "venv", venv]
-    assert payload["commands"][-1][-3:] == ["playwright", "install", "chromium"]
-    assert "150 MB" in payload["consent_text"] and "system Python" in payload["consent_text"]
+    assert payload["commands"][-1][-3:] == ["install", "--no-shell", "chromium"]
+    assert "540 MB" in payload["consent_text"] and "system Python" in payload["consent_text"]
     assert not (tmp_path / ".productforge").exists()
 
 
@@ -76,6 +76,11 @@ def test_consent_text_names_the_hard_rules() -> None:
         assert phrase in observe.CONSENT_TEXT, phrase
 
 
-def test_session_actions_are_not_built_yet(pf_cli, tasklet_plan: Path) -> None:  # type: ignore[no-untyped-def]
-    code, out, _ = pf_cli("observe", "start", "--workspace", str(tasklet_plan), "--json")
+def test_ingest_is_not_built_yet(pf_cli, tasklet_plan: Path) -> None:  # type: ignore[no-untyped-def]
+    code, out, _ = pf_cli("observe", "ingest", "--workspace", str(tasklet_plan), "--json")
     assert code == 2 and json.loads(out)["error"] == "OBSERVE_NOT_YET"
+
+
+def test_cli_status_without_a_session(pf_cli, tasklet_discovery: Path) -> None:  # type: ignore[no-untyped-def]
+    code, out, _ = pf_cli("observe", "status", "--workspace", str(tasklet_discovery), "--json")
+    assert code == 2 and json.loads(out)["error"] == "OBSERVE_NO_SESSION"

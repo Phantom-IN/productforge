@@ -3,6 +3,20 @@
 All notable changes to ProductForge are documented here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — v2 observe mode (in progress)
+
+### Added
+- `browser.observe` capability, offered on request only: a consent-gated install of Playwright and
+  Chromium (~540 MB) into `~/.productforge/observe-venv`; `pf.py observe consent` records the
+  user's consent with a hash of the exact text shown.
+- Recorder (`observe/recorder.py`) and localhost control panel (`observe/server.py`,
+  `observe/panel/`): a visible Chromium window the user drives; navigations, clicks, submits,
+  field changes (never values), per-screen accessibility snapshots, screenshots, API request and
+  response *shapes* (read at the CDP response stage so a redirect cannot lose them), realtime
+  message shapes, console errors and dialogs. The panel binds to 127.0.0.1 and needs a random
+  token; the browser profile is temporary.
+- `pf.py observe start [--url] [--label] [--port]`, `observe status`, `observe stop`.
+
 ## [Unreleased]
 
 ### Added (v1.1)

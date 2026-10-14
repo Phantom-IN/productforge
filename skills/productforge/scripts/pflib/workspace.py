@@ -23,6 +23,7 @@ DISCARDED = "_discarded"
 ARCHIVES = (MERGED, DISCARDED)
 RAW = "raw"  # delegated-provider output inside a run; never merged (§9.4)
 CACHE = "cache"  # .productforge/cache/ (discover results, …)
+OBSERVE = "observe"  # .productforge/observe/<session>/ (observe mode; local only)
 RUN_META = ".run.json"
 HISTORY = "history.log"
 IDS_FILE = "ids.json"

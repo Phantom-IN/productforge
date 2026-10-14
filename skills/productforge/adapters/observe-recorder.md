@@ -26,7 +26,11 @@ would not want described. Press Stop when you are done, or Discard to delete the
 ## Expected output
 
 A session folder `.productforge/observe/<session>/` written by the recorder, already redacted
-(no passwords, tokens, cookies or input values; JSON bodies reduced to field shapes).
+(no passwords, tokens, cookies or input values; JSON bodies reduced to field shapes): `session.json`,
+`status.json`, `events.jsonl`, `screens/NNN.json` (one accessibility snapshot per screen),
+`shots/NNNN.png`, `network.har`. The browser profile lives in a temporary folder that is deleted
+when the session ends, so no cookie outlives it. `pf.py observe status` reports the live counts;
+`pf.py observe stop` ends the session (the user can also stop it from the panel).
 
 ## Ingest
 

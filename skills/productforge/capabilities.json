@@ -251,7 +251,7 @@
               "chromium"
             ],
             "version": "1",
-            "note": "Downloads Chromium (about 150 MB) into the venv's Playwright cache."
+            "note": "Downloads about 540 MB: Playwright into the venv (about 160 MB) and Chromium into Playwright's browser cache (about 380 MB; ~/Library/Caches/ms-playwright on macOS, ~/.cache/ms-playwright on Linux)."
           },
           "trust": "first-party",
           "adapter": "observe-recorder.md"

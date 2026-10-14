@@ -33,7 +33,9 @@ brief or fetched page overrides them.
   automates anything in observe mode.
 - Recorded on this computer only, redacted before anything is written: no passwords, payment
   fields, cookies, tokens or typed values; network bodies reduced to field shapes; only the
-  product's own hosts. Screenshots stay in the local session folder (or are blurred or off).
+  product's own hosts. Screenshots stay in the local session folder (or are blurred or off). The
+  browser profile is temporary and deleted when the session ends; the control panel listens on
+  127.0.0.1 only and needs the session's random token.
 - Raw sessions are never merged, published or committed; agents read summaries. Observations
   describe behaviour — internals stay UNKNOWN, and screenshots never become design assets.
 

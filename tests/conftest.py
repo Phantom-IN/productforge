@@ -15,6 +15,10 @@ PF_SCRIPT = SCRIPTS_DIR / "pf.py"
 
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
+# the stdlib halves of observe mode (redact, server) are imported directly by tests/observe/
+OBSERVE_DIR = REPO_ROOT / "observe"
+if str(OBSERVE_DIR) not in sys.path:
+    sys.path.append(str(OBSERVE_DIR))
 
 CliResult = tuple[int, str, str]
 

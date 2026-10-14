@@ -394,7 +394,8 @@ def install_commands(
         python = str(venv / "bin" / "python")
         pip = [python, "-m", "pip", "install", "--upgrade", *prov.install["packages"]]
         browsers = [
-            [python, "-m", "playwright", "install", b] for b in prov.install.get("browsers", [])
+            [python, "-m", "playwright", "install", "--no-shell", b]
+            for b in prov.install.get("browsers", [])
         ]
         return [["python3.11", "-m", "venv", str(venv)], pip, *browsers]
     market = prov.install["marketplace"]

@@ -450,18 +450,30 @@ def _cmd_lint_phases(args: argparse.Namespace) -> CommandResult:
     )
 
 
-OBSERVE_LATER = {"start": "01", "status": "01", "stop": "01", "ingest": "03", "discard": "02"}
+OBSERVE_SESSION = ("start", "status", "stop")
+OBSERVE_LATER = {"ingest": "03", "discard": "02"}
 
 
 def _add_observe(p: argparse.ArgumentParser) -> None:
-    p.add_argument("action", choices=("consent", *OBSERVE_LATER), help="observe-mode action")
+    p.add_argument("action", choices=("consent", *OBSERVE_SESSION, *OBSERVE_LATER),
+                   help="observe-mode action")  # fmt: skip
+    p.add_argument("session", nargs="?", help="session ID (status/stop; default: the latest)")
     p.add_argument("--confirmed", action="store_true", help="the user agreed (consent)")
+    p.add_argument("--url", help="start: the page to open (default: the target URL)")
+    p.add_argument("--label", help="start: what the user is about to do")
+    p.add_argument("--port", type=int, help="start: control-panel port (default: observe.port)")
 
 
 def _cmd_observe(args: argparse.Namespace) -> dict[str, Any]:
     ws = workspace.resolve_workspace(args.workspace)
     if args.action == "consent":
         return observe.record_consent(ws, args.confirmed)
+    if args.action == "start":
+        return observe.start(ws, url=args.url, label=args.label, port=args.port)
+    if args.action == "status":
+        return observe.session_status(ws, args.session)
+    if args.action == "stop":
+        return observe.stop(ws, args.session)
     raise UsageError(
         f"observe {args.action} arrives in v2 phase {OBSERVE_LATER[args.action]}",
         code="OBSERVE_NOT_YET",
