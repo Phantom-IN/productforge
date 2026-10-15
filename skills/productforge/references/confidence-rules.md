@@ -1,7 +1,7 @@
 # Confidence rules
 
 Every claim-bearing record carries a `Confidence`, and `pf.py validate` checks it mechanically
-(IMPLEMENTATION_PLAN.md §11, code in `scripts/pflib/confidence.py`). Never pick a confidence by feel:
+(code in `scripts/pflib/confidence.py`). Never pick a confidence by feel:
 pick the strongest one the evidence satisfies.
 
 ## The rules

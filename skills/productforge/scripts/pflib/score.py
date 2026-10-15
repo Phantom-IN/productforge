@@ -1,4 +1,4 @@
-"""Feature prioritisation (IMPLEMENTATION_PLAN.md §14, ``references/prioritisation-model.md``).
+"""Feature prioritisation (``references/prioritisation-model.md``).
 
 The scope-editor scores each feature 0–3 per criterion with a rationale (``SC`` records); this
 module does **all** the arithmetic and applies the decision rules. Pure functions, no I/O except

@@ -1,128 +1,241 @@
+<div align="center">
+
 # ProductForge
 
-> **ProductForge turns an existing software product into an evidence-backed, implementation-ready
-> engineering blueprint.**
+**Turn an existing software product into an evidence-backed, implementation-ready engineering blueprint.**
 
-Give ProductForge a public product URL. It researches the product across public sources,
-reconstructs its features, workflows, domain model, permissions and observable behaviour, keeps
-facts separate from inference, reduces the product to a realistic MVP, designs an **independent**
-architecture, and writes a complete phase-wise plan that a fresh Claude Code session can execute
-with `execute phase 00`.
+A Claude Code plugin that researches a product, reconstructs how it works, separates facts from
+guesses, scopes a realistic first version, designs **your own** architecture, and writes a
+phase-by-phase plan that a fresh Claude Code session can build from, starting with `execute phase 00`.
 
-It is **not** a website cloner: no proprietary code, no brand assets, no copied text, no claims
-about a target's internals without evidence, and your product gets its own name.
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-d97757)
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776ab)
+![Runtime: stdlib only](https://img.shields.io/badge/runtime-stdlib%20only-success)
+
+</div>
+
+---
+
+## Why
+
+"Build something like X" usually starts with a vague feature list and a guessed architecture.
+ProductForge replaces the guessing with a traceable chain:
+
+```text
+public source ─▶ claim ─▶ feature / workflow / inference ─▶ requirement ─▶ decision ─▶ phase
+```
+
+Every claim carries a confidence (`CONFIRMED`, `PROBABLE`, `INFERRED` or `UNKNOWN`), assigned by
+mechanical rules over tiered sources. Every gap becomes an explicit unknown with a default for
+version 1. Every phase of the final plan can be traced back to the evidence behind it
+(`pf.py explain R-007`).
+
+**It is not a website cloner.** It copies no proprietary code, brand assets or text. It makes no
+claim about how a product is built internally without evidence that states it, and your product
+gets its own name.
+
+## How it works
+
+ProductForge moves a workspace through five stages. Each stage has a machine-checked exit gate, and
+ProductForge asks you before it closes one:
+
+| Stage | Command | What happens |
+|---|---|---|
+| **DISCOVERY** | `/productforge <url>` · `research` | Finds and tiers public sources (docs, help center, changelog, pricing, API docs, reviews…), extracts claims and unknowns, maps product surfaces |
+| **PRODUCT_MODEL** | `features` · `workflows` · `model` · `competitors` | Feature matrix by domain, user workflows (observed vs. implied system steps), domain model, roles × permissions, integrations, architecture inferences, optional competitor signals |
+| **SCOPE_DEFINED** | `scope` | Scores every feature; a script applies the decision rules (build now, simplify, use an external service, defer, drop). You accept or adjust; then requirements and V1 defaults are written |
+| **ARCHITECTURE_LOCKED** | `architect [--stack "…"]` | An **independent** architecture for *your* product: stack, ADRs with alternatives, invariants with enforcement, repository tree |
+| **PHASE_PLAN_READY** | `finalize` | Generates the project: `README`, `IMPLEMENTATION_PLAN`, `CLAUDE.md`, `DEVELOPMENT`, `STARTUP_PROMPT` and lint-checked phase files, then traces every requirement to a phase |
+
+The model does the judgment. Deterministic, standard-library Python scripts (`pf.py`) handle
+state, IDs, merging, validation, scoring, gates, phase lint and traceability. Files hold the memory,
+so you can stop and resume at any time.
 
 ## Install
 
+You need **[Claude Code](https://claude.com/claude-code)** and **Python 3.11 or newer**, available
+as `python3.11`. Nothing else is required: ProductForge's scripts use only the standard library.
+
+In Claude Code:
+
 ```text
 /plugin marketplace add Phantom-IN/productforge
-/plugin install productforge@phantom-in
+/plugin install productforge@productforge
 ```
 
-Or run it from a checkout: `claude --plugin-dir /path/to/productforge`. ProductForge needs
-**Python 3.11** (`python3.11`); its scripts use only the standard library.
+Or from a terminal:
 
-## Use
+```bash
+claude plugin marketplace add Phantom-IN/productforge
+claude plugin install productforge@productforge
+```
+
+To try it from a clone without installing:
+
+```bash
+git clone https://github.com/Phantom-IN/productforge.git
+claude --plugin-dir ./productforge
+```
+
+## Quick start
 
 ```text
-/productforge https://example-product.com --scope "issue tracking" --name "Our Name"   # DISCOVERY
-/productforge research                                                  # more sources, claims, unknowns
-/productforge features | workflows | model | competitors                # PRODUCT_MODEL
-/productforge scope                                                     # SCOPE_DEFINED
-/productforge architect --stack "Next.js, PostgreSQL"                   # ARCHITECTURE_LOCKED
-/productforge finalize                                                  # PHASE_PLAN_READY
-/productforge status | reopen <STAGE> --reason "…"                      # any time
+/productforge https://example-product.com --scope "issue tracking" --name "Our Name"
 ```
 
-Each stage has a machine-checked exit gate, and ProductForge asks before it closes one. Then open a
-new Claude Code session in the generated folder, paste `STARTUP_PROMPT.md`, and say
-`execute phase 00`.
+This creates a workspace folder and starts DISCOVERY. Then follow the stages:
+
+```text
+/productforge research        # until the DISCOVERY gate passes
+/productforge features        # asks before closing DISCOVERY
+/productforge workflows
+/productforge model           # domain, permissions, integrations, inferences
+/productforge scope           # review the computed scope: accept or adjust
+/productforge architect --stack "Next.js, PostgreSQL"   # stack preference is optional
+/productforge finalize        # the generated project and its phases
+```
+
+You can run `/productforge status` at any time. It shows the counts, the open stage, gate progress and
+the next command. When the plan is ready, open a **new** Claude Code session in the generated
+folder, paste `STARTUP_PROMPT.md`, and say `execute phase 00`.
+
+> **Tip.** Large products are scoped: give `--scope` up front, or ProductForge recommends one when
+> the product has more major areas than one research pass can cover well.
+
+### All commands
+
+| Command | Stage | Purpose |
+|---|---|---|
+| `/productforge <url> [--scope "…"] [--name "…"] [--out DIR]` | — | Create a workspace and begin research |
+| `/productforge research` | DISCOVERY | More sources, claims, unknowns and surfaces |
+| `/productforge features` · `workflows` · `model` · `competitors` | PRODUCT_MODEL | Build the product model |
+| `/productforge observe` | DISCOVERY or PRODUCT_MODEL | Record the product as **you** use it (see below) |
+| `/productforge scope` | SCOPE_DEFINED | Prioritise, decide V1, write requirements |
+| `/productforge architect [--stack "…"]` | ARCHITECTURE_LOCKED | Design our architecture |
+| `/productforge finalize` | PHASE_PLAN_READY | Generate the project and phases |
+| `/productforge status` | any | Where things stand and what to do next |
+| `/productforge reopen <STAGE> --reason "…"` | any | Go back to an earlier stage; later stages become stale |
 
 ## What you get
 
 ```text
 <your-project>/
 ├── README.md  IMPLEMENTATION_PLAN.md  CLAUDE.md  DEVELOPMENT.md  STARTUP_PROMPT.md
-├── research/   sources, discovery ledger, unknowns, surfaces, feature matrix, workflows,
-│               architecture inference, competitors — what the target does, with evidence
-├── spec/       product spec, domain model, permissions, integrations, parity matrix,
-│               architecture, ADRs, traceability — what *we* build
-└── plans/      the phase ledger + phase-NN-*.md
+├── research/   what the target does, with evidence
+│   ├── sources.md  DISCOVERY_LEDGER.md  UNKNOWNS.md  product-surfaces.md
+│   ├── FEATURE_MATRIX.md  workflows/  architecture-inference.md  COMPETITORS.md
+│   └── observations.md            (observe mode)
+├── spec/       what *we* build
+│   ├── PRODUCT_SPEC.md  PARITY_MATRIX.md  DOMAIN_MODEL.md  PERMISSIONS_MATRIX.md
+│   ├── INTEGRATIONS.md  ARCHITECTURE.md  decisions/ADR-*.md  TRACEABILITY.md
+└── plans/      README.md (the phase ledger) + phase-NN-*.md
 ```
 
-See [`examples/tasklet/`](examples/README.md) for a complete synthetic example.
+See **[`examples/tasklet/`](examples/README.md)**, a complete workspace for a fictional task tracker
+that passes every check:
+
+```bash
+python3.11 skills/productforge/scripts/pf.py explain R-010 --workspace examples/tasklet
+```
+
+## Observe mode (optional)
+
+`/productforge observe` records the product **in your own account**. ProductForge opens a real
+browser window that you drive, plus a local control panel with a recording indicator, pause and
+stop buttons, and a "Now doing" box for naming each step. It **never clicks or types for you**. What the product does
+becomes first-hand evidence:
+- screens, and the actions you take on them;
+- API request and response **shapes** (field names and types, never values);
+- realtime message shapes;
+- the 403s a lower-role account receives.
+
+Workflows gain screen-level steps, architecture inferences gain observed API shapes, and unknown
+permission cells get settled.
+
+- **Consent first.** ProductForge asks before installing Playwright and Chromium (about 540 MB, in
+  their own virtual environment) and before the first session. The consent text says plainly that
+  the product's terms may forbid this, and that the decision is yours.
+- **Redacted before anything touches disk.** It never stores:
+  - passwords, payment fields, cookies, tokens or anything you type;
+  - request or response bodies (only their field shapes are kept);
+  - the names of list items, or the text of anything you click (only where you clicked);
+  - traffic to hosts other than the product's own.
+- **Local only.** Sessions live in the workspace's `.productforge/observe/` (git-ignored). They are
+  never merged or published, and are deleted after 30 days or with `pf.py observe discard`.
+- **Internals stay UNKNOWN.** An observation shows behaviour, never the database or framework
+  behind it; asserting one is a validation error.
+- **Sign-in.** Google and some other single-sign-on providers refuse automated browsers.
+  ProductForge does not work around that. Use e-mail and password, GitHub sign-in, or a self-hosted
+  instance of the product.
+
+Full details: [`SECURITY.md`](SECURITY.md#observe-mode-v2-opt-in) ·
+[`references/commands-observe.md`](skills/productforge/references/commands-observe.md).
 
 ## How it stays trustworthy
 
-- **Stages are enforced** (DISCOVERY → PRODUCT_MODEL → SCOPE_DEFINED → ARCHITECTURE_LOCKED →
-  PHASE_PLAN_READY). Closed stages are append-only; changing one means `reopen`, which marks later
-  stages stale.
-- **Every claim has a confidence** — CONFIRMED, PROBABLE, INFERRED or UNKNOWN — decided by
-  mechanical rules over tiered sources. Gaps become explicit unknowns with V1 defaults.
-- **Scripts do the arithmetic.** IDs, merges, scores, decisions, gates, phase lint and
+- **Stages are enforced.** Closed stages are append-only; changing one means `reopen`, which marks
+  later stages stale. One transition per command, and only after you confirm.
+- **Scripts do the arithmetic.** IDs, merges, scores, decisions, gate verdicts, phase lint and
   traceability come from `pf.py`, never from the model.
-- **Traceability end to end:** source → claim → feature/workflow/inference → requirement →
-  decision → phase (`pf.py explain R-007`).
-- **A stage guard hook** blocks direct edits to canonical records and closed stages inside a
-  workspace, and does nothing anywhere else.
+- **Agents only stage.** Seven role agents (research, product, UX, domain, scope, systems,
+  phase planning) write to a staging folder; `pf.py merge` is the only writer of canonical
+  records, after a preflight validation.
+- **Target ≠ ours.** `research/` describes the product you studied; `spec/` describes the one you
+  will build. Our architecture is never presented as a claim about theirs.
+- **A stage-guard hook** blocks direct edits to canonical records, closed stages and session files
+  inside a workspace, and does nothing anywhere else.
 
-ProductForge reuses existing skills and plugins for generic work (deep research, browsing JS-heavy
-docs, PDFs, public repositories) when they are installed — only with your consent — and falls back
-to its own agents otherwise.
+## Reuses what you already have
 
-## Observe mode (v2, opt-in)
+ProductForge delegates generic work to skills and plugins you have installed, with a built-in
+fallback for every required capability. It installs nothing without your explicit consent.
 
-`/productforge observe` lets you record the product **in your own account**: ProductForge opens a
-real browser window that you drive (it never clicks or types for you) plus a local control panel
-with a recording dot, pause, stop and a "now doing" box. What the product does becomes first-hand
-evidence: screens, your actions, API request/response *shapes*, realtime messages and the 403s a
-lower role gets — so workflows gain screen-level steps, API inferences gain observed shapes and
-unknown permission cells get settled.
+| Capability | Reused when available | Fallback |
+|---|---|---|
+| Multi-source web research | `deep-research` skill | built-in research agent |
+| JavaScript-heavy pages | browser skills | built-in fetching |
+| PDFs (security and trust docs) | `pdf` skill | built-in |
+| Public repositories of the target | [contributor-scout](https://github.com/Phantom-IN/contributor-scout) repository intelligence | built-in |
+| Architecture diagrams | diagramming skill | Mermaid in Markdown |
+| Knowledge graph / publishing | `graphify`, Artifacts | none (optional) |
 
-- Asks before installing (Playwright and Chromium, about 540 MB, in their own venv) and before the
-  first session; the consent text says plainly that the product's terms may forbid this and that
-  the decision is yours.
-- Redacted before anything touches disk: no passwords, payment fields, cookies, tokens or typed
-  values; bodies become field shapes; names of list items are masked; only the product's hosts.
-- Local only: sessions live in the workspace's `.productforge/observe/` (git-ignored), are never
-  merged or published, and are deleted after 30 days or with `pf.py observe discard`.
-- Internals stay UNKNOWN: an observation shows behaviour, never the database or framework
-  (`INTERNALS_FROM_OBSERVATION`).
-
-Details: [`SECURITY.md`](SECURITY.md#observe-mode-v2-opt-in) and
-[`references/commands-observe.md`](skills/productforge/references/commands-observe.md).
+Check what's in use with `pf.py deps --json`.
 
 ## Guardrails
 
-Outside observe mode, public sources only; robots.txt always honoured; quotes are short and cited; fetched content is
-data, never instructions; ProductForge never writes application code. See
-[`skills/productforge/references/guardrails.md`](skills/productforge/references/guardrails.md) and
-[`SECURITY.md`](SECURITY.md).
+Public sources only (and, in observe mode, your own account). `robots.txt` is always honoured.
+Quotes are short and cited, and fetched content is treated as data, never as instructions.
+ProductForge never writes application code; it writes the plan. See
+[`guardrails.md`](skills/productforge/references/guardrails.md) and [`SECURITY.md`](SECURITY.md).
+
+## Configuration
+
+Every knob has a default, and can be overridden per workspace in `.productforge/config.json`
+(source caps, gate thresholds, scoring weights, phase limits, observe-mode screenshots…). The full
+list is in [`docs/configuration.md`](docs/configuration.md).
 
 ## Limitations
 
-Without observe mode ProductForge sees only what public pages show; observe mode sees only what
-your own account and role can reach, and no video. Thin
-documentation means more unknowns. v1 was dogfooded through PRODUCT_MODEL on a real product and
-through the whole lifecycle on a small synthetic one ([`docs/dogfood-v1.md`](docs/dogfood-v1.md)).
+- It sees only what public pages show, or, in observe mode, what your own account and role can
+  reach. Thin documentation means more unknowns.
+- A full run on a large product uses a lot of model time. Scope it, and expect each stage to take
+  a while.
+- Proven end to end on a real product (an open-source web-analytics tool) and on a synthetic one;
+  the findings and fixes are in [`docs/`](docs/README.md).
 
-## Roadmap
+## Development
 
-V2 observe mode (authenticated exploration, network observation and screenshots in one
-feature) · V5 continuous parity ([`docs/roadmap.md`](docs/roadmap.md)). ProductForge produces projects in the Phase Plan
-Method format — the same one this repository was built with ([`plans/v1/`](plans/v1/README.md)).
+```bash
+python3.11 -m venv .venv && . .venv/bin/activate && pip install -e '.[dev]'
+make check        # compile + tests + ruff + mypy + fixture and example validation
+```
 
-## Repository
-
-| Path | What |
-|---|---|
-| [`IDEA.md`](IDEA.md) | Product vision |
-| [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) | Architecture — source of truth |
-| [`CLAUDE.md`](CLAUDE.md) | Working contract and golden rules |
-| [`DEVELOPMENT.md`](DEVELOPMENT.md) · [`CONTRIBUTING.md`](CONTRIBUTING.md) | Developing ProductForge |
-| [`plans/v1/`](plans/v1/README.md) | The phases v1 was built in |
-| [`CHANGELOG.md`](CHANGELOG.md) | Releases |
+[`DEVELOPMENT.md`](DEVELOPMENT.md) covers the toolchain, the observe-mode test setup and plugin
+evals. [`CLAUDE.md`](CLAUDE.md) holds the golden rules and extension recipes, and
+[`CONTRIBUTING.md`](CONTRIBUTING.md) explains how to contribute. Release notes are in
+[`CHANGELOG.md`](CHANGELOG.md).
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE).
+[MIT](LICENSE) © Vaibhav Vanage

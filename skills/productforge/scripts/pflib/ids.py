@@ -1,4 +1,4 @@
-"""Record identity (IMPLEMENTATION_PLAN.md §6.1).
+"""Record identity.
 
 Final IDs look like ``D-041`` (zero-padded to the prefix's minimum width; wider numbers
 are allowed once a set outgrows it). Provisional IDs written by agents in staging look
@@ -15,7 +15,7 @@ from typing import Literal, overload
 
 from pflib.errors import UsageError
 
-# prefix → minimum zero-padded width. Order mirrors the §6.1 table.
+# prefix → minimum zero-padded width (the prefix table in ``references/record-format.md``).
 PREFIXES: dict[str, int] = {
     "S": 3,  # source
     "OB": 3,  # observation from an observe-mode session (v2)

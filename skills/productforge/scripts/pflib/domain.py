@@ -1,4 +1,4 @@
-"""Domain model and permissions grammar (IMPLEMENTATION_PLAN.md §12.4–§12.5).
+"""Domain model and permissions grammar.
 
 An entity's ``Relationships`` field lists ``;``-separated links from this entity to another::
 

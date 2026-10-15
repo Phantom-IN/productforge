@@ -1,4 +1,4 @@
-"""Repository-structure trees (IMPLEMENTATION_PLAN.md §15, IDEA §26).
+"""Repository-structure trees.
 
 ``spec/ARCHITECTURE.md`` ``## Repository structure`` holds a fenced tree of *our* repository::
 

@@ -1,6 +1,6 @@
 # Product-model playbook
 
-How PRODUCT_MODEL turns research into a model of the target (IMPLEMENTATION_PLAN.md §12). Each
+How PRODUCT_MODEL turns research into a model of the target. Each
 artifact describes the **target as observed**; *our* design starts at SCOPE_DEFINED. Field grammars
 live in `record-format.md`; confidence rules in `confidence-rules.md`.
 

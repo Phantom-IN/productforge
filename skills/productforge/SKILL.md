@@ -300,7 +300,7 @@ observation passes). It adds evidence to the open stage and never advances it.
 
 Run `python3.11 "$PF" status --workspace <ws> --json` (omit `--workspace` if unknown). With no
 workspace, say so and how to start one. Otherwise report the product, our working name, scope, open
-stage, stale stages, the IDEA-style counts, claim confidence, gate progress and the next command.
+stage, stale stages, the record counts, claim confidence, gate progress and the next command.
 
 ### `/productforge reopen <STAGE> --reason "…"`
 

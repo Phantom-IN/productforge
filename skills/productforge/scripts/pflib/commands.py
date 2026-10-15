@@ -1,4 +1,4 @@
-"""Which ``/productforge`` command may run now? (IMPLEMENTATION_PLAN.md §7.1)
+"""Which ``/productforge`` command may run now?
 
 Verdicts:
 - ``allowed``          — the command belongs to the open stage.
@@ -31,7 +31,7 @@ COMMAND_STAGE: dict[str, State] = {
 ALWAYS_ALLOWED = ("status", "reopen")
 # Commands that add evidence in any of several open stages and never trigger a transition.
 MULTI_STAGE: dict[str, tuple[State, ...]] = {
-    "observe": (State.DISCOVERY, State.PRODUCT_MODEL),  # v2 observe mode, §23.6
+    "observe": (State.DISCOVERY, State.PRODUCT_MODEL),  # v2 observe mode
 }
 
 # The command suggested to work on (or enter) each stage.

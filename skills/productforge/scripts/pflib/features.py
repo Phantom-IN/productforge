@@ -1,4 +1,4 @@
-"""Feature planning — ``pf.py feature-plan`` (IMPLEMENTATION_PLAN.md §12.2). Scripts count."""
+"""Feature planning — ``pf.py feature-plan``. Scripts count."""
 
 from __future__ import annotations
 

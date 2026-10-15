@@ -2,7 +2,7 @@
 """ProductForge stage guard — a PreToolUse hook for Write, Edit, MultiEdit and NotebookEdit.
 
 Inside a ProductForge workspace (a directory with ``.productforge/state.json``) it blocks writes
-that would bypass the lifecycle (IMPLEMENTATION_PLAN.md §2, §7):
+that would bypass the lifecycle:
 
 - canonical record files (``research/sources.md``, ``spec/PRODUCT_SPEC.md``, ADR files …) — only
   ``pf.py merge`` writes them; agents write their staging folder;

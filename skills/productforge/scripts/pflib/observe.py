@@ -1,4 +1,4 @@
-"""Observe mode (IMPLEMENTATION_PLAN.md §23): consent and the session lifecycle; summaries and
+"""Observe mode: consent and the session lifecycle; summaries and
 ingestion arrive in later v2 phases.
 
 The user drives the real product in a browser ProductForge controls; ProductForge records what the

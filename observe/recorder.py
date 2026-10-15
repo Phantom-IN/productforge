@@ -1,4 +1,4 @@
-"""Observe-mode recorder (IMPLEMENTATION_PLAN.md §23) — runs with the observe venv's Python.
+"""Observe-mode recorder — runs with the observe venv's Python.
 
 ``pf.py observe start`` launches ``<venv>/bin/python observe/recorder.py --session-dir <dir>``.
 The recorder opens a real, visible Chromium window at the product URL plus the control panel

@@ -1,4 +1,4 @@
-"""URL canonicalisation and site identity (IMPLEMENTATION_PLAN.md §10.1, §11).
+"""URL canonicalisation and site identity.
 
 Pure functions, no network. ``canonicalize`` is the dedupe key for sources;
 ``registrable_domain`` decides whether two sources are "distinct hosts" for PROBABLE.

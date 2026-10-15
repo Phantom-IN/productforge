@@ -1,9 +1,9 @@
-"""Observation checks (IMPLEMENTATION_PLAN.md §23.3): OB kinds are a closed set, an observation
+"""Observation checks: OB kinds are a closed set, an observation
 rests on an observed-session source, and its local artifact exists unless the session was
 discarded (raw sessions are local only, so a missing file is a warning, not an error).
 
 Observations show **behaviour**, never internals: an observed session is Tier 1, so without this
-rule "uses ClickHouse — OB-012" would satisfy the Tier ≤ 2 bar for a target's internals (§12.7).
+rule "uses ClickHouse — OB-012" would satisfy the Tier ≤ 2 bar for a target's internals.
 When a claim's — or an inference's Target implementation's — only Tier ≤ 2 support is observed
 sessions, every technology it names must appear in the cited observations themselves (a
 ``/graphql`` endpoint, a WebSocket channel): ``INTERNALS_FROM_OBSERVATION``."""

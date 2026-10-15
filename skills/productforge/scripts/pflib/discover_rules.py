@@ -1,4 +1,4 @@
-"""URL → source-category classification for discovery (IMPLEMENTATION_PLAN.md §10.1).
+"""URL → source-category classification for discovery.
 
 Ordered rules; the first match wins. Categories are names from ``taxonomy.CATEGORIES``.
 Rules only *propose* a category: the research agent may pick a narrower true one (and may only

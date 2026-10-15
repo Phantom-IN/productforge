@@ -1,4 +1,4 @@
-"""SCOPE_DEFINED exit-gate conditions (IMPLEMENTATION_PLAN.md §7.2). Registered on import."""
+"""SCOPE_DEFINED exit-gate conditions. Registered on import."""
 
 from __future__ import annotations
 

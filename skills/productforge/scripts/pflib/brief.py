@@ -1,4 +1,4 @@
-"""Agent briefs — ``pf.py brief`` (IMPLEMENTATION_PLAN.md §9.1).
+"""Agent briefs — ``pf.py brief``.
 
 The orchestrator never improvises a brief: it renders ``templates/agent-brief.md`` with
 workspace values so every agent run gets the same contract, staging path and scope. With an
@@ -98,7 +98,7 @@ def _check_pending(ws: Path) -> None:
 
 
 def _check_observe_input(rel: str) -> None:
-    """Agents read a session's ``summary.json``, never its raw files (§23.1)."""
+    """Agents read a session's ``summary.json``, never its raw files."""
     parts = Path(rel).as_posix().strip("/").split("/")
     if parts[:2] == [workspace.PF_DIR, workspace.OBSERVE] and parts[-1] != "summary.json":
         raise UsageError(
@@ -213,7 +213,7 @@ def render_delegation(
     allowed_urls: list[str] | None = None,
     run_id: str | None = None,
 ) -> Delegation:
-    """Prompt for a delegated provider (§9.4), rendered from its adapter's ```brief block.
+    """Prompt for a delegated provider, rendered from its adapter's ```brief block.
 
     Creates (or reuses) a staging run whose ``raw/`` folder receives the provider's output; the
     normalising role agent then works in the same run.

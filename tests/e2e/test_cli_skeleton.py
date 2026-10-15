@@ -9,7 +9,7 @@ from pflib import __version__
 
 Cli = Callable[..., tuple[int, str, str]]
 
-# IMPLEMENTATION_PLAN.md §8 — every subcommand must exist in the CLI contract.
+# Every subcommand of the CLI contract must exist.
 SECTION_8_SUBCOMMANDS = [
     "init",
     "status",

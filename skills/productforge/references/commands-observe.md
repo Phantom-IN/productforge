@@ -1,4 +1,4 @@
-# /productforge observe — procedure (v2, IMPLEMENTATION_PLAN §23)
+# /productforge observe — procedure (v2)
 
 Observe mode records the real product while **the user** drives it in their own account. Works
 in DISCOVERY and PRODUCT_MODEL. `$PF` = `<base>/scripts/pf.py`; `<ws>` = the workspace.

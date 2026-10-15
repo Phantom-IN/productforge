@@ -1,6 +1,6 @@
 # Stage gates
 
-ProductForge's lifecycle is a state machine (IMPLEMENTATION_PLAN.md §7) enforced by
+ProductForge's lifecycle is a state machine enforced by
 `scripts/pflib/state.py`, `gates.py` and `commands.py`. Read this before running any
 `/productforge` command that changes stage.
 

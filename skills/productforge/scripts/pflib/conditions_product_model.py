@@ -1,4 +1,4 @@
-"""PRODUCT_MODEL exit-gate conditions (IMPLEMENTATION_PLAN.md §7.2). Registered on import."""
+"""PRODUCT_MODEL exit-gate conditions. Registered on import."""
 
 from __future__ import annotations
 

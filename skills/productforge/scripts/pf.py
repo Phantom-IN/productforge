@@ -1,7 +1,7 @@
 #!/usr/bin/env python3.11
 """ProductForge CLI — the deterministic core behind the ``productforge`` skill.
 
-Contract: IMPLEMENTATION_PLAN.md §8. Every subcommand accepts ``--workspace DIR``
+Every subcommand accepts ``--workspace DIR``
 and ``--json`` (before or after the subcommand name). Exit codes: 0 ok,
 1 check failed, 2 usage error / not implemented.
 
@@ -724,7 +724,7 @@ def _cmd_complete(args: argparse.Namespace) -> CommandResult:
     return CommandResult(payload)
 
 
-# name, help, argument builder, handler — order mirrors IMPLEMENTATION_PLAN.md §8.
+# name, help, argument builder, handler
 SUBCOMMANDS: list[tuple[str, str, Callable[[argparse.ArgumentParser], None], Handler]] = [
     ("init", "create a workspace and open DISCOVERY", _add_init, _cmd_init),
     ("status", "counts, open stage, gate progress, next command", _add_nothing, _cmd_status),
@@ -792,7 +792,7 @@ SUBCOMMANDS: list[tuple[str, str, Callable[[argparse.ArgumentParser], None], Han
         _cmd_competitor_candidates,
     ),
     ("score", "compute feature priorities and decisions", _add_score, _cmd_score),
-    ("observe", "observe mode: consent, sessions, ingestion (§23)", _add_observe, _cmd_observe),
+    ("observe", "observe mode: consent, sessions, ingestion", _add_observe, _cmd_observe),
     (
         "set-preferences",
         "store stack preferences for /productforge architect",
@@ -843,7 +843,7 @@ def _global_options(parser: argparse.ArgumentParser, suppress: bool) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="pf.py",
-        description="ProductForge deterministic core (IMPLEMENTATION_PLAN.md §8).",
+        description="ProductForge deterministic core.",
     )
     parser.add_argument("--version", action="version", version=__version__)
     _global_options(parser, suppress=False)

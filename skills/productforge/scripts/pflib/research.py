@@ -1,4 +1,4 @@
-"""Research planning — ``pf.py research-plan`` (IMPLEMENTATION_PLAN.md §9.3, §10.2, §10.5).
+"""Research planning — ``pf.py research-plan``.
 
 Scripts do the arithmetic: which categories are covered, how many candidate URLs each research
 partition has, how the remaining source budget is split, and whether the user must be asked to
@@ -13,7 +13,7 @@ from typing import Any
 from pflib import catalog, config, discover, metrics, records, state, taxonomy
 from pflib.index import WorkspaceIndex
 
-# Parallel research partitions (§9.3). Every taxonomy category except the two "never a real
+# Parallel research partitions. Every taxonomy category except the two "never a real
 # source" ones belongs to exactly one partition (a test enforces it).
 PARTITIONS: dict[str, tuple[str, ...]] = {
     "official-core": (
@@ -33,7 +33,7 @@ UNPARTITIONED = ("unverified", "provider-report", "observed-session")  # never r
 # Official categories the DISCOVERY coverage gate asks about (observed sessions are optional).
 COVERAGE_OFFICIAL = tuple(c for c in taxonomy.OFFICIAL if c not in UNPARTITIONED)
 SHARES = {"official-docs": 45, "official-core": 25, "external": 30}  # percent of remaining budget
-SCOPE_AREA_LIMIT = 8  # §10.5: more major areas than this → recommend a scope
+SCOPE_AREA_LIMIT = 8  # more major areas than this → recommend a scope
 
 
 def _overview_doc(ws: Path) -> records.Document | None:

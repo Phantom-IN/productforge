@@ -1,4 +1,4 @@
-"""Artifact catalog (IMPLEMENTATION_PLAN.md §5.1) — the ONLY place artifact paths live.
+"""Artifact catalog — the ONLY place artifact paths live.
 
 Each ``ArtifactSpec`` maps a workspace-relative path (or glob) to its owning stage, its
 kind, and the schemas of the records it holds. Validators, gates, locks, merge and the
@@ -88,7 +88,7 @@ def _rs(prefix: str, required: str, **kw: object) -> RecordSchema:
             kw[key] = split(kw[key])
     req = split(required)
     if "Confidence" in req:
-        # §11: INFERRED needs "Derived from", UNKNOWN needs "Related unknown" — so every
+        # Confidence rules: INFERRED needs "Derived from", UNKNOWN "Related unknown" — so every
         # confidence-bearing schema accepts both as optional, unioned reference lists.
         for name in CONFIDENCE_SUPPORT_FIELDS:
             for key in ("optional", "ref_fields", "union_fields"):

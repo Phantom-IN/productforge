@@ -1,4 +1,4 @@
-"""ARCHITECTURE_LOCKED exit-gate conditions (IMPLEMENTATION_PLAN.md §7.2). Registered on import."""
+"""ARCHITECTURE_LOCKED exit-gate conditions. Registered on import."""
 
 from __future__ import annotations
 

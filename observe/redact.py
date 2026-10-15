@@ -1,4 +1,4 @@
-"""Observe-mode redaction (IMPLEMENTATION_PLAN.md §23.4) — applied before anything touches disk.
+"""Observe-mode redaction — applied before anything touches disk.
 
 Stdlib only and pure: the recorder (Playwright venv) and ``pflib`` both import it. Rules:
 

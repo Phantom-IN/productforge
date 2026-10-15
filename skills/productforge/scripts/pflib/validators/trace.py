@@ -1,4 +1,4 @@
-"""Traceability checks (IMPLEMENTATION_PLAN.md §17), once phase files exist."""
+"""Traceability checks, once phase files exist."""
 
 from __future__ import annotations
 

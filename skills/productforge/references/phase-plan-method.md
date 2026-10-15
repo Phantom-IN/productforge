@@ -1,7 +1,7 @@
 # Phase Plan Method
 
 How PHASE_PLAN_READY turns the locked spec into a project a fresh Claude Code session can build
-(IMPLEMENTATION_PLAN.md §16, IDEA §27–§31). `pf.py lint-phases` (`pflib/phaselint.py`) is the
+`pf.py lint-phases` (`pflib/phaselint.py`) is the
 authority on whether a plan is valid; this repository's own `plans/v1/` passes the same lint.
 
 ## Principles
@@ -16,7 +16,7 @@ authority on whether a plan is valid; this repository's own `plans/v1/` passes t
 4. **Traceability**: each phase's `## References` lists the IMPLEMENTATION_PLAN §N sections and the
    R / ADR / INV IDs it implements.
 
-## The phase file (§16.2, verbatim)
+## The phase file (verbatim)
 
 ```markdown
 # Phase NN — <Name>

@@ -1,4 +1,4 @@
-"""Architecture-inference checks (IMPLEMENTATION_PLAN.md §12.7, §18.5): no architecture
+"""Architecture-inference checks: no architecture
 hallucination. A record describes the target's *behaviour*; its internals stay ``UNKNOWN`` unless a
 CONFIRMED claim backed by a Tier ≤ 2 source states them."""
 

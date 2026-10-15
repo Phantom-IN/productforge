@@ -1,4 +1,4 @@
-"""Observe-mode control panel server (IMPLEMENTATION_PLAN.md §23.1) — stdlib ``http.server``.
+"""Observe-mode control panel server — stdlib ``http.server``.
 
 Bound to 127.0.0.1 only. Every request must carry the session's random token (``?t=`` on the
 page, ``X-PF-Token`` on the API) and a ``Host`` of 127.0.0.1/localhost on the panel's port, so a

@@ -1,7 +1,6 @@
 # Prioritisation model
 
-How SCOPE_DEFINED reduces the reconstructed product to a realistic V1 (IMPLEMENTATION_PLAN.md §14,
-IDEA §20–§22). The scope editor scores; **`pf.py score` does all arithmetic and applies the rules**
+How SCOPE_DEFINED reduces the reconstructed product to a realistic V1. The scope editor scores; **`pf.py score` does all arithmetic and applies the rules**
 (`pflib/score.py`). Nobody types a priority or a decision.
 
 ## Score cards
@@ -75,7 +74,7 @@ amendments of the score card (logged with their `Why`), shown in `## Overrides` 
   (an identity provider); R1 would have kept it in V1 anyway.
 - **Live updates** — computes DEFER (engineering 3, infra 3, time 3); overridden to BUILD SIMPLIFIED
   because realtime is the target's selling point: V1 refreshes boards on focus and polls.
-- **SAML single sign-on** (IDEA §21) — core 1, frequency 0, dependency 0, differentiation 1,
+- **SAML single sign-on** — core 1, frequency 0, dependency 0, differentiation 1,
   engineering 3, infrastructure 1, security 3, operations 1, time 3, external 1 → priority
   5 − 17 = **−12** → R6 DROP. Enterprise buyers ask for it, so the scope editor overrides to DEFER
   ("an enterprise plan is a V1 non-goal; keep SAML on the roadmap").

@@ -1,6 +1,6 @@
 # Architecture playbook
 
-How ARCHITECTURE_LOCKED designs **our** system (IMPLEMENTATION_PLAN.md §15, IDEA §23–§26). Only now
+How ARCHITECTURE_LOCKED designs **our** system. Only now
 — with research, model and scope locked — is technology chosen.
 
 ## Rules

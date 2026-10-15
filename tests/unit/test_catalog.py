@@ -36,7 +36,7 @@ def test_schema_field_lists_are_consistent() -> None:
             assert (s.owner_stage or spec.owner_stage) in stages.ARTIFACT_STAGES
 
 
-# IMPLEMENTATION_PLAN.md §5.1 rows
+# every artifact a workspace holds
 PLAN_ARTIFACTS = [
     "research/sources.md",
     "research/product-overview.md",

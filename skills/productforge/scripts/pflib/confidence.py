@@ -1,4 +1,4 @@
-"""Mechanical confidence rules (IMPLEMENTATION_PLAN.md §11). Pure, no I/O.
+"""Mechanical confidence rules. Pure, no I/O.
 
 | Confidence | Requirement on the record's evidence                                         |
 |------------|------------------------------------------------------------------------------|
@@ -75,7 +75,7 @@ def _tiers(srcs: list[SourceInfo]) -> list[int]:
 
 
 def check_record(rec: Record, index: SourceIndex) -> list[Violation]:
-    """Violations of the §11 rules for one record (empty when it has no Confidence)."""
+    """Violations of the confidence rules for one record (empty when it has no Confidence)."""
     if "Confidence" not in rec.fields:
         return []
     value = rec.get("Confidence").strip()

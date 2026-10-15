@@ -1,4 +1,4 @@
-"""Validator framework (IMPLEMENTATION_PLAN.md §8 ``validate``, §11, §7.3).
+"""Validator framework (``pf.py validate``): record grammar, confidence rules and stage locks.
 
 Validators never raise on bad content: they return ``Finding`` objects. Every code a
 validator can emit is declared in ``CODES`` (with its severity) and documented in
@@ -85,13 +85,13 @@ CODES: dict[str, tuple[str, str]] = {
     "ADR_DEVIATES_FROM_REQUIREMENT": (WARN, "A decision deviates from a requirement"),
     "ENTITY_LOOKS_LIKE_UI_STATE": (WARN, "An entity's name suggests UI state, not an entity"),
     "PHASE_HEADER_FIELDS": (ERROR, "A phase lacks its title line or Status / Depends on / Goal"),
-    "PHASE_HEADING_MISSING": (ERROR, "A phase lacks one of the §16.2 headings"),
-    "PHASE_HEADING_ORDER": (ERROR, "A phase's §16.2 headings are out of order"),
+    "PHASE_HEADING_MISSING": (ERROR, "A phase lacks one of the phase-template headings"),
+    "PHASE_HEADING_ORDER": (ERROR, "A phase's template headings are out of order"),
     "PHASE00_HAS_DEPS": (ERROR, "Phase 00 depends on another phase"),
     "PHASE_DEP_UNKNOWN": (ERROR, "A phase depends on a phase that does not exist"),
     "PHASE_DEP_FORWARD": (ERROR, "A phase depends on a later phase"),
     "PHASE_DEP_CYCLE": (ERROR, "Phase dependencies form a cycle"),
-    "PHASE_SECTION_REF_DANGLING": (ERROR, "A phase cites a § that does not exist"),
+    "PHASE_SECTION_REF_DANGLING": (ERROR, "A phase cites a plan section (§N) that does not exist"),
     "PHASE_TASK_NO_PATH": (ERROR, "A phase task names no path"),
     "PHASE_PATH_OUTSIDE_TREE": (ERROR, "A phase task names a path outside the repository tree"),
     "PHASE_TOO_FEW_ACCEPTANCE": (ERROR, "A phase has fewer than phases.min_acceptance criteria"),
@@ -112,7 +112,7 @@ CODES: dict[str, tuple[str, str]] = {
     "NEAR_DUPLICATE_TITLE": (WARN, "Two records of the same type have nearly identical titles"),
     "QUOTE_TOO_LONG": (ERROR, "A verbatim quote is longer than quotes.max_words"),
     "BAD_CONFIDENCE": (ERROR, "Confidence is not CONFIRMED, PROBABLE, INFERRED or UNKNOWN"),
-    "CONFIDENCE_RULE": (ERROR, "The cited evidence does not support the stated confidence (§11)"),
+    "CONFIDENCE_RULE": (ERROR, "The cited evidence does not support the stated confidence"),
     "PROVIDER_REPORT_AS_EVIDENCE": (ERROR, "A claim above INFERRED rests only on a skill's report"),
     "CONFLICT_ASYMMETRIC": (ERROR, "A conflict is declared on one side only"),
     "CONFLICT_UNRESOLVED": (WARN, "A conflicting pair has no unknown or Resolution explaining it"),

@@ -1,4 +1,4 @@
-"""Canonical Markdown record grammar (IMPLEMENTATION_PLAN.md §6.2).
+"""Canonical Markdown record grammar.
 
 A record is a level-3 heading followed by a key/value bullet list::
 

@@ -1,4 +1,4 @@
-"""Competitive research (IMPLEMENTATION_PLAN.md §13): candidates and feature signals.
+"""Competitive research: candidates and feature signals.
 
 Competitors are a *category* lens, never a second discovery: a shallow ``C-`` record per competitor
 and ``FS-`` feature signals linking competitors to the target's features. Competitor sources are

@@ -1,4 +1,4 @@
-"""Phase lint (IMPLEMENTATION_PLAN.md §16.4): is a phase plan executable by a fresh session?
+"""Phase lint: is a phase plan executable by a fresh session?
 
 ``lint(PlanSet)`` checks phase files, the plans index and the implementation plan as plain text —
 no workspace needed, so ProductForge's own ``plans/v1/`` is linted with the same rules
@@ -9,7 +9,8 @@ Conventions the lint relies on (the phase-planner follows them; so do this repo'
 
 - the first line is ``# Phase NN — <Name>`` and the file is ``phase-NN-<slug>.md``;
 - header lines ``**Status:**``, ``**Depends on:**`` (phase numbers or ``none``), ``**Goal:**``;
-- the §16.2 ``##`` headings, in order (extra headings are allowed between them);
+- the ``##`` headings of ``templates/plans/phase.md``, in order (extra headings may sit
+  between them);
 - tasks are a numbered list under ``## Tasks``, each naming a path in backticks;
 - acceptance criteria are ``- [ ]`` / ``- [x]`` checkboxes;
 - ``§N`` / ``§N.M`` cite the implementation plan; ``IDEA §N`` cites the vision document.
@@ -509,7 +510,7 @@ ROOT_HEADINGS: dict[str, tuple[str, ...]] = {
 
 
 def lint_root_docs(texts: dict[str, str | None], invariant_count: int) -> list[Issue]:
-    """Required sections of the generated project documents (IMPLEMENTATION_PLAN §16.1)."""
+    """Required sections of the generated project documents."""
     out: list[Issue] = []
     plan = texts.get(_PLAN)
     if plan is None:

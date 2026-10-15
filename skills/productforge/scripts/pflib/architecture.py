@@ -1,4 +1,4 @@
-"""Our architecture (IMPLEMENTATION_PLAN.md §15): shared analysis for validators, gates and views.
+"""Our architecture: shared analysis for validators, gates and views.
 
 ``spec/ARCHITECTURE.md`` describes **our** system. Its prose sections are written by the
 systems-architect; this module reads the structured parts:

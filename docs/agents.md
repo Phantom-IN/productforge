@@ -1,6 +1,6 @@
 # Role agents
 
-ProductForge's seven role agents (IMPLEMENTATION_PLAN.md §9.2, IDEA §33). Each agent writes only to
+ProductForge's seven role agents. Each agent writes only to
 its staging folder (`.productforge/staging/<run-id>/`); `pf.py merge` is the only writer of canonical
 files. Agent bodies arrive with the phase that first needs them — none are defined yet, so no agent
 is registered by the plugin.

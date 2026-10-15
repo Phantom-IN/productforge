@@ -9,7 +9,7 @@ import pytest
 from pflib import config
 from pflib.errors import PFError
 
-PLAN = Path(__file__).resolve().parents[2] / "IMPLEMENTATION_PLAN.md"
+DOC = Path(__file__).resolve().parents[2] / "docs" / "configuration.md"
 
 
 @pytest.fixture
@@ -68,13 +68,9 @@ def test_every_key_has_a_description() -> None:
     assert all(spec.description.strip() for spec in config.DEFAULTS.values())
 
 
-def test_every_plan_section_5_2_key_is_registered() -> None:
-    text = PLAN.read_text(encoding="utf-8")
-    section = text[text.index("### 5.2 Configuration") : text.index("## 6. Record format")]
-    keys = re.findall(r"^\| `([a-z_.*]+)` \|", section, re.M)
-    assert keys, "could not read the §5.2 table"
-    for key in keys:
-        if key.endswith(".*"):
-            assert any(k.startswith(key[:-1]) for k in config.DEFAULTS), key
-        else:
-            assert key in config.DEFAULTS, key
+def test_configuration_doc_lists_exactly_the_registered_keys() -> None:
+    text = DOC.read_text(encoding="utf-8")
+    documented = set(re.findall(r"^\| `([a-z_.]+)` \|", text, re.M))
+    assert documented == set(config.DEFAULTS)
+    for key, spec in config.DEFAULTS.items():
+        assert spec.description in text, key

@@ -1,4 +1,4 @@
-"""Feature-matrix checks (IMPLEMENTATION_PLAN.md §12.2) and enum checks for every schema."""
+"""Feature-matrix checks and enum checks for every schema."""
 
 from __future__ import annotations
 

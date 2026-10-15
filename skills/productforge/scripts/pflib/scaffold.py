@@ -1,4 +1,4 @@
-"""Workspace initialisation — ``pf.py init`` (IMPLEMENTATION_PLAN.md §5).
+"""Workspace initialisation — ``pf.py init``.
 
 Creates the workspace directory, ``.productforge/{state.json,config.json,history.log}``,
 the ``research/``, ``spec/decisions/`` and ``plans/`` folders, and renders any template
@@ -105,7 +105,7 @@ def init_workspace(
     product_name = slug.replace("-", " ").title()
     if name is not None and name.strip().lower() in {slug, product_name.lower(), host}:
         raise UsageError(
-            f"--name {name!r} reuses the target's name; our product needs its own name (§18.4)",
+            f"--name {name!r} reuses the target's name; our product needs its own name",
             code="TARGET_NAME_REUSED",
         )
     ws = (Path(out) if out else (cwd or Path.cwd()) / slug).resolve()
@@ -164,7 +164,7 @@ def init_workspace(
 
 
 def set_scope(ws: Path, text: str, accepted: bool, source: str) -> state.WorkspaceState:
-    """Record the product scope (user-given or recommended+accepted, §10.5)."""
+    """Record the product scope (user-given or recommended+accepted)."""
     if source not in state.SCOPE_SOURCES:
         raise UsageError(f"scope source must be one of {state.SCOPE_SOURCES}", code="BAD_SCOPE")
     if not text.strip():

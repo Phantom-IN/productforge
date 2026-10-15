@@ -1,4 +1,4 @@
-"""Competitor checks (IMPLEMENTATION_PLAN.md §13): signals need evidence and enough competitors,
+"""Competitor checks: signals need evidence and enough competitors,
 complaints come from reviews and forums, and competitor sources never support target claims."""
 
 from __future__ import annotations

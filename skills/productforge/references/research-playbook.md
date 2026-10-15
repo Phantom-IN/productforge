@@ -1,6 +1,6 @@
 # Research playbook
 
-How ProductForge researches a product during DISCOVERY (IMPLEMENTATION_PLAN.md §10). The goal of
+How ProductForge researches a product during DISCOVERY. The goal of
 this stage is a **trustworthy source ledger** that covers the product's official material and a
 balanced sample of independent views — not a crawl.
 

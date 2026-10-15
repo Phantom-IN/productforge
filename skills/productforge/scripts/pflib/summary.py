@@ -1,4 +1,4 @@
-"""A short blueprint summary (IMPLEMENTATION_PLAN.md §9.4 ``report.publish``).
+"""A short blueprint summary (``report.publish``).
 
 Composed only from script output — counts, the funnel, decision counts, ADR titles and the phase
 list — so it can be shared without exposing research content. The orchestrator publishes it

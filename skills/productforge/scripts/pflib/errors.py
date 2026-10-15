@@ -1,4 +1,4 @@
-"""Exception types and their CLI exit codes (IMPLEMENTATION_PLAN.md §8).
+"""Exception types and their CLI exit codes.
 
 Exit codes: 0 ok, 1 check failed, 2 usage error / not implemented.
 """

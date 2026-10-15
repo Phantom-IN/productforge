@@ -1,19 +1,19 @@
 {
-  "name": "phantom-in",
+  "name": "productforge",
   "owner": {
     "name": "Vaibhav Vanage",
     "url": "https://github.com/Phantom-IN"
   },
   "metadata": {
-    "description": "Plugins by Phantom-IN",
-    "version": "1.0.0"
+    "description": "ProductForge — evidence-backed product blueprints for Claude Code",
+    "version": "2.0.0"
   },
   "plugins": [
     {
       "name": "productforge",
       "source": "./",
       "description": "ProductForge turns an existing software product into an evidence-backed, implementation-ready engineering blueprint: public-source research, feature/workflow/domain reconstruction with explicit confidence, MVP scoping, an independent architecture, and a Phase Plan Method project specification.",
-      "version": "1.0.0",
+      "version": "2.0.0",
       "author": {
         "name": "Vaibhav Vanage"
       },

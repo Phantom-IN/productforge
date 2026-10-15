@@ -1,10 +1,10 @@
-"""Configuration registry (IMPLEMENTATION_PLAN.md §5.2).
+"""Configuration registry.
 
 Every knob resolves **CLI flag → ``.productforge/config.json`` → coded default**. New knobs
-are added to ``DEFAULTS`` (with a description) and to the §5.2 table — never hardcoded at
+are added to ``DEFAULTS`` (with a description) and to ``docs/configuration.md`` — never hardcoded at
 the call site. ``config.json`` stores only non-default overrides.
 
-``research.respect_robots`` deliberately does not exist: robots.txt is always honoured (§18).
+``research.respect_robots`` deliberately does not exist: robots.txt is always honoured.
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ def _k(default: Any, description: str, typ: type | None = None) -> ConfigKey:
     return ConfigKey(default, typ or type(default), description)
 
 
-# Prioritisation weights (§14.1). "External service availability" has no weight: it
+# Prioritisation weights. "External service availability" has no weight: it
 # modifies the decision, not the score.
 _WEIGHTS = {
     "core_value": (3, "Core product value"),

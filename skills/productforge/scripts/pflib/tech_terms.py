@@ -1,4 +1,4 @@
-"""Technology names that signal a claim about how a product is *built* (§12.7, §18.5).
+"""Technology names that signal a claim about how a product is *built*.
 
 Used only to warn (``TECH_ASSERTION_IN_OBSERVATION``): an observation describes behaviour, and a
 target's internals stay UNKNOWN without qualifying evidence. Matching is case-insensitive on word

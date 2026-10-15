@@ -1,4 +1,4 @@
-"""Closed-stage lock checks (IMPLEMENTATION_PLAN.md §7.3).
+"""Closed-stage lock checks.
 
 Allowed after a stage closes: new records, and *added* references in union fields (merge's
 dedupe union). Anything else — a changed field or title, a removed reference, a deleted

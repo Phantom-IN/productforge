@@ -101,5 +101,5 @@ dialog (as in check 1) and, after the design pass, "Accept the architecture (Rec
 | 4 Install offer |  |  |  |
 | 5 Architecture (optional) |  |  |  |
 
-Copy the table into `plans/v1.1/phase-04-interactive-verification.md` when you are done. A failure
+Report the table in an issue when you are done. A failure
 becomes a small fix in `skills/productforge/SKILL.md` or `references/`, or a v1.2 item.

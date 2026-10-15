@@ -1,6 +1,6 @@
 """Workspace location, staging runs, history log and ID high-water marks.
 
-A workspace is any directory containing ``.productforge/`` (IMPLEMENTATION_PLAN.md §5).
+A workspace is any directory containing ``.productforge/``.
 Full initialisation (state.json, config.json, scaffolding) arrives in Phase 02.
 """
 
@@ -21,7 +21,7 @@ STAGING = "staging"
 MERGED = "_merged"
 DISCARDED = "_discarded"
 ARCHIVES = (MERGED, DISCARDED)
-RAW = "raw"  # delegated-provider output inside a run; never merged (§9.4)
+RAW = "raw"  # delegated-provider output inside a run; never merged
 CACHE = "cache"  # .productforge/cache/ (discover results, …)
 OBSERVE = "observe"  # .productforge/observe/<session>/ (observe mode; local only)
 RUN_META = ".run.json"

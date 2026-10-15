@@ -228,7 +228,7 @@
       ]
     },
     "browser.observe": {
-      "description": "Observe mode: record the user's own session in a real browser ProductForge controls (IMPLEMENTATION_PLAN §23)",
+      "description": "Observe mode: record the user's own session in a real browser ProductForge controls",
       "required": false,
       "used_in": [
         "DISCOVERY",

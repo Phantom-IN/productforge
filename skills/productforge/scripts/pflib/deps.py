@@ -1,4 +1,4 @@
-"""``pf.py deps`` — capability doctor, consented installs and pins (IMPLEMENTATION_PLAN.md §9.4)."""
+"""``pf.py deps`` — capability doctor, consented installs and pins."""
 
 from __future__ import annotations
 

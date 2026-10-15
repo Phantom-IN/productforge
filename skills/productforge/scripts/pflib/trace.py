@@ -1,4 +1,4 @@
-"""Traceability (IMPLEMENTATION_PLAN.md §17, IDEA §48–§49): source → claim → feature / workflow /
+"""Traceability: source → claim → feature / workflow /
 inference → requirement → decision → phase.
 
 The graph has one node per record ID (and per phase, ``Phase NN``) and an edge ``a → b`` whenever

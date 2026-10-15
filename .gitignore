@@ -10,6 +10,11 @@ dist/
 .ruff_cache/
 
 # ProductForge
+# private planning notes kept outside the public repository
+/IDEA.md
+/IMPLEMENTATION_PLAN.md
+/STARTUP_PROMPT.md
+/plans/
 .dogfood/
 **/.productforge/staging/
 **/.productforge/cache/

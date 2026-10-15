@@ -1,6 +1,6 @@
 # Record format
 
-How every ProductForge artifact stores its records (IMPLEMENTATION_PLAN.md §6). The parser is
+How every ProductForge artifact stores its records. The parser is
 `scripts/pflib/records.py`; artifact paths and per-prefix schemas live in `scripts/pflib/catalog.py`.
 
 ## Grammar
@@ -282,13 +282,13 @@ tolerant: a malformed record yields one finding and the rest of the file is stil
 | `ADR_DEVIATES_FROM_REQUIREMENT` | warn | A decision deviates from a requirement |
 | `ENTITY_LOOKS_LIKE_UI_STATE` | warn | An entity's name suggests UI state, not an entity |
 | `PHASE_HEADER_FIELDS` | error | A phase lacks its title line or Status / Depends on / Goal |
-| `PHASE_HEADING_MISSING` | error | A phase lacks one of the §16.2 headings |
-| `PHASE_HEADING_ORDER` | error | A phase's §16.2 headings are out of order |
+| `PHASE_HEADING_MISSING` | error | A phase lacks one of the phase-template headings |
+| `PHASE_HEADING_ORDER` | error | A phase's template headings are out of order |
 | `PHASE00_HAS_DEPS` | error | Phase 00 depends on another phase |
 | `PHASE_DEP_UNKNOWN` | error | A phase depends on a phase that does not exist |
 | `PHASE_DEP_FORWARD` | error | A phase depends on a later phase |
 | `PHASE_DEP_CYCLE` | error | Phase dependencies form a cycle |
-| `PHASE_SECTION_REF_DANGLING` | error | A phase cites a § that does not exist |
+| `PHASE_SECTION_REF_DANGLING` | error | A phase cites a plan section (§N) that does not exist |
 | `PHASE_TASK_NO_PATH` | error | A phase task names no path |
 | `PHASE_PATH_OUTSIDE_TREE` | error | A phase task names a path outside the repository tree |
 | `PHASE_TOO_FEW_ACCEPTANCE` | error | A phase has fewer than phases.min_acceptance criteria |
@@ -309,7 +309,7 @@ tolerant: a malformed record yields one finding and the rest of the file is stil
 | `NEAR_DUPLICATE_TITLE` | warn | Two records of the same type have nearly identical titles |
 | `QUOTE_TOO_LONG` | error | A verbatim quote is longer than quotes.max_words |
 | `BAD_CONFIDENCE` | error | Confidence is not CONFIRMED, PROBABLE, INFERRED or UNKNOWN |
-| `CONFIDENCE_RULE` | error | The cited evidence does not support the stated confidence (§11) |
+| `CONFIDENCE_RULE` | error | The cited evidence does not support the stated confidence |
 | `PROVIDER_REPORT_AS_EVIDENCE` | error | A claim above INFERRED rests only on a skill's report |
 | `CONFLICT_ASYMMETRIC` | error | A conflict is declared on one side only |
 | `CONFLICT_UNRESOLVED` | warn | A conflicting pair has no unknown or Resolution explaining it |

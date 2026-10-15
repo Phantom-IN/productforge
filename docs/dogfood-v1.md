@@ -1,6 +1,6 @@
 # ProductForge v1 — dogfood report
 
-How v1 measured up against its success criteria (IDEA §51, IMPLEMENTATION_PLAN §1) on real use.
+How v1 measured up against its success criteria on real use.
 Only aggregate numbers and paraphrased observations are recorded here; the research workspaces
 themselves are not committed.
 
@@ -17,7 +17,7 @@ v1.1 item.
 
 ## Success criteria
 
-| Criterion (IDEA §51) | Result | Evidence |
+| Criterion | Result | Evidence |
 |---|---|---|
 | Trustworthy source inventory | **Met** | 79 tiered sources, DISCOVERY gate 10/10; spot-check below: 9/10 claims accurate, 1 partial, 0 wrong |
 | Coherent feature breakdown | **Met** | 9 domains, 248 features, every surface mapped (0 validator errors) |
@@ -70,7 +70,7 @@ Every chain reaches a Tier 1–2 source upstream and at least one phase downstre
 - A corrected permission rule merged into the old one, dropping its cells → title dedupe + one rule per resource × action.
 - A re-run could not add a competitor's offered features; one competitor showed every feature as "rare"; the source budget was exceeded → union field, rarity needs ≥ 2 competitors, `competitors.max_sources`.
 - Proposals could not follow a superseded decision → amendable proposals + a stale-citation warning.
-- Phase lint misread `IDEA §…` lists and stripped the dot from `.claude-plugin/` → document context by parenthesis depth, prefix-safe path handling; six of ProductForge's own task lines now name their files.
+- Phase lint misread vision-document section lists and stripped the dot from `.claude-plugin/` → document context by parenthesis depth, prefix-safe path handling; six of ProductForge's own task lines now name their files.
 - Traceability chains walked structural links (task → workspace → everything) → provenance edges only.
 
 ## Calibration
@@ -84,4 +84,4 @@ Every chain reaches a Tier 1–2 source upstream and at least one phase downstre
 
 ## v1.1 follow-ups
 
-See [`plans/v1.1/README.md`](../plans/v1.1/README.md).
+These became v1.1; see [`dogfood-v1.1.md`](dogfood-v1.1.md).

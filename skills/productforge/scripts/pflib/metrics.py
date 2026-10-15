@@ -1,4 +1,4 @@
-"""Counts reported by ``pf.py status`` (IDEA §6 report shape). Scripts count; models don't."""
+"""Counts reported by ``pf.py status`` Scripts count; models don't."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from pflib.index import WorkspaceIndex
 
 CONFIDENCE_STATES = ("CONFIRMED", "PROBABLE", "INFERRED", "UNKNOWN")
 
-# IDEA §6 labels → record prefix
+# status labels → record prefix
 SUMMARY = {
     "sources": "S",
     "claims": "D",
@@ -61,7 +61,7 @@ def domains(ws: Path, index: WorkspaceIndex | None = None) -> int:
 
 
 def funnel(ws: Path, index: WorkspaceIndex | None = None) -> dict[str, int | None]:
-    """The reduction funnel (IDEA §20): observed → features → requirements → V1 → phases."""
+    """The reduction funnel: observed → features → requirements → V1 → phases."""
     from pflib import plans, score
 
     index = index or WorkspaceIndex(ws)

@@ -1,4 +1,4 @@
-"""Reconnaissance — the ONLY networked ProductForge module (IMPLEMENTATION_PLAN.md §10.1).
+"""Reconnaissance — the ONLY networked ProductForge module.
 
 ``discover(root_url)`` finds candidate source URLs without reading page content:
 

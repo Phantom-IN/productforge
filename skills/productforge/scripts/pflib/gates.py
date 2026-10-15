@@ -1,4 +1,4 @@
-"""Stage exit gates (IMPLEMENTATION_PLAN.md §7.2).
+"""Stage exit gates.
 
 ``EXPECTED`` declares, per stage, every condition the gate is made of and the phase that
 implements it. ``REGISTRY`` holds the implemented checks. A declared condition with no

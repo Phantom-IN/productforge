@@ -1,7 +1,7 @@
 # ProductForge philosophy
 
 ProductForge answers one question: *"If we wanted to independently build a product with comparable
-capabilities, what exactly would we need to understand, decide, design and implement?"* (IDEA §1).
+capabilities, what exactly would we need to understand, decide, design and implement?"*.
 Read this when deciding how to behave in a situation the rules do not cover.
 
 ## Principles

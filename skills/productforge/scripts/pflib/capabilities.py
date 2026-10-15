@@ -1,4 +1,4 @@
-"""Capability adapters — reuse existing skills and plugins (IMPLEMENTATION_PLAN.md §9.4).
+"""Capability adapters — reuse existing skills and plugins.
 
 ``capabilities.json`` maps each generic capability (deep research, browsing, PDFs, repo
 analysis, …) to an ordered list of providers. The last provider of a *required* capability is

@@ -1,4 +1,4 @@
-"""Staging → canonical merge (IMPLEMENTATION_PLAN.md §2 "Why staging + merge").
+"""Staging → canonical merge.
 
 ``merge`` is the ONLY writer of canonical record files. For one staging run it:
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "productforge"
-version = "0.1.0"
+version = "2.0.0"
 description = "Turn an existing software product into an evidence-backed, implementation-ready engineering blueprint (Claude Code plugin)."
 readme = "README.md"
 license = { text = "MIT" }

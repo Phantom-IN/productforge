@@ -68,7 +68,7 @@ and install `productforge` from it. For a standalone skill install, symlink
 
 ## Reused skills & plugins (capabilities)
 
-ProductForge delegates generic work to existing skills (see IMPLEMENTATION_PLAN §9.4). Nothing is
+ProductForge delegates generic work to existing skills (`skills/productforge/capabilities.json`). Nothing is
 required — every capability has a built-in fallback — but results improve with providers installed.
 
 ```bash

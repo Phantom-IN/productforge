@@ -1,4 +1,4 @@
-"""Workflow files (IMPLEMENTATION_PLAN.md §12.3): step grammar and candidate generation.
+"""Workflow files: step grammar and candidate generation.
 
 A workflow file is one ``W-`` record followed by prose sections; ``## Steps`` holds numbered steps:
 

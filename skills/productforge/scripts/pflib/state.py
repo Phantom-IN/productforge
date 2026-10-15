@@ -1,4 +1,4 @@
-"""Lifecycle state machine (IMPLEMENTATION_PLAN.md §7).
+"""Lifecycle state machine.
 
 The state names the **open stage** — the only stage whose artifacts may change. Moves are
 strictly one stage forward (after the closing stage's gate passes and the user confirms),

@@ -1,7 +1,6 @@
 # Hooks
 
-`hooks.json` registers one **PreToolUse** hook, `stage_guard.py`, for `Write|Edit|MultiEdit|NotebookEdit`
-(IMPLEMENTATION_PLAN.md §2, §7).
+`hooks.json` registers one **PreToolUse** hook, `stage_guard.py`, for `Write|Edit|MultiEdit|NotebookEdit`.
 
 **Scope.** It acts only when the file being written lies inside a ProductForge workspace — a
 directory with `.productforge/state.json`. Everywhere else it does nothing.

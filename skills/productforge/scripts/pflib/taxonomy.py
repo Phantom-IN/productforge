@@ -1,4 +1,4 @@
-"""Source categories and their default tiers (IMPLEMENTATION_PLAN.md §10.2–§10.3, IDEA §36).
+"""Source categories and their default tiers.
 
 A source's tier starts at its category default and may be **lowered** (worse, higher number)
 by the agent with a reason in ``Notes`` — never raised. Human-readable version:
@@ -41,7 +41,7 @@ CATEGORIES: tuple[Category, ...] = (
         "observed-session",
         1,
         True,
-        "A session the user recorded in observe mode, in their own account (§23)",
+        "A session the user recorded in observe mode, in their own account",
     ),  # fmt: skip
     # ---- external ----
     Category("tutorials", 3, False, "Reliable third-party tutorials"),

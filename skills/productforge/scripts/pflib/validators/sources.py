@@ -1,4 +1,4 @@
-"""Source-ledger checks (IMPLEMENTATION_PLAN.md §10.2–§10.4)."""
+"""Source-ledger checks."""
 
 from __future__ import annotations
 

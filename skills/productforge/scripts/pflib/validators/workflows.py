@@ -1,4 +1,4 @@
-"""Workflow-file checks (IMPLEMENTATION_PLAN.md §12.3): tagged steps, evidence, confidence."""
+"""Workflow-file checks: tagged steps, evidence, confidence."""
 
 from __future__ import annotations
 

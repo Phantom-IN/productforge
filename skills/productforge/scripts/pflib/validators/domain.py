@@ -1,4 +1,4 @@
-"""Domain-model checks (IMPLEMENTATION_PLAN.md §12.4): relationships and deletion semantics."""
+"""Domain-model checks: relationships and deletion semantics."""
 
 from __future__ import annotations
 

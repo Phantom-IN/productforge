@@ -1,6 +1,6 @@
 # Adapter — `productforge:observe-recorder` (capability `browser.observe`)
 
-ProductForge's own recorder (IMPLEMENTATION_PLAN §23). It runs locally from its own virtual
+ProductForge's own recorder. It runs locally from its own virtual
 environment (`~/.productforge/observe-venv`, Playwright + Chromium) and is driven by `pf.py observe`.
 
 ## When to use

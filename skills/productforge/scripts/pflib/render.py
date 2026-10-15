@@ -1,4 +1,4 @@
-"""Generated views over records (IMPLEMENTATION_PLAN.md §6.2: records canonical, tables views).
+"""Generated views over records (records are canonical; tables are views).
 
 A generated region looks like::
 

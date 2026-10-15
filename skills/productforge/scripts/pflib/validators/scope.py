@@ -1,4 +1,4 @@
-"""Scope checks (IMPLEMENTATION_PLAN.md §14): honest score cards, reasoned overrides, decisions
+"""Scope checks: honest score cards, reasoned overrides, decisions
 that carry their details, and requirements for everything we build."""
 
 from __future__ import annotations

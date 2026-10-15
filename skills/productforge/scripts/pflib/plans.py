@@ -1,4 +1,4 @@
-"""Generated project plans in a workspace (IMPLEMENTATION_PLAN.md §16): lint input and status.
+"""Generated project plans in a workspace: lint input and status.
 
 Builds a ``phaselint.PlanSet`` from the workspace — phase files, the plans index, the
 implementation plan, the repository tree declared in ``spec/ARCHITECTURE.md`` and the record IDs
@@ -64,7 +64,7 @@ def root_doc_issues(ws: Path) -> list[phaselint.Issue]:
 
 
 def implementation_detected(ws: Path, gate_passed: bool) -> bool:
-    """§7: work has begun when the plan is ready and any phase left `Not started`."""
+    """Work has begun when the plan is ready and any phase left `Not started`."""
     readme = _read(ws, catalog.PLANS_README_PATH)
     if not gate_passed or readme is None:
         return False

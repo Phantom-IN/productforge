@@ -1,4 +1,4 @@
-"""Permissions checks (IMPLEMENTATION_PLAN.md §12.5): complete cells, explained ? and Limited."""
+"""Permissions checks: complete cells, explained ? and Limited."""
 
 from __future__ import annotations
 

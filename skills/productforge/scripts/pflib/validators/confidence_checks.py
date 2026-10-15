@@ -1,4 +1,4 @@
-"""Registers the §11 confidence rules and the conflict protocol as validators."""
+"""Registers the confidence rules and the conflict protocol as validators."""
 
 from __future__ import annotations
 

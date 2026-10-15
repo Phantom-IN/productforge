@@ -1,4 +1,4 @@
-"""Lifecycle stage names (IMPLEMENTATION_PLAN.md §7).
+"""Lifecycle stage names.
 
 Phase 01 only needs the names (artifact ownership in ``catalog``); the state machine
 built on them arrives in Phase 02.

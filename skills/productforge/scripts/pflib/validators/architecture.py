@@ -1,4 +1,4 @@
-"""Architecture checks (IMPLEMENTATION_PLAN.md §15): decisions with alternatives, every requirement
+"""Architecture checks: decisions with alternatives, every requirement
 and inference addressed, a complete stack, an enforced invariant set and a concrete repository."""
 
 from __future__ import annotations

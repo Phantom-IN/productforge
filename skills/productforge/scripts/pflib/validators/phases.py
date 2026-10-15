@@ -1,4 +1,4 @@
-"""Phase-plan checks (IMPLEMENTATION_PLAN.md §16.4) — the phase lint as validator findings."""
+"""Phase-plan checks — the phase lint as validator findings."""
 
 from __future__ import annotations
 

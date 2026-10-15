@@ -3,9 +3,11 @@
 All notable changes to ProductForge are documented here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] — v2 observe mode (in progress)
+## [2.0.0] — 2026-10-15
 
-### Added
+Observe mode, and the hardening from the first full real-product run.
+
+### Added — observe mode
 - `browser.observe` capability, offered on request only: a consent-gated install of Playwright and
   Chromium (~540 MB) into `~/.productforge/observe-venv`; `pf.py observe consent` records the
   user's consent with a hash of the exact text shown.
@@ -36,9 +38,7 @@ versions follow [Semantic Versioning](https://semver.org/).
   README and SECURITY.md describe what is stored and what never is. `docs/dogfood-v2.md` holds
   the automated results and the runbook for the first real session.
 
-## [Unreleased]
-
-### Added (v1.1)
+### Added and fixed — hardening (v1.1)
 - `ENTITY_LOOKS_LIKE_UI_STATE` (warn) and a "not an entity" rule for the domain architect;
   optional ADR `Deviates from` with `ADR_DEVIATES_FROM_REQUIREMENT` (warn, `reopen` hint), shown in
   the requirement-coverage view.
@@ -70,7 +70,7 @@ through PRODUCT_MODEL and on a synthetic one end to end (`docs/dogfood-v1.md`).
   `make check`); `pf.py publish-summary` (shareable summary from script output, published via
   `report.publish` only on request); version 1.0.0 across `pflib`, `plugin.json` and
   `marketplace.json` (`test_versions.py`); `docs/dogfood-v1.md`, `docs/roadmap.md`,
-  `plans/v1.1/README.md`; README rewritten for users; `CONTRIBUTING.md`, `SECURITY.md`.
+  README rewritten for users; `CONTRIBUTING.md`, `SECURITY.md`.
 
 ### Calibration
 - Kept `research.min_sources_gate` 15, `research.min_claims_gate` 40 and the near-duplicate ratio
@@ -80,8 +80,8 @@ through PRODUCT_MODEL and on a synthetic one end to end (`docs/dogfood-v1.md`).
 ### Phases 00–16
 
 ### Added
-- Phase 00 scaffold: plugin + marketplace manifests, repository layout (IMPLEMENTATION_PLAN.md §4),
-  `productforge` skill stub (`status` only), `pf.py` CLI skeleton with every §8 subcommand stubbed,
+- Phase 00 scaffold: plugin + marketplace manifests, repository layout,
+  `productforge` skill stub (`status` only), `pf.py` CLI skeleton with every subcommand stubbed,
   `pflib` (`errors`, `io`), pytest harness, stdlib-only import guard, Makefile, CI.
 
 - Phase 01: record grammar parser/serialiser (`records.py`, byte-identical round trip), ID system
@@ -90,12 +90,12 @@ through PRODUCT_MODEL and on a synthetic one end to end (`docs/dogfood-v1.md`).
   all-or-nothing staging merge with dedupe/union/ref rewriting (`merge.py`); `pf.py next-id`,
   `staging new`, `merge`; `references/record-format.md`.
 - Phase 02: workspace init (`pf.py init`, `pflib/scaffold.py`) and `set-scope`; layered config
-  registry (`config.py`, every §5.2 key); lifecycle state machine with one-step transitions, locks
+  registry (`config.py`, every documented key); lifecycle state machine with one-step transitions, locks
   (append-tolerant snapshots), reopen/stale (`state.py`); declarative gates with not-built
   conditions (`gates.py`); command verdicts (`commands.py`, `pf.py check-command`); `advance`,
-  `reopen`; IDEA §6-style `status` (`metrics.py`); `references/stage-gates.md`.
+  `reopen`; counts-first `status` (`metrics.py`); `references/stage-gates.md`.
 - Phase 03: validator framework (`pflib/validators/`: generic schema/ref/status/identity/quote,
-  sources, confidence + conflicts, locks) with 24 declared finding codes; mechanical §11 confidence
+  sources, confidence + conflicts, locks) with 24 declared finding codes; mechanical confidence
   rules with transitive evidence (`confidence.py`); `urls.py`, `taxonomy.py`; tolerant parsing;
   `pf.py validate` / `check`; `G-VALIDATE-CLEAN` gate condition; Tasklet DISCOVERY fixture + one
   invalid overlay per code; `references/confidence-rules.md`, `references/source-tiers.md`.
@@ -188,7 +188,7 @@ through PRODUCT_MODEL and on a synthetic one end to end (`docs/dogfood-v1.md`).
   `G-PP-PHASE-LINT`; IMPLEMENTATION detection in `status`; the funnel's phase count; merge can
   remove an open-stage document (`<!-- pf:remove -->`); `agents/phase-planner.md`;
   `references/phase-plan-method.md` and `references/commands-finalize.md`; `repotree` handles
-  sibling names and comment lines; ProductForge's own `plans/v1/` pass the lint in CI (six task
+  sibling names and comment lines; ProductForge's own phase plans passed the lint in CI (six task
   lines now name their files); PHASE_PLAN_READY fixture (13 phases).
 - Phase 16: traceability — `pflib/trace.py` (provenance graph over reference fields and phase
   References; structural links excluded), `pf.py trace [--write]`, `pf.py explain`, `pf.py complete`;
