@@ -68,3 +68,57 @@ def test_v1_features_need_requirements(tasklet_scope: Path) -> None:
 
 def test_before_scoping_nothing_is_required(tasklet_product_model: Path) -> None:
     assert validators.run(tasklet_product_model) == []  # no PARITY_MATRIX yet → no FEATURE_UNSCORED
+
+
+# ------------------------------------------------------------- DEFAULT_RULE_UNSOURCED
+
+UNK = "research/UNKNOWNS.md"
+OLD = "Keep activity history for the life of the task"
+
+
+def set_default(ws: Path, text: str, rationale: str = "Simplest rule; storage is small") -> None:
+    p = ws / UNK
+    body = p.read_text()
+    start = body.index("### UD-001")
+    end = body.index("\n### ", start + 1)
+    rec = (f"### UD-001 — U-001: {text}\n- Unknown: U-001\n- V1 default: {text}\n"
+           f"- Rationale: {rationale}\n- Impact if wrong: Low\n")  # fmt: skip
+    p.write_text(body[:start] + rec + body[end:])
+    render.render_all(ws)
+
+
+def test_regulatory_number_without_source_warns(tasklet_scope: Path) -> None:
+    set_default(tasklet_scope, "Objected: reply within 30 days (Trade Marks Rules)")
+    found = [f for f in validators.run(tasklet_scope) if f.code == "DEFAULT_RULE_UNSOURCED"]
+    assert len(found) == 1 and found[0].severity == "warn"
+    assert found[0].artifact == "spec/PRODUCT_SPEC.md"
+
+
+def test_cited_source_silences_the_warning(tasklet_scope: Path) -> None:
+    set_default(tasklet_scope, "Objected: reply within 30 days (Trade Marks Rules) (D-001)")
+    assert "DEFAULT_RULE_UNSOURCED" not in codes(tasklet_scope)
+
+
+def test_the_unknowns_own_id_is_not_a_source(tasklet_scope: Path) -> None:
+    set_default(tasklet_scope, "Statutory filing period is 60 days")
+    assert "DEFAULT_RULE_UNSOURCED" in codes(tasklet_scope)
+
+
+@pytest.mark.parametrize("text", [
+    "Objected: reply within the usual period (Trade Marks Rules)",  # no number
+    "Keep 30 days of history in the activity list",  # a number, no regulatory term
+    "Keep an action log for 7 days",  # 'action' is not 'act'
+])  # fmt: skip
+def test_needs_both_a_regulatory_term_and_a_number(tasklet_scope: Path, text: str) -> None:
+    set_default(tasklet_scope, text)
+    assert "DEFAULT_RULE_UNSOURCED" not in codes(tasklet_scope)
+
+
+def test_regulatory_terms_match_stems_and_plurals(tasklet_scope: Path) -> None:
+    for text in (
+        "The statutory period is 60 days",
+        "2 tax filings a year",
+        "File acts within 5 days",
+    ):
+        set_default(tasklet_scope, text)
+        assert "DEFAULT_RULE_UNSOURCED" in codes(tasklet_scope), text

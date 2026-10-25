@@ -18,7 +18,7 @@ Builds database and tenancy for tasklet-alt V1 (§6).
 
 ## Tasks
 
-1. `packages/db/migrations/`: workspaces, members and RLS policies.
+1. `packages/db/migrations/`: workspaces, members and RLS policies with drizzle-kit 0.28.0 against `postgres:16.4`, read from `DATABASE_URL`.
 2. `packages/db/src/session.ts`: per-request workspace setting.
 3. `tests/integration/tenancy.test.ts`: cross-workspace reads are denied.
 

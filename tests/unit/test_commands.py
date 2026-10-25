@@ -96,3 +96,41 @@ def test_observe_works_in_discovery_and_product_model_only(
         assert d.verdict == commands.ALLOWED and d.target_stage == d.open_stage
     late = commands.check_command(tasklet_scope, "observe")
     assert late.verdict == commands.REFUSED and late.suggested_command == "reopen PRODUCT_MODEL"
+
+
+def _need_more_competitors(ws: Path) -> None:
+    from pflib import config
+
+    config.write_config(ws, {"competitors.min_researched": 5})  # the fixture has three
+
+
+def test_competitors_allowed_while_scope_is_open_refused_after(
+    tasklet_scope: Path, tasklet_arch: Path
+) -> None:
+    d = commands.check_command(tasklet_scope, "competitors")
+    assert d.verdict == commands.ALLOWED and d.open_stage == "SCOPE_DEFINED"
+    late = commands.check_command(tasklet_arch, "competitors")
+    assert late.verdict == commands.REFUSED and late.suggested_command == "reopen PRODUCT_MODEL"
+
+
+def test_next_command_suggests_competitors_in_product_model(tasklet_product_model: Path) -> None:
+    from pflib import waivers
+
+    ws = tasklet_product_model
+    st = state.load(ws)
+    assert commands.next_command(ws, st) == "scope"  # two competitors recorded
+    _need_more_competitors(ws)
+    assert commands.next_command(ws, st) == "competitors"
+    waivers.waive(ws, "competitors", "user chose to skip")
+    assert commands.next_command(ws, state.load(ws)) == "scope"
+
+
+def test_next_command_suggests_competitors_in_scope(tasklet_scope: Path) -> None:
+    from pflib import waivers
+
+    ws = tasklet_scope
+    _need_more_competitors(ws)
+    st = state.load(ws)
+    assert commands.next_command(ws, st) == "competitors"
+    waivers.waive(ws, "competitors", "user chose to skip")
+    assert commands.next_command(ws, state.load(ws)) != "competitors"

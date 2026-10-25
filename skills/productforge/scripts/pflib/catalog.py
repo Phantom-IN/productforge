@@ -134,7 +134,7 @@ CATALOG: tuple[ArtifactSpec, ...] = (
             _rs(
                 "D",
                 "Claim, Evidence, Confidence, Product impact, Engineering impact, Status",
-                optional="Derived from, Related unknown, Conflicts, Resolution",
+                optional="Derived from, Related unknown, Conflicts, Resolution, Context",
                 ref_fields="Evidence, Derived from, Related unknown, Conflicts",
                 union_fields="Evidence, Derived from, Related unknown",
                 allow_empty="Product impact, Engineering impact",
@@ -421,6 +421,7 @@ CATALOG: tuple[ArtifactSpec, ...] = (
     ArtifactSpec("CLAUDE.md", PP, KIND_DOCUMENT, "CLAUDE.md"),
     ArtifactSpec("DEVELOPMENT.md", PP, KIND_DOCUMENT, "Development"),
     ArtifactSpec("STARTUP_PROMPT.md", PP, KIND_DOCUMENT, "Startup prompt"),
+    ArtifactSpec("ORCHESTRATOR_PROMPT.md", PP, KIND_DOCUMENT, "Orchestrator prompt"),
     ArtifactSpec("plans/README.md", PP, KIND_DOCUMENT, "Phase plans"),
     ArtifactSpec("plans/phase-*.md", PP, KIND_DOCUMENT, "Phase"),
     ArtifactSpec("spec/TRACEABILITY.md", PP, KIND_DOCUMENT, "Traceability"),
@@ -455,6 +456,7 @@ ROOT_DOCS = (
     "CLAUDE.md",
     "DEVELOPMENT.md",
     "STARTUP_PROMPT.md",
+    "ORCHESTRATOR_PROMPT.md",
 )
 # Workspace folders a generated phase may touch besides the declared repository tree.
 WORKSPACE_ROOTS = ("research/", "spec/", "plans/")
@@ -474,7 +476,7 @@ ENUMS: dict[tuple[str, str], tuple[str, ...]] = {
                                   "DROP"),
     ("R", "Priority"): ("must", "should"),
     ("ADR", "Topic"): ("identity", "tenancy", "authn", "authz", "storage", "realtime", "async",
-                       "search", "files", "deployment", "other"),
+                       "search", "files", "deployment", "vendor", "other"),
     ("FS", "Signal"): ("table-stakes", "differentiator", "rare", "absent-in-target"),
     ("A", "Area"): ("realtime", "async", "search", "storage", "files", "authn", "authz", "tenancy",
                     "integrations", "notifications", "audit", "offline", "performance",

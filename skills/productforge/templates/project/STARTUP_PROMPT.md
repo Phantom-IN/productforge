@@ -23,3 +23,8 @@ For "execute phase NN": follow the "Executing a phase" section of `CLAUDE.md` â€
 session, only that phase's tasks, tests and lint green, manual verification done, its
 Definition-of-done ticked and its status set to **Done** in `plans/README.md`. Never start the next
 phase unasked.
+
+## Parallel alternative
+
+To build every phase in one session, with parallel subagents in git worktrees, paste
+`ORCHESTRATOR_PROMPT.md` instead of this prompt.

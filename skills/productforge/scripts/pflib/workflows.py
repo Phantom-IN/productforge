@@ -136,24 +136,60 @@ def candidates(ws: Path) -> dict[str, Any]:
             add(f"Create and manage — {name}", domain, f.id, "top-level feature")
         if re.search(r"\b(flow|workflow|wizard|onboarding)\b", f.get("Notes"), re.I):
             add(f"{name} flow", domain, f.id, "notes mention a flow")
+    from pflib.conditions_product_model import CORE_DOMAIN_MIN_FEATURES  # lazy: gates load stages
+
     cap = int(config.resolve("model.max_workflows", ws))
     existing = len(index.records("W"))
-    room = max(0, cap - existing)
+    sizes: dict[str, int] = {}
+    for f in feats:
+        d = f.get("Domain").strip()
+        if d:
+            sizes[d] = sizes.get(d, 0) + 1
+    order = sorted(sizes, key=lambda d: (-sizes[d], d))  # core domains first
+    domain_of = {f.id: f.get("Domain").strip() for f in feats}
+    has_workflow = {domain_of[ref] for ref in covered if ref in domain_of}
+    required = [d for d in order if sizes[d] >= CORE_DOMAIN_MIN_FEATURES and d not in has_workflow]
     per_domain: dict[str, list[dict[str, Any]]] = {}
     for entry in sorted(by_name.values(), key=lambda e: (e["domain"], e["features"][0], e["name"])):
         per_domain.setdefault(entry["domain"], []).append(entry)
     chosen: list[dict[str, Any]] = []
+    for d in required:  # the gate needs one per core domain: never dropped by the cap
+        if per_domain.get(d):
+            chosen.append(per_domain[d].pop(0))
+            continue
+        first = min((f for f in feats if f.get("Domain").strip() == d), key=lambda r: r.id)
+        name = first.get("Feature").strip() or first.title
+        chosen.append(
+            {
+                "name": f"Create and manage — {name}",
+                "domain": d,
+                "features": [first.id],
+                "reason": "core domain without a workflow",
+            }
+        )
+    room = max(0, cap - existing)
+    effective_cap = cap
+    below = len(required) > room
+    if below:
+        effective_cap = existing + len(required)
+        room = len(required)
+    rotation = [d for d in order if d in per_domain] + sorted(set(per_domain) - set(order))
     while len(chosen) < room and any(per_domain.values()):
-        for domain in sorted(per_domain):  # round-robin: every domain gets a turn
-            if per_domain[domain] and len(chosen) < room:
-                chosen.append(per_domain[domain].pop(0))
-    return {
+        for d in rotation:  # round-robin over domains, biggest first
+            if per_domain.get(d) and len(chosen) < room:
+                chosen.append(per_domain[d].pop(0))
+    result: dict[str, Any] = {
         "candidates": chosen,
         "cap": cap,
+        "effective_cap": effective_cap,
         "existing_workflows": existing,
+        "required_domains": required,
         "remaining_candidates": sum(len(v) for v in per_domain.values()),
         "features_covered": sorted(covered),
     }
+    if below:
+        result["cap_below_required"] = len(required)
+    return result
 
 
 def workflow_files(ws: Path) -> list[Path]:

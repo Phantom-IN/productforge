@@ -59,6 +59,7 @@ PLAN_ARTIFACTS = [
     "CLAUDE.md",
     "DEVELOPMENT.md",
     "STARTUP_PROMPT.md",
+    "ORCHESTRATOR_PROMPT.md",
     "plans/README.md",
     "plans/phase-00-foundation.md",
     "spec/TRACEABILITY.md",

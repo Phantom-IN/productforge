@@ -11,6 +11,10 @@ Standard library only. Requires Python 3.11+; the plugin always invokes it as ``
 from __future__ import annotations
 
 import argparse
+import contextlib
+import io
+import json
+import shlex
 import sys
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -31,6 +35,8 @@ from dataclasses import dataclass  # noqa: E402
 
 from pflib import (  # noqa: E402
     __version__,
+    auto,
+    autonomy,
     brief,
     catalog,
     commands,
@@ -39,6 +45,7 @@ from pflib import (  # noqa: E402
     deps,
     discover,
     domain,
+    exclusions,
     features,
     gates,
     merge,
@@ -53,12 +60,14 @@ from pflib import (  # noqa: E402
     summary,
     trace,
     validators,
+    waivers,
     workflows,
     workspace,
 )
 from pflib.errors import (  # noqa: E402
     EXIT_CHECK_FAILED,
     EXIT_OK,
+    EXIT_USAGE,
     NotImplementedPF,
     PFError,
     UsageError,
@@ -126,13 +135,29 @@ def _status_human(p: dict[str, Any]) -> str:
             else ""
         ),
         f"External integrations identified: {s['integrations']}",
+        f"Excluded pages: {p.get('exclusions', 0)}",
+        *[f"Waived: {k} — {w['reason']}" for k, w in p.get("waivers", {}).items()],
         "",
         "Claim confidence: " + " · ".join(f"{k.title()} {v}" for k, v in conf.items()),
         f"Gate {gate['stage']}: {gate['done']}/{gate['total']} conditions passing"
         + (" — ready to advance" if gate["passed"] else ""),
         f"Next command: /productforge {p['next_command']}",
     ]
+    if p["autonomy"]["active"]:
+        lines.append(
+            f"Autonomy: active since {p['autonomy']['granted_at']} — "
+            f"{p['decisions']} decision(s) logged (pf.py decide --list)"
+        )
+    elif p["decisions"]:
+        lines.append(f"Decisions logged: {p['decisions']} (pf.py decide --list)")
     return "\n".join(lines)
+
+
+def _exclusion_count(ws: Path) -> int:
+    try:
+        return len(exclusions.load(ws))
+    except PFError:
+        return 0
 
 
 def _cmd_status(args: argparse.Namespace) -> Any:
@@ -161,6 +186,10 @@ def _cmd_status(args: argparse.Namespace) -> Any:
         },
         "next_command": commands.next_command(ws, st, report),
         "capabilities": st.capabilities,
+        "autonomy": autonomy.status(st, ws),
+        "decisions": autonomy.count_decisions(ws),
+        "waivers": st.waivers,
+        "exclusions": _exclusion_count(ws),
         "implementation_detected": st.state is state.State.PHASE_PLAN_READY
         and plans.implementation_detected(ws, report.passed),
     }
@@ -178,6 +207,8 @@ def _cmd_advance(args: argparse.Namespace) -> CommandResult:
     closing = st.state
     target = state.parse_state(args.to)
     state.check_transition(st, target)
+    if args.auto:
+        autonomy.require_active(st, ws)
     report = gates.evaluate(ws, closing.value)
     payload: dict[str, Any] = {
         "from": closing.value,
@@ -189,7 +220,7 @@ def _cmd_advance(args: argparse.Namespace) -> CommandResult:
     if not report.passed:
         payload["message"] = f"{closing.value} gate failing: {', '.join(report.failing())}"
         return CommandResult(payload, EXIT_CHECK_FAILED)
-    if not args.confirmed:
+    if not (args.confirmed or args.auto):
         payload["message"] = (
             "gate passed; show this report to the user and re-run with --confirmed once they agree"
         )
@@ -199,10 +230,38 @@ def _cmd_advance(args: argparse.Namespace) -> CommandResult:
     state.transition(st, target, workspace.iso(workspace.utc_now()))
     state.save(ws, st)
     workspace.append_history(
-        ws, {"event": "advance", "from": closing.value, "to": target.value, "locked": len(locks)}
+        ws,
+        {
+            "event": "auto-advance" if args.auto else "advance",
+            "from": closing.value,
+            "to": target.value,
+            "locked": len(locks),
+        },
     )
     payload.update(transitioned=True, open_stage=st.state.value, locked_records=len(locks))
     return CommandResult(payload)
+
+
+def _add_waive(p: argparse.ArgumentParser) -> None:
+    p.add_argument("name", choices=waivers.WAIVABLE, help="what to waive")
+    p.add_argument("--reason", default="", help="why the user waives it (their words)")
+    p.add_argument("--revoke", action="store_true", help="remove the waiver")
+    p.add_argument(
+        "--confirmed",
+        action="store_true",
+        help="the user agreed (or autonomy is active and a `decide` entry is logged)",
+    )
+
+
+def _cmd_waive(args: argparse.Namespace) -> dict[str, Any]:
+    ws = workspace.resolve_workspace(args.workspace)
+    if not (args.confirmed or args.revoke):
+        raise UsageError(
+            "nothing recorded: a waiver needs the user's agreement (or autonomy plus a `decide` "
+            "entry); re-run with --confirmed",
+            code="WAIVER_NOT_CONFIRMED",
+        )
+    return waivers.waive(ws, args.name, args.reason, revoke=args.revoke)
 
 
 def _cmd_reopen(args: argparse.Namespace) -> dict[str, Any]:
@@ -324,6 +383,7 @@ def _cmd_discover(args: argparse.Namespace) -> CommandResult:
         delay=float(config.resolve("research.request_delay_seconds", ws)),
         max_pages_per_host=max_pages,
         slug=slug,
+        scope_terms=research.scope_terms(ws) if ws else (),
     )
     cache = str(discover.write_cache(ws, result)) if ws else None
     payload = {
@@ -349,6 +409,22 @@ def _cmd_discover(args: argparse.Namespace) -> CommandResult:
     if cache:
         human.append(f"cache: {cache}")
     return CommandResult(payload, human="\n".join(human))
+
+
+def _add_exclude(p: argparse.ArgumentParser) -> None:
+    p.add_argument("urls", nargs="*", metavar="URL", help="discovered pages to exclude")
+    p.add_argument("--reason", help="why these pages are not read (required)")
+    p.add_argument("--list", action="store_true", help="list the exclusions")
+
+
+def _cmd_exclude(args: argparse.Namespace) -> CommandResult:
+    ws = workspace.resolve_workspace(args.workspace)
+    if args.list:
+        rows = exclusions.load(ws)
+        human = "\n".join(f"{u}  ({r['reason']})" for u, r in rows.items()) or "no exclusions"
+        return CommandResult({"exclusions": rows, "total": len(rows)}, human=human)
+    out = exclusions.add(ws, list(args.urls), args.reason or "")
+    return CommandResult(out, human=f"{len(out['excluded'])} excluded ({out['total']} total)")  # type: ignore[arg-type]
 
 
 def _cmd_research_plan(args: argparse.Namespace) -> dict[str, Any]:
@@ -431,6 +507,42 @@ def _cmd_set_preferences(args: argparse.Namespace) -> dict[str, Any]:
         config.write_config(ws, values)
     keys = ("architecture.preferences", "architecture.deployment_target")
     return {"architecture": {k.split(".", 1)[1]: config.resolve(k, ws) for k in keys}}
+
+
+def _add_config(p: argparse.ArgumentParser) -> None:
+    p.add_argument("action", choices=["get", "list", "set"], help="config action")
+    p.add_argument("key", nargs="?", help="get/set: the knob, e.g. model.max_workflows")
+    p.add_argument("value", nargs="?", help="set: the value (JSON for numbers, lists, dicts)")
+    p.add_argument("--reason", help="set: why (logged to history.log)")
+
+
+def _cmd_config(args: argparse.Namespace) -> CommandResult:
+    ws = workspace.resolve_workspace(args.workspace)
+    if args.action == "list":
+        overrides = config.load_overrides(ws)
+        rows = [
+            {**row, "value": config.resolve(row["key"], ws), "overridden": row["key"] in overrides}
+            for row in config.describe()
+        ]
+        human = "\n".join(
+            f"{r['key']} = {json.dumps(r['value'])}{'  (override)' if r['overridden'] else ''}"
+            for r in rows
+        )
+        return CommandResult({"config": rows, "count": len(rows)}, human=human)
+    if not args.key:
+        raise UsageError(f"config {args.action} needs a key", code="USAGE_ERROR")
+    if args.action == "get":
+        value = config.resolve(args.key, ws)
+        return CommandResult(
+            {"key": args.key, "value": value, "default": config.DEFAULTS[args.key].default},
+            human=json.dumps(value),
+        )
+    if args.value is None or not args.reason:
+        raise UsageError('config set needs <key> <value> --reason "…"', code="USAGE_ERROR")
+    out = config.set_value(ws, args.key, args.value, args.reason)
+    return CommandResult(
+        out, human=f"{args.key}: {json.dumps(out['old'])} -> {json.dumps(out['new'])}"
+    )
 
 
 def _cmd_lint_phases(args: argparse.Namespace) -> CommandResult:
@@ -527,8 +639,13 @@ def _cmd_staging(args: argparse.Namespace) -> dict[str, Any]:
 def _cmd_merge(args: argparse.Namespace) -> Any:
     ws = workspace.resolve_workspace(args.workspace)
     if args.check:
-        result = merge.preflight(ws, args.run_id)
+        summary_file = Path(args.summary_file) if args.summary_file else None
+        if summary_file is not None and not summary_file.is_file():
+            raise UsageError(f"no such summary file: {summary_file}", code="USAGE_ERROR")
+        result = merge.preflight(ws, args.run_id, summary_file)
         return CommandResult(result, EXIT_OK if result["ok"] else EXIT_CHECK_FAILED)
+    if not args.accept_findings:
+        merge.check_repaired(ws, args.run_id)
     return merge.merge(ws, args.run_id).to_dict()
 
 
@@ -598,6 +715,7 @@ def _add_check_command(p: argparse.ArgumentParser) -> None:
 def _add_advance(p: argparse.ArgumentParser) -> None:
     p.add_argument("--to", required=True, metavar="STATE", help="next lifecycle state")
     p.add_argument("--confirmed", action="store_true", help="the user confirmed the gate report")
+    p.add_argument("--auto", action="store_true", help="autonomy grant stands: no confirmation")
 
 
 def _add_reopen(p: argparse.ArgumentParser) -> None:
@@ -620,6 +738,17 @@ def _add_merge(p: argparse.ArgumentParser) -> None:
     p.add_argument("run_id", help="staging run id")
     p.add_argument(
         "--check", action="store_true", help="preflight: merge into a scratch copy and validate"
+    )
+    p.add_argument(
+        "--accept-findings",
+        action="store_true",
+        help="merge although the latest preflight had errors and repair passes remain "
+        "(the user or autonomy accepted the remaining findings)",
+    )
+    p.add_argument(
+        "--summary-file",
+        help="with --check: the agent's saved reply, for input receipts "
+        "(default: <staging>/SUMMARY.md)",
     )
 
 
@@ -657,6 +786,189 @@ def _add_explain(p: argparse.ArgumentParser) -> None:
 
 def _add_complete(p: argparse.ArgumentParser) -> None:
     p.add_argument("--confirmed", action="store_true", help="the user agreed")
+    p.add_argument("--auto", action="store_true", help="autonomy grant stands: no confirmation")
+
+
+def _add_autonomy(p: argparse.ArgumentParser) -> None:
+    p.add_argument("action", choices=["show", "grant", "revoke"], help="autonomy action")
+    p.add_argument("--confirmed", action="store_true", help="grant: the user agreed")
+    p.add_argument("--text-sha256", help="grant: hash of the consent text the user was shown")
+
+
+def _cmd_autonomy(args: argparse.Namespace) -> CommandResult:
+    ws = workspace.resolve_workspace(args.workspace)
+    if args.action == "grant":
+        out = autonomy.do_grant(ws, args.confirmed, args.text_sha256)
+    elif args.action == "revoke":
+        out = autonomy.do_revoke(ws)
+    else:
+        out = autonomy.show(state.load(ws), ws)
+    human = f"Autonomy: {'active since ' + out['granted_at'] if out['active'] else 'not granted'}"
+    if args.action == "show":
+        human = f"{out['text']}\n\nsha256: {out['text_sha256']}\n{human}"
+    return CommandResult(out, human=human)
+
+
+def _add_decide(p: argparse.ArgumentParser) -> None:
+    p.add_argument("--list", action="store_true", help="list the logged decisions")
+    p.add_argument("--question", help="the question ProductForge would have asked")
+    p.add_argument("--choice", help="the option chosen on the user's behalf")
+    p.add_argument("--why", help="why (usually: it was marked Recommended)")
+    p.add_argument("--command", help="the productforge command being run")
+
+
+def _cmd_decide(args: argparse.Namespace) -> CommandResult:
+    ws = workspace.resolve_workspace(args.workspace)
+    if args.list:
+        rows = autonomy.read_decisions(ws)
+        human = (
+            "\n".join(
+                f"{r['ts']}  [{r['stage']}] {r['question']} -> {r['choice']}  ({r['why']})"
+                for r in rows
+            )
+            or "no decisions logged"
+        )
+        return CommandResult({"decisions": rows, "count": len(rows)}, human=human)
+    if not (args.question and args.choice and args.why):
+        raise UsageError("decide needs --question, --choice and --why (or --list)",
+                         code="USAGE_ERROR")  # fmt: skip
+    out = autonomy.decide(ws, args.question, args.choice, args.why, args.command)
+    return CommandResult(out, human=f"decision {out['decisions']} logged")
+
+
+def _add_auto(p: argparse.ArgumentParser) -> None:
+    p.add_argument("action", choices=["start", "status", "stop"], help="driver action")
+    p.add_argument("url", nargs="?", help="start: public product URL (initialises a workspace)")
+    p.add_argument("--scope", help="start: scope for a new workspace")
+    p.add_argument("--name", help="start: working name for OUR product")
+    p.add_argument("--out", help="start: workspace directory for a new workspace")
+    p.add_argument("--stack", help="start: stack preference passed to architect")
+    p.add_argument("--confirmed", action="store_true", help="start: the user consented")
+    p.add_argument(
+        "--text-sha256", help="start --confirmed: hash of the consent text the user was shown"
+    )
+    p.add_argument(
+        "--dry-run", action="store_true", help="start: print the next step, change nothing"
+    )
+
+
+def _inproc(ws: Path) -> auto.PfCall:
+    """Call this CLI in-process: ``(argv) -> (exit code, JSON payload)``; never a subprocess."""
+
+    def call(argv: list[str]) -> tuple[int, dict[str, Any]]:
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = main([*argv, "--workspace", str(ws), "--json"])
+        try:
+            data = json.loads(out.getvalue() or "{}")
+        except json.JSONDecodeError:
+            data = {"error": "BAD_OUTPUT", "message": out.getvalue() or err.getvalue()}
+        return rc, data if isinstance(data, dict) else {"result": data}
+
+    return call
+
+
+def _auto_command(args: argparse.Namespace, text_sha256: str) -> str:
+    parts = ["python3.11", "pf.py", "auto", "start"]
+    if args.url:
+        parts.append(args.url)
+    for flag, value in (("--scope", args.scope), ("--name", args.name), ("--out", args.out),
+                        ("--stack", args.stack), ("--workspace", args.workspace)):  # fmt: skip
+        if value:
+            parts += [flag, value]
+    parts += ["--text-sha256", text_sha256]
+    return " ".join(shlex.quote(x) for x in parts) + " --confirmed"
+
+
+def _auto_workspace(args: argparse.Namespace, create: bool) -> Path | None:
+    """The workspace to drive; with ``create`` and a URL, initialise it when missing."""
+    target = args.workspace or args.out
+    if target and (Path(target) / workspace.PF_DIR).is_dir():
+        return workspace.resolve_workspace(target)
+    if args.url and create:
+        ws, _ = scaffold.init_workspace(
+            args.url, out=target, scope=args.scope, name=args.name, force_adopt=False
+        )
+        return ws
+    if args.url:
+        return None
+    return workspace.resolve_workspace(args.workspace)
+
+
+def _cmd_auto(args: argparse.Namespace) -> CommandResult:
+    if args.action == "stop":
+        ws = workspace.resolve_workspace(args.workspace)
+        path = auto.request_stop(ws)
+        return CommandResult({"stop_file": str(path)}, human=f"stop requested: {path}")
+    if args.action == "status":
+        ws = workspace.resolve_workspace(args.workspace)
+        payload = {
+            "log": auto.read_log(ws, last=10),
+            "stop_requested": auto.stop_path(ws).is_file(),
+            "status": _cmd_status(args).payload,
+        }
+        human = "\n".join(json.dumps(r) for r in payload["log"]) or "no auto log yet"
+        human += "\n\n" + _status_human(payload["status"])
+        return CommandResult(payload, human=human)
+    auto.check_stack(args.stack)
+    if args.dry_run:
+        found = _auto_workspace(args, create=False)
+        if found is None:
+            msg = f"dry run: would initialise {args.url} first, then drive it"
+            return CommandResult({"dry_run": True, "message": msg}, human=msg)
+        preview = auto.run(found, auto.load_cfg(found, args.stack), _inproc(found), dry_run=True)
+        return CommandResult(preview, human=f"next: {preview.get('next')}")
+    known = _auto_workspace(args, create=False)
+    shown = autonomy.text(known)
+    shown_hash = autonomy.current_hash(known)
+    if not args.confirmed:
+        command = _auto_command(args, shown_hash)
+        payload = {
+            "consent_required": True,
+            "consent_text": shown,
+            "text_sha256": shown_hash,
+            "permission_args": config.resolve("auto.permission_args", known),
+            "command": command,
+        }
+        human = f"{shown}\n\nNothing ran. To consent and start, run:\n  {command}"
+        return CommandResult(payload, EXIT_USAGE, human=human)
+    if known is None or not autonomy.active(state.load(known), known):
+        if not args.text_sha256:
+            raise UsageError(
+                "auto start --confirmed needs --text-sha256 <hash> of the consent text the user "
+                "was shown (run without --confirmed to print it)",
+                code="USAGE_ERROR",
+            )
+        if args.text_sha256 != shown_hash:
+            raise UsageError(
+                "the consent text changed since it was shown; run `auto start` without "
+                "--confirmed again",
+                code="AUTONOMY_TEXT_CHANGED",
+            )
+    made = _auto_workspace(args, create=True)
+    if made is None:  # unreachable: create=True initialises
+        raise UsageError("no workspace to drive", code="NO_WORKSPACE")
+    ws = made
+    st = state.load(ws)
+    if not autonomy.active(st, ws):
+        print(autonomy.text(ws), file=sys.stderr)
+        autonomy.grant(st, workspace.iso(workspace.utc_now()), ws)
+        state.save(ws, st)
+        workspace.append_history(
+            ws, {"event": "autonomy-grant", "text_sha256": autonomy.current_hash(ws)}
+        )
+    cfg = auto.load_cfg(ws, args.stack)
+    summary = auto.run(ws, cfg, _inproc(ws))
+    summary["workspace"] = str(ws)
+    human = (
+        f"{'completed' if summary['completed'] else 'stopped: ' + str(summary['stopped'])}; "
+        f"{summary['sessions']} session(s), {summary['retries']} retry(ies), "
+        f"{len(summary['stages_passed'])} stage(s) passed, {summary['decisions']} decision(s). "
+        f"Next: {summary['next_step']}"
+    )
+    return CommandResult(
+        summary, EXIT_OK if summary["completed"] else EXIT_CHECK_FAILED, human=human
+    )
 
 
 def _cmd_trace(args: argparse.Namespace) -> CommandResult:
@@ -705,6 +1017,8 @@ def _cmd_publish_summary(args: argparse.Namespace) -> CommandResult:
 def _cmd_complete(args: argparse.Namespace) -> CommandResult:
     ws = workspace.resolve_workspace(args.workspace)
     st = state.load(ws)
+    if args.auto:
+        autonomy.require_active(st, ws)
     report = gates.evaluate(ws, st.state.value)
     payload: dict[str, Any] = {"completed": False, "gate": report.to_dict()}
     if st.state is not state.State.PHASE_PLAN_READY:
@@ -713,13 +1027,15 @@ def _cmd_complete(args: argparse.Namespace) -> CommandResult:
     if not report.passed:
         payload["message"] = f"PHASE_PLAN_READY gate failing: {', '.join(report.failing())}"
         return CommandResult(payload, EXIT_CHECK_FAILED)
-    if not args.confirmed:
+    if not (args.confirmed or args.auto):
         payload["message"] = "gate passed; re-run with --confirmed once the user agrees"
         return CommandResult(payload)
     now = workspace.iso(workspace.utc_now())
     state.complete(st, now)
     state.save(ws, st)
-    workspace.append_history(ws, {"event": "complete", "stage": st.state.value})
+    workspace.append_history(
+        ws, {"event": "auto-complete" if args.auto else "complete", "stage": st.state.value}
+    )
     payload.update(completed=True, completed_at=now)
     return CommandResult(payload)
 
@@ -735,7 +1051,17 @@ SUBCOMMANDS: list[tuple[str, str, Callable[[argparse.ArgumentParser], None], Han
         _cmd_check_command,
     ),
     ("advance", "pass the open stage's gate and transition", _add_advance, _cmd_advance),
+    ("autonomy", "show, grant or revoke autonomous mode", _add_autonomy, _cmd_autonomy),
+    ("auto", "autonomous driver: start, status, stop", _add_auto, _cmd_auto),
+    ("config", "get, list or set a configuration knob", _add_config, _cmd_config),
+    ("decide", "log or list decisions made on the user's behalf", _add_decide, _cmd_decide),
     ("reopen", "re-open an earlier stage (feedback loop)", _add_reopen, _cmd_reopen),
+    (
+        "waive",
+        "record (or revoke) a user waiver, e.g. of the competitor pass",
+        _add_waive,
+        _cmd_waive,
+    ),
     ("set-scope", "record the product scope", _add_set_scope, _cmd_set_scope),
     ("next-id", "allocate one record ID", _add_next_id, _cmd_next_id),
     ("staging", "manage agent staging runs", _add_staging, _cmd_staging),
@@ -759,6 +1085,12 @@ SUBCOMMANDS: list[tuple[str, str, Callable[[argparse.ArgumentParser], None], Han
         "robots/sitemap/link reconnaissance",
         _add_discover,
         _cmd_discover,
+    ),
+    (
+        "exclude",
+        "exclude discovered pages from research, with a reason (or --list)",
+        _add_exclude,
+        _cmd_exclude,
     ),
     (
         "research-plan",

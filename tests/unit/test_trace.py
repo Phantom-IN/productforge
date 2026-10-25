@@ -18,7 +18,11 @@ def test_every_v1_requirement_traces_from_a_source_to_a_phase(tasklet_plan: Path
 def test_chain_contents(tasklet_plan: Path) -> None:
     c = trace.chain(trace.build(tasklet_plan), "R-010")
     assert c["sources"] == ["S-001"] and c["claims"] == ["D-039"]
-    assert c["inferences"] == ["A-010"] and c["adrs"] == ["ADR-008"] and c["phases"] == ["Phase 10"]
+    assert (
+        c["inferences"] == ["A-010"]
+        and c["adrs"] == ["ADR-008", "ADR-015"]
+        and c["phases"] == ["Phase 10"]
+    )
 
 
 def test_structural_links_are_not_provenance(tasklet_plan: Path) -> None:
@@ -30,7 +34,7 @@ def test_structural_links_are_not_provenance(tasklet_plan: Path) -> None:
 def test_traceability_view(tasklet_plan: Path) -> None:
     text = (tasklet_plan / "spec/TRACEABILITY.md").read_text()
     regions = render.regions(text)
-    assert "| R-010 | S-001 | D-039 | F-006 | A-010 | ADR-008 | 10 |" in regions["chains"]
+    assert "| R-010 | S-001 | D-039 | F-006 | A-010 | ADR-008, ADR-015 | 10 |" in regions["chains"]
     assert "| Traced from a source to a phase | 11 |" in regions["coverage"]
     assert regions["gaps"] == "_None._\n"
 
@@ -46,7 +50,7 @@ def test_trace_cli(pf_cli, tasklet_plan: Path) -> None:  # type: ignore[no-untyp
         .startswith("# Traceability — tasklet-alt")
     )
     p = tasklet_plan / "plans/phase-11-billing.md"
-    p.write_text(p.read_text().replace("§10, R-011, ADR-011", "§10"))
+    p.write_text(p.read_text().replace("§10, R-011, ADR-011, ADR-013", "§10"))
     code, out, _ = pf_cli("trace", "--workspace", str(tasklet_plan), "--json")
     codes = {f["code"] for f in json.loads(out)["findings"]}
     assert code == 1 and codes == {

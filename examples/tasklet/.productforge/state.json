@@ -90,13 +90,13 @@
         ]
       },
       "D-009": {
-        "hash": "1cdfe70eefd882946e29f207503335be7c3de29dee9b19483b55ea9c94468154",
+        "hash": "72305e240f75b03e1bf80ae2487656eff2bf467bad0913c804b40f9cde70faab",
         "refs": [
           "S-004"
         ]
       },
       "D-010": {
-        "hash": "caa684fff2497b1e4073d694fe8b3ce1d2d1fbb264dde507ac8e29200c9c7a00",
+        "hash": "7bbbb557075725ed5310d254355782e7e33b26acd6929386fd832893280bcd0b",
         "refs": [
           "S-006"
         ]
@@ -279,7 +279,7 @@
         ]
       },
       "D-040": {
-        "hash": "2a01fc9274f1cf7e6aa7d1c0a0f876737e61ed01e6687d8e84f2721d79ad59ad",
+        "hash": "b0f6c6b56fefd750544b924af4e5f1c4b9536164bf4de4966e3f8c50bea2f6d4",
         "refs": [
           "S-006"
         ]
@@ -1385,7 +1385,7 @@
         "refs": []
       },
       "SC-019": {
-        "hash": "c206658f507fc7913c4c6d64db05ce84bef9ec9cf0dfd6b0b0e43d36f4915b91",
+        "hash": "bcf450997e29a971280187b81bbaddbe1752ae031f6f5f2c29dba6c98c84ec7f",
         "refs": []
       },
       "SC-020": {
@@ -1433,7 +1433,7 @@
         "refs": []
       },
       "SC-031": {
-        "hash": "699c4f33a8375cd89e7d14d6b3a7bc6a771517bb98ef596a018e46915222f062",
+        "hash": "f63215f9843b88c1c8e101b6ffe188560055a66779c05efb20363540d03023d7",
         "refs": []
       },
       "UD-001": {
@@ -1561,6 +1561,31 @@
         "hash": "8904aecc6a28a007b68adc636f76c6ccb663b724b149ac5778d4764396edaaf4",
         "refs": [
           "R-011"
+        ]
+      },
+      "ADR-012": {
+        "hash": "dbcf5b7b76cb03d09cd7eb5fd197be2d15ffb641ef07d235f0a1bf197e8d29b5",
+        "refs": [
+          "R-009"
+        ]
+      },
+      "ADR-013": {
+        "hash": "2a068824432be66a7bd6bd1606e98b0be0b5808e1dd628d2b712bb3735425ceb",
+        "refs": [
+          "R-011"
+        ]
+      },
+      "ADR-014": {
+        "hash": "c516ea9f5a2ec26bf990d1e11568e93a165689aae09d0b11e5c03d43829f04b8",
+        "refs": [
+          "R-007",
+          "R-009"
+        ]
+      },
+      "ADR-015": {
+        "hash": "6c2acc592e26aae8638e25bf624ddf830215f13a67e7745c3d379a328999080f",
+        "refs": [
+          "R-010"
         ]
       },
       "AP-001": {

@@ -16,6 +16,35 @@ _Diagram (mermaid or ASCII) of our system: clients, services, stores, external s
 | Concern | Choice | ADR |
 |---|---|---|
 
+## External services
+
+_One row per third-party service the product calls, each with a `Topic: vendor` ADR. A product with
+none writes a single row `none`; a capability that V1 does not need goes under
+`## Not applicable topics`._
+
+| Capability | Vendor | ADR | Test stand-in |
+|---|---|---|---|
+
+## Toolchain
+
+_Every concern in `architecture.toolchain_concerns`, each with a pinned version and a verification
+note: `YYYY-MM-DD <registry or URL>` (checked on the day against npm, PyPI, crates, Docker Hub or
+the vendor page)._
+
+| Concern | Choice | Version | Verified |
+|---|---|---|---|
+
+## Environments
+
+_Every environment variable the system reads, and the services a developer runs locally._
+
+| Name | Secret | Used by | Development value |
+|---|---|---|---|
+
+### Local services
+
+_`- <service>: <image:tag>, <port>`_
+
 ## Components
 
 _One line per component: `- <name>: <role> (R-/A-/ADR- IDs)`._

@@ -13,7 +13,7 @@ def test_versions_agree() -> None:
     plugin = json.loads((ROOT / ".claude-plugin/plugin.json").read_text())
     market = json.loads((ROOT / ".claude-plugin/marketplace.json").read_text())
     (entry,) = [p for p in market["plugins"] if p["name"] == "productforge"]
-    assert __version__ == plugin["version"] == entry["version"] == "2.0.0"
+    assert __version__ == plugin["version"] == entry["version"] == "3.0.0"
 
 
 def test_changelog_has_the_release() -> None:

@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "ProductForge — evidence-backed product blueprints for Claude Code",
-    "version": "2.0.0"
+    "version": "3.0.0"
   },
   "plugins": [
     {
       "name": "productforge",
       "source": "./",
       "description": "ProductForge turns an existing software product into an evidence-backed, implementation-ready engineering blueprint: public-source research, feature/workflow/domain reconstruction with explicit confidence, MVP scoping, an independent architecture, and a Phase Plan Method project specification.",
-      "version": "2.0.0",
+      "version": "3.0.0",
       "author": {
         "name": "Vaibhav Vanage"
       },

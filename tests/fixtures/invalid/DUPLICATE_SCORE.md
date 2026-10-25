@@ -18,3 +18,5 @@ expect: DUPLICATE_SCORE
 - Time to implement: 1 — days
 - External availability: 0 — no service fits
 - Future: maybe
+- Override decision: DEFER
+- Override reason: Reviewed, same call as SC-031

@@ -83,7 +83,14 @@ When the brief lists a session's `summary.json` and `research/observations.md`:
 
 ```text
 RUN <run-id> · ROLE <role> · WROTE <files> · RECORDS <prefix:n,…> · RESEARCH REQUESTS <list or none> · NOTES <≤5 lines>
+READ <workspace path>: <n>
 ```
+
+One `READ` line per input your brief lists. `n` is the number of records for record artifacts and
+record directories, and the number of `##` sections for prose files. If you could not read an
+input, write `READ <path>: 0 (why)`. Read inputs completely; preflight compares `n` with the real
+count and warns (`INPUT_RECEIPT_MISSING`, `INPUT_RECEIPT_SHORT`) so the orchestrator can ask you to
+read the rest.
 
 Counts in `RECORDS` are what you staged (the orchestrator reports authoritative numbers from
 `pf.py`). Keep `NOTES` to at most five short lines.

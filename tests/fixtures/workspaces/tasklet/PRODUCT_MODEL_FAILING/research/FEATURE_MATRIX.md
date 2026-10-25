@@ -57,39 +57,39 @@ and `Score` are filled during scoping (SCOPE_DEFINED).
 ## Matrix
 
 <!-- pf:generated:start matrix -->
-| ID | Domain | Feature | Parent | Surface | Evidence | Confidence | Plan tier | Complexity | MVP | Decision | Score |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| F-014 | Collaboration | Comments | — | PS-03 | D-038 | CONFIRMED | all | Low | — | — | — |
-| F-015 | Collaboration | Mentions | F-014 | PS-03 | D-038 | CONFIRMED | all | Low | — | — | — |
-| F-016 | Collaboration | In-app notifications | — | PS-05 | D-019 | CONFIRMED | all | Medium | — | — | — |
-| F-017 | Collaboration | Email digests | F-016 | PS-05 | D-020 | CONFIRMED | all | Medium | — | — | — |
-| F-018 | Collaboration | Guest access | — | PS-06 | D-004 | CONFIRMED | unknown | Medium | — | — | — |
-| F-019 | Collaboration | Global search | — | PS-03 | D-036 | CONFIRMED | all | Medium | — | — | — |
-| F-025 | Integrations & API | Public REST API | — | PS-07 | D-003, D-032 | CONFIRMED | all | High | — | — | — |
-| F-026 | Integrations & API | Personal access tokens | F-025 | PS-07 | D-030 | CONFIRMED | all | Low | — | — | — |
-| F-027 | Integrations & API | Webhooks | F-025 | PS-07 | D-031 | CONFIRMED | all | Medium | — | — | — |
-| F-028 | Integrations & API | Calendar sync | — | PS-06 | D-033 | CONFIRMED | all | Medium | — | — | — |
-| F-029 | Integrations & API | Chat notifications | — | PS-06 | D-034 | CONFIRMED | all | Low | — | — | — |
-| F-030 | Integrations & API | Git commit linking | — | PS-06 | D-035 | CONFIRMED | all | Medium | — | — | — |
-| F-011 | Projects | Projects | — | PS-04 | D-021, D-002 | CONFIRMED | all | Low | — | — | — |
-| F-012 | Projects | Project archive and restore | F-011 | PS-04 | D-022 | CONFIRMED | all | Low | — | — | — |
-| F-013 | Projects | Optional project membership | F-011 | PS-04 | D-002 | CONFIRMED | all | Low | — | — | — |
-| F-001 | Tasks & boards | Tasks | — | PS-03 | D-001, D-024 | CONFIRMED | all | Medium | — | — | — |
-| F-002 | Tasks & boards | Assignment | F-001 | PS-03 | D-001, D-019 | CONFIRMED | all | Low | — | — | — |
-| F-003 | Tasks & boards | Due dates and reminders | F-001 | PS-03 | D-023 | CONFIRMED | all | Low | — | — | — |
-| F-004 | Tasks & boards | Statuses | F-001 | PS-03 | D-024 | CONFIRMED | all | Low | — | — | — |
-| F-005 | Tasks & boards | Labels | F-001 | PS-03 | D-014 | CONFIRMED | all | Low | — | — | — |
-| F-006 | Tasks & boards | Attachments | F-001 | PS-03 | D-039 | CONFIRMED | all | Medium | — | — | — |
-| F-007 | Tasks & boards | Recurring tasks | F-001 | PS-03 | D-042, D-005 | CONFIRMED | all | Medium | — | — | — |
-| F-008 | Tasks & boards | Board view | — | PS-03 | D-037 | CONFIRMED | all | Medium | — | — | — |
-| F-009 | Tasks & boards | Live updates | — | PS-03 | D-007 | CONFIRMED | all | High | — | — | — |
-| F-010 | Tasks & boards | Activity history | F-001 | PS-05 | D-012 | CONFIRMED | all | Medium | — | — | — |
-| F-020 | Workspace & access | Workspaces | — | PS-06 | D-025 | CONFIRMED | all | Low | — | — | — |
-| F-021 | Workspace & access | Member invitations | F-020 | PS-02 | D-026 | CONFIRMED | all | Low | — | — | — |
-| F-022 | Workspace & access | Roles | F-020 | PS-06 | D-027 | CONFIRMED | all | Medium | — | — | — |
-| F-023 | Workspace & access | Billing management | F-020 | PS-06 | D-028, D-040 | CONFIRMED | paid | Medium | — | — | — |
-| F-024 | Workspace & access | Sign-in | — | PS-02 | D-029 | CONFIRMED | all | Medium | — | — | — |
-| F-031 | Workspace & access | Plans and pricing | — | PS-01 | D-040 | CONFIRMED | all | Low | — | — | — |
+| ID | Domain | Feature | Parent | Surface | Evidence | Confidence | Plan tier | Complexity | Headline | MVP | Decision | Score |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| F-014 | Collaboration | Comments | — | PS-03 | D-038 | CONFIRMED | all | Low | — | — | — | — |
+| F-015 | Collaboration | Mentions | F-014 | PS-03 | D-038 | CONFIRMED | all | Low | — | — | — | — |
+| F-016 | Collaboration | In-app notifications | — | PS-05 | D-019 | CONFIRMED | all | Medium | — | — | — | — |
+| F-017 | Collaboration | Email digests | F-016 | PS-05 | D-020 | CONFIRMED | all | Medium | — | — | — | — |
+| F-018 | Collaboration | Guest access | — | PS-06 | D-004 | CONFIRMED | unknown | Medium | — | — | — | — |
+| F-019 | Collaboration | Global search | — | PS-03 | D-036 | CONFIRMED | all | Medium | yes | — | — | — |
+| F-025 | Integrations & API | Public REST API | — | PS-07 | D-003, D-032 | CONFIRMED | all | High | — | — | — | — |
+| F-026 | Integrations & API | Personal access tokens | F-025 | PS-07 | D-030 | CONFIRMED | all | Low | — | — | — | — |
+| F-027 | Integrations & API | Webhooks | F-025 | PS-07 | D-031 | CONFIRMED | all | Medium | — | — | — | — |
+| F-028 | Integrations & API | Calendar sync | — | PS-06 | D-033 | CONFIRMED | all | Medium | — | — | — | — |
+| F-029 | Integrations & API | Chat notifications | — | PS-06 | D-034 | CONFIRMED | all | Low | — | — | — | — |
+| F-030 | Integrations & API | Git commit linking | — | PS-06 | D-035 | CONFIRMED | all | Medium | — | — | — | — |
+| F-011 | Projects | Projects | — | PS-04 | D-021, D-002 | CONFIRMED | all | Low | — | — | — | — |
+| F-012 | Projects | Project archive and restore | F-011 | PS-04 | D-022 | CONFIRMED | all | Low | — | — | — | — |
+| F-013 | Projects | Optional project membership | F-011 | PS-04 | D-002 | CONFIRMED | all | Low | — | — | — | — |
+| F-001 | Tasks & boards | Tasks | — | PS-03 | D-001, D-024 | CONFIRMED | all | Medium | — | — | — | — |
+| F-002 | Tasks & boards | Assignment | F-001 | PS-03 | D-001, D-019 | CONFIRMED | all | Low | — | — | — | — |
+| F-003 | Tasks & boards | Due dates and reminders | F-001 | PS-03 | D-023 | CONFIRMED | all | Low | — | — | — | — |
+| F-004 | Tasks & boards | Statuses | F-001 | PS-03 | D-024 | CONFIRMED | all | Low | — | — | — | — |
+| F-005 | Tasks & boards | Labels | F-001 | PS-03 | D-014 | CONFIRMED | all | Low | — | — | — | — |
+| F-006 | Tasks & boards | Attachments | F-001 | PS-03 | D-039 | CONFIRMED | all | Medium | — | — | — | — |
+| F-007 | Tasks & boards | Recurring tasks | F-001 | PS-03 | D-042, D-005 | CONFIRMED | all | Medium | — | — | — | — |
+| F-008 | Tasks & boards | Board view | — | PS-03 | D-037 | CONFIRMED | all | Medium | yes | — | — | — |
+| F-009 | Tasks & boards | Live updates | — | PS-03 | D-007 | CONFIRMED | all | High | — | — | — | — |
+| F-010 | Tasks & boards | Activity history | F-001 | PS-05 | D-012 | CONFIRMED | all | Medium | — | — | — | — |
+| F-020 | Workspace & access | Workspaces | — | PS-06 | D-025 | CONFIRMED | all | Low | — | — | — | — |
+| F-021 | Workspace & access | Member invitations | F-020 | PS-02 | D-026 | CONFIRMED | all | Low | — | — | — | — |
+| F-022 | Workspace & access | Roles | F-020 | PS-06 | D-027 | CONFIRMED | all | Medium | yes | — | — | — |
+| F-023 | Workspace & access | Billing management | F-020 | PS-06 | D-028, D-040 | CONFIRMED | paid | Medium | yes | — | — | — |
+| F-024 | Workspace & access | Sign-in | — | PS-02 | D-029 | CONFIRMED | all | Medium | — | — | — | — |
+| F-031 | Workspace & access | Plans and pricing | — | PS-01 | D-040 | CONFIRMED | all | Low | yes | — | — | — |
 <!-- pf:generated:end -->
 
 ## Records

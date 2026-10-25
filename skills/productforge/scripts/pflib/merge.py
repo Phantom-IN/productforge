@@ -23,7 +23,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from pflib import catalog, ids, records, render, workspace
+from pflib import catalog, config, ids, records, render, workspace
+from pflib import receipts as receipts_mod
 from pflib.catalog import ArtifactSpec, RecordSchema
 from pflib.errors import CheckFailed, UsageError
 from pflib.index import WorkspaceIndex
@@ -334,6 +335,8 @@ def _collect(
         rel = path.relative_to(run_dir).as_posix()
         parts = rel.split("/")
         if parts[0] == workspace.RAW or any(part.startswith(".") for part in parts):
+            continue
+        if rel == workspace.SUMMARY:
             continue
         spec = catalog.spec_for_staged_path(rel)
         if spec is None or not rel.endswith(".md"):
@@ -834,16 +837,51 @@ def allocate_next(ws: Path, prefix: str) -> str:
         return new_id
 
 
+def check_repaired(ws: Path, run_id: str) -> None:
+    """Refuse ``merge`` over unrepaired preflight errors (Agent run protocol, step 5).
+
+    Applies when the run's latest preflight had error findings and fewer than
+    ``agents.max_repair_loops`` repair briefs were rendered for it. ``--accept-findings`` skips it.
+    """
+    meta = workspace.read_run_meta(ws, run_id)
+    errors = int((meta.get("preflight") or {}).get("errors") or 0)
+    used = int(meta.get("repairs") or 0)
+    limit = int(config.resolve("agents.max_repair_loops", ws))
+    if errors > 0 and used < limit:
+        raise UsageError(
+            f"run {run_id}: the latest preflight had {errors} error finding(s) and only {used} of "
+            f"{limit} repair passes were used; repair it (pf.py brief --run-id {run_id}), run "
+            "merge --check again, or pass --accept-findings to merge anyway",
+            code="MERGE_BEFORE_REPAIR",
+            details={"run_id": run_id, "errors": errors, "repairs_used": used, "limit": limit},
+        )
+
+
 def _preflight_ignore(directory: str, names: list[str]) -> set[str]:
     return {n for n in names if n in (*workspace.ARCHIVES, "cache")}
 
 
-def preflight(ws: Path, run_id: str) -> dict[str, Any]:
+def preflight(ws: Path, run_id: str, summary_file: Path | None = None) -> dict[str, Any]:
+    result = _preflight(ws, run_id, summary_file)
+    workspace.update_run_meta(
+        ws,
+        run_id,
+        preflight={
+            "errors": int(result["errors"]),
+            "warnings": int(result["warnings"]),
+            "at": workspace.iso(workspace.utc_now()),
+        },
+    )
+    return result
+
+
+def _preflight(ws: Path, run_id: str, summary_file: Path | None = None) -> dict[str, Any]:
     """Merge ``run_id`` into a throw-away copy of the workspace and validate the result.
 
     Nothing in ``ws`` changes. Returns the would-be merge report and the validator findings
     that concern this run's records (new or deduped-into) or the files it would write — the
-    input for an agent repair loop *before* anything reaches the canonical files.
+    input for an agent repair loop *before* anything reaches the canonical files. Input-receipt
+    warnings (``INPUT_RECEIPT_*``) compare the agent's ``READ`` lines with its brief's inputs.
     """
     import tempfile
 
@@ -869,6 +907,9 @@ def preflight(ws: Path, run_id: str) -> dict[str, Any]:
             if f.record_id in touched or (f.record_id is None and f.artifact in written)
         ]
     summary = validators.summary(found)
+    receipts = receipts_mod.check(ws, run_dir, receipts_mod.summary_text(run_dir, summary_file))
+    summary["findings"] = [*summary["findings"], *receipts]
+    summary["warnings"] += len(receipts)
     return {
         "run_id": run_id,
         "ok": summary["errors"] == 0,

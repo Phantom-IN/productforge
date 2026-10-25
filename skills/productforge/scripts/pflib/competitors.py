@@ -21,6 +21,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from pflib import catalog, config, records, state
 from pflib.index import WorkspaceIndex
@@ -38,6 +39,28 @@ _STOP = {
     "which", "guide", "small", "teams", "team", "task", "tasks", "project", "projects", "app",
     "apps", "tool", "tools", "software", "free", "pricing", "features", "our", "my", "is", "in",
 }  # fmt: skip
+
+
+# One-word names that are common nouns, never products ("URL", "API", "App").
+GENERIC_NAMES = {
+    "url", "api", "app", "apps", "cli", "sdk", "ui", "web", "docs", "doc", "tool", "tools",
+    "software", "platform", "service", "services", "list", "lists", "link", "links", "code",
+    "data", "server", "client", "open", "source", "self", "hosted", "free", "new", "open-source",
+}  # fmt: skip
+
+
+def _compact(text: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", text.lower())
+
+
+def _aggregators(ws: Path) -> set[str]:
+    return {_compact(str(n)) for n in config.resolve("competitors.aggregator_names", ws) if n}
+
+
+def _is_aggregator_source(src: records.Record, aggregators: set[str]) -> bool:
+    host = (urlsplit(src.get("URL").strip()).hostname or "").lower()
+    labels = {_compact(label) for label in host.split(".")} | {_compact(host)}
+    return bool(labels & aggregators)
 
 
 def competitor_of(source: records.Record) -> str | None:
@@ -70,13 +93,23 @@ def candidates(ws: Path) -> dict[str, Any]:
     excluded |= {c.title for _, c in index.records("C")}
     excluded |= {c.get("Name").strip() for _, c in index.records("C")}
     excluded_norm = {records.normalise_text(n) for n in excluded if n}
+    aggregators = _aggregators(ws)
     evidence: dict[str, list[str]] = {}
+    comparison_sources: list[str] = []
     for _, src in index.records("S"):
-        if src.get("Category").strip() not in CANDIDATE_CATEGORIES or competitor_of(src):
+        if competitor_of(src):
+            continue
+        aggregator = _is_aggregator_source(src, aggregators)
+        if aggregator or src.get("Category").strip() in CANDIDATE_CATEGORIES:
+            comparison_sources.append(src.id)
+        if src.get("Category").strip() not in CANDIDATE_CATEGORIES:
             continue
         for name in _names_in(src.title):
-            if records.normalise_text(name) not in excluded_norm:
-                evidence.setdefault(name, []).append(src.id)
+            if records.normalise_text(name) in excluded_norm or _compact(name) in aggregators:
+                continue
+            if " " not in name and name.lower() in GENERIC_NAMES:
+                continue
+            evidence.setdefault(name, []).append(src.id)
     ranked = sorted(evidence, key=lambda n: (-len(evidence[n]), n))
     category = ""
     overview = ws / catalog.OVERVIEW_PATH
@@ -88,6 +121,8 @@ def candidates(ws: Path) -> dict[str, Any]:
         "candidates": ranked[:cap],
         "evidence": {n: evidence[n] for n in ranked[:cap]},
         "more": ranked[cap:],
+        "comparison_sources": sorted(comparison_sources),
+        "min_researched": int(config.resolve("competitors.min_researched", ws)),
         "category": category,
         "cap": cap,
         "existing": sorted(c.id for _, c in index.records("C") if records.is_active(c)),

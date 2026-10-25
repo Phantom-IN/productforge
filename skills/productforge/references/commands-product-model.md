@@ -3,7 +3,7 @@
 Procedures for the PRODUCT_MODEL stage commands. `SKILL.md` owns dispatch, transitions, the Agent
 run protocol, the Delegated run protocol and the end-of-command report; `$PF` and `<ws>` are as
 defined there. Run the stage's commands in this order: `features` → `workflows` → `model`
-(→ optional `competitors`); `/productforge scope` closes the stage.
+→ `competitors` (the default before `scope`); `/productforge scope` closes the stage.
 
 ### `/productforge features`
 
@@ -42,7 +42,16 @@ evidence) from `[implied-system]` steps (what our system must do). The index in 
 is rendered by merge.
 
 1. **Candidates.** `python3.11 "$PF" workflow-candidates --workspace <ws> --json` — deterministic
-   proposals from the feature matrix, at least one per domain, capped by `model.max_workflows`.
+   proposals from the feature matrix. Payload: `candidates` (name, domain, features, reason),
+   `cap`, `effective_cap`, `existing_workflows`, `required_domains`, `remaining_candidates`,
+   `features_covered`, and `cap_below_required` (the number of required candidates) only when the
+   cap is too low. Selection: first one candidate for every domain with at least 3 active features
+   and no workflow yet (`required_domains`, largest domain first, never dropped by the cap), then
+   extras round-robin over the domains ordered by feature count, up to `model.max_workflows`. When
+   `cap_below_required` is present, `model.max_workflows` can never satisfy
+   `G-PM-WORKFLOW-PER-DOMAIN`: raise it to `effective_cap` (`config set model.max_workflows
+   <effective_cap> --reason "…"`, with the user's agreement; autonomous mode just does it and logs
+   a `decide` entry) and run the candidates again.
 2. **Trim.** Show the candidates grouped by domain and ask with AskUserQuestion: "Use all
    (Recommended)", "Only one per domain", or Other (the user's list). Without AskUserQuestion, use
    all and list them in the report.
@@ -101,13 +110,27 @@ records exist** (counts from `pf.py status --json`) unless the user asks to redo
 
 ### `/productforge competitors`
 
-Optional, PRODUCT_MODEL: a shallow category lens in `research/COMPETITORS.md` (`C-`, `FS-`).
-Skipping it is fine — scoring treats missing signals as neutral.
+PRODUCT_MODEL (also allowed while SCOPE_DEFINED is open, as an evidence-adding command; refused from
+ARCHITECTURE_LOCKED on): a shallow category lens in `research/COMPETITORS.md` (`C-`, `FS-`). It is the
+default step before `scope`: `G-SC-COMPETITOR-SIGNAL` needs `competitors.min_researched`
+competitors, or a user waiver (`pf.py waive competitors --confirmed`, see `commands-scope.md`); a waived
+pass leaves scoring signals neutral.
 
 1. **Candidates.** `python3.11 "$PF" competitor-candidates --workspace <ws> --json` (names from
    comparison/review source titles, capped by `competitors.max`). **Never research a competitor the
    user has not confirmed** or add names yourself: ask with AskUserQuestion (multi-select + Other).
    No answer — or no AskUserQuestion — means list the candidates and stop.
+   **Discovery pass.** Comparison and directory sites (`competitors.aggregator_names`) and generic
+   words are already filtered out. When fewer than `competitors.min_researched` names remain, brief
+   one research-agent run: `brief --role research-agent --task "Competitor discovery: from the
+   comparison sources <comparison_sources> and one web search for '<product> alternatives', list
+   the direct alternatives most often named, each with its citing source; add those comparison
+   sources if missing." --partition "competitor discovery" --input research/sources.md
+   --template research/sources.md` (sources and names only, no C records yet; the names go in the
+   run summary with their S IDs), then preflight, repair, merge, and re-run `competitor-candidates`.
+   Never invent a name without a citing source. Interactive: the user picks from the result.
+   Autonomous: take the top `competitors.max` names that have at least one citation and log
+   `pf.py decide`.
 2. **Per competitor**, in batches of at most 3: `python3.11 "$PF" discover <its homepage>
    --max-pages 20 --workspace <ws>` (only when the user gave or confirmed its URL; otherwise the
    analyst finds it), then `brief --role product-analyst --task "Competitor pass for <name>: at most

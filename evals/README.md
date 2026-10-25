@@ -7,6 +7,7 @@ Cases for `claude plugin eval` (on demand — they cost tokens and are not part 
 | `status-no-workspace` | `/productforge status` asks `pf.py status` and reports that there is no workspace |
 | `refused-closed-stage` | a closed stage's command is refused with the `reopen` hint and writes nothing |
 | `lint-from-script` | plan questions are answered from `pf.py lint-phases`, not by reading files |
+| `gate-blocks-thin-discovery` | a thin single-pass DISCOVERY is blocked by `pf.py check` and `auto start --dry-run` starts with `/productforge research` |
 
 ```bash
 claude plugin eval . --runs 1 --ablation none --allow-tools "Bash(python3.11:*)" --no-publish

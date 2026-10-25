@@ -39,20 +39,20 @@ def test_changing_a_decision_supersedes_and_repoints(tasklet_arch: Path) -> None
         "research/architecture-inference.md": repoint,
     }))  # fmt: skip
     new_id = report.id_map["ADR-?1"]
-    assert new_id == "ADR-012" and sorted(report.amended) == ["ADR-006", "AP-001"]
-    assert (ws / "spec/decisions/ADR-012-server-sent-events-for-board-changes.md").is_file()
+    assert new_id == "ADR-016" and sorted(report.amended) == ["ADR-006", "AP-001"]
+    assert (ws / "spec/decisions/ADR-016-server-sent-events-for-board-changes.md").is_file()
     old = next((ws / "spec/decisions").glob("ADR-006-*.md")).read_text()
-    assert "- Status: superseded-by ADR-012" in old  # history is kept
+    assert "- Status: superseded-by ADR-016" in old  # history is kept
     assert validators.run(ws) == []
     decisions = render.regions((ws / "spec/ARCHITECTURE.md").read_text())["decisions"]
     assert (
-        "| ADR-006 | Polling instead of push in V1 | realtime | superseded-by ADR-012 |"
+        "| ADR-006 | Polling instead of push in V1 | realtime | superseded-by ADR-016 |"
         in decisions
     )
     ap = records.parse_document((ws / "research/architecture-inference.md").read_text()).record(
         "AP-001"
     )
-    assert ap is not None and ap.get("Decision") == "ADR-012"
+    assert ap is not None and ap.get("Decision") == "ADR-016"
 
 
 def test_set_preferences(pf_cli, tasklet_scope: Path) -> None:  # type: ignore[no-untyped-def]

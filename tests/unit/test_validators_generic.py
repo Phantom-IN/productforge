@@ -75,3 +75,85 @@ def test_parse_error_does_not_hide_the_rest_of_the_file(tasklet_discovery: Path)
     apply_overlay(tasklet_discovery, INVALID / "PARSE_ERROR.md")
     ctx = validators.Context.load(tasklet_discovery)
     assert ctx.get("D-018") is not None  # records after the bad one are still indexed
+
+
+def _conflict_codes(ws: Path) -> list[str]:
+    return sorted(f.code for f in validators.run(ws) if f.code.startswith("CONFLICT_"))
+
+
+def _ws_with_pair(tmp_path: Path, ctx_a: str, ctx_b: str, resolution: str = "") -> Path:
+    ws = copy_snapshot("DISCOVERY", tmp_path / "ws")
+    p = ws / "research/DISCOVERY_LEDGER.md"
+    text = p.read_text(encoding="utf-8")
+    for rid, ctx in (("D-009", ctx_a), ("D-010", ctx_b)):
+        head, rest = text.split(f"### {rid} — ", 1)
+        body, tail = rest.split("\n\n", 1) if "\n\n" in rest else (rest, "")
+        lines = [ln for ln in body.splitlines() if not ln.startswith("- Context:")]
+        if ctx:
+            lines.append(f"- Context: {ctx}")
+        if resolution and rid == "D-010":
+            lines.append(f"- Resolution: {resolution}")
+        text = head + f"### {rid} — " + "\n".join(lines) + ("\n\n" + tail if tail else "\n")
+    p.write_text(text, encoding="utf-8")
+    return ws
+
+
+def test_conflict_same_context_is_clean(tmp_path: Path) -> None:
+    assert _conflict_codes(_ws_with_pair(tmp_path, "Guest pricing", "guest   PRICING")) == []
+
+
+def test_conflict_missing_context_is_an_error(tmp_path: Path) -> None:
+    assert _conflict_codes(_ws_with_pair(tmp_path, "Guest pricing", "")) == [
+        "CONFLICT_CONTEXT_MISSING"
+    ]
+
+
+def test_conflict_differing_contexts_warn_naming_both(tmp_path: Path) -> None:
+    ws = _ws_with_pair(tmp_path, "Clause approvals", "Creation approvals")
+    found = [f for f in validators.run(ws) if f.code == "CONFLICT_CONTEXT_DIFFERS"]
+    assert len(found) == 1
+    assert "Clause approvals" in found[0].message and "Creation approvals" in found[0].message
+
+
+def test_different_contexts_resolution_clears_both_codes(tmp_path: Path) -> None:
+    ws = _ws_with_pair(
+        tmp_path,
+        "Clause approvals",
+        "Creation approvals",
+        "different contexts — clause approvals vs creation approvals",
+    )
+    assert _conflict_codes(ws) == []
+
+
+def test_same_context_unresolved_stays_unresolved(tmp_path: Path) -> None:
+    ws = _ws_with_pair(tmp_path, "Guest pricing", "Guest pricing")
+    p = ws / "research/UNKNOWNS.md"
+    p.write_text(p.read_text(encoding="utf-8").replace("D-009, D-010", "D-001"), encoding="utf-8")
+    assert "CONFLICT_UNRESOLVED" in _conflict_codes(ws)
+
+
+UNKNOWN_FEATURE = """
+### F-900 — Bulk export
+- Domain: Tasks & boards
+- Feature: Bulk export
+- Parent:
+- Surface: PS-03
+- Evidence: D-001
+- Confidence: UNKNOWN
+- Plan tier: all
+- Complexity: Low
+- Notes: {notes}
+- Status: {status}
+"""
+
+
+def test_confidence_rules_skip_inactive_records(tasklet_product_model: Path) -> None:
+    matrix = tasklet_product_model / "research" / "FEATURE_MATRIX.md"
+    base = matrix.read_text(encoding="utf-8")
+    active = UNKNOWN_FEATURE.format(notes="Missing Related unknown.", status="active")
+    matrix.write_text(base.rstrip("\n") + "\n" + active, encoding="utf-8")
+    assert "CONFIDENCE_RULE" in [f.code for f in validators.run(tasklet_product_model)]
+    for status in ("superseded-by F-901", "rejected"):
+        gone = UNKNOWN_FEATURE.format(notes="Missing Related unknown.", status=status)
+        matrix.write_text(base.rstrip("\n") + "\n" + gone, encoding="utf-8")
+        assert "CONFIDENCE_RULE" not in [f.code for f in validators.run(tasklet_product_model)]

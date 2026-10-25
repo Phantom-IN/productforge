@@ -34,7 +34,7 @@ flowchart LR
 | API and worker | Node.js (TypeScript) | ADR-010 |
 | Database and jobs | PostgreSQL | ADR-005, ADR-007 |
 | Sign-in | Hosted identity provider | ADR-003 |
-| Files | TBD | ADR-008 |
+| Files | ? | ADR-008 |
 | Payments | Payment provider | ADR-011 |
 | Deployment | Docker on a container platform | ADR-009 |
 

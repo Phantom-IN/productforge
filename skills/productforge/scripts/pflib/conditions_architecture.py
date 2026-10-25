@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
-from pflib import architecture, catalog, domain
+from pflib import architecture, catalog, config, domain, records
 from pflib.gates import ConditionResult, GateCondition, register
 from pflib.index import WorkspaceIndex
 
@@ -86,6 +86,100 @@ def _topics(ws: Path) -> ConditionResult:
                                  "decided or explained")  # fmt: skip
 
 
+def _is_open(value: str) -> bool:
+    return bool(architecture.INCOMPLETE_RE.match(value))
+
+
+def _external_services(ws: Path) -> ConditionResult:
+    text = architecture.text_of(ws)
+    if text is None:
+        return NO_DOC
+    rows = architecture.external_service_rows(text)
+    if not rows:
+        return ConditionResult(
+            False, "## External services has no table (a product with none writes a row 'none')"
+        )
+    if len(rows) == 1 and rows[0][0].strip().lower() == "none":
+        return ConditionResult(True, "no external services")
+    not_applicable = {k.lower() for k in architecture.bullets(
+        architecture.section(text, "Not applicable topics"))}  # fmt: skip
+    index = WorkspaceIndex(ws)
+    adrs = {a.id: a for _, a in index.records("ADR")}
+    problems: list[str] = []
+    for row in rows:
+        cap = row[0] if row else ""
+        if cap.strip().lower() in not_applicable:
+            continue
+        vendor = row[1] if len(row) > 1 else ""
+        if _is_open(vendor) or vendor.strip().lower() in {"tbd", "none"}:
+            problems.append(f"{cap}: vendor is not named")
+            continue
+        refs = records.parse_refs(row[2]) if len(row) > 2 else []
+        if not refs:
+            problems.append(f"{cap}: no ADR cited")
+            continue
+        for ref in refs:
+            adr = adrs.get(ref)
+            if adr is None or not records.is_active(adr):
+                problems.append(f"{cap}: {ref} is missing or not active")
+            elif adr.get("Topic").strip() != "vendor":
+                problems.append(f"{cap}: {ref} does not have Topic: vendor")
+    if problems:
+        return ConditionResult(False, "; ".join(problems[:6]) + (" …" if len(problems) > 6 else ""))
+    return ConditionResult(True, f"{len(rows)} external services, each with a vendor ADR")
+
+
+def _toolchain(ws: Path) -> ConditionResult:
+    text = architecture.text_of(ws)
+    if text is None:
+        return NO_DOC
+    rows = architecture.toolchain_rows(text)
+    if not rows:
+        return ConditionResult(False, "no ## Toolchain table")
+    by_concern = {r[0].strip().lower(): r for r in rows if r}
+    concerns = [str(c) for c in config.resolve("architecture.toolchain_concerns", ws)]
+    problems: list[str] = []
+    for concern in concerns:
+        row = by_concern.get(concern.strip().lower())
+        if row is None:
+            problems.append(f"{concern}: no row")
+            continue
+        version = row[2] if len(row) > 2 else ""
+        verified = row[3] if len(row) > 3 else ""
+        if _is_open(version) or architecture.UNPINNED_RE.match(version):
+            problems.append(f"{concern}: version is not pinned")
+        elif not architecture.VERIFIED_RE.match(verified.strip()):
+            problems.append(f"{concern}: Verified must read 'YYYY-MM-DD <registry or URL>'")
+    if problems:
+        return ConditionResult(False, "; ".join(problems[:6]) + (" …" if len(problems) > 6 else ""))
+    return ConditionResult(True, f"all {len(concerns)} concerns pinned and verified")
+
+
+def _env_contract(ws: Path) -> ConditionResult:
+    text = architecture.text_of(ws)
+    if text is None:
+        return NO_DOC
+    rows = architecture.environment_rows(text)
+    services = architecture.local_services(text)
+    problems: list[str] = []
+    if not rows:
+        problems.append("## Environments has no variable rows")
+    for row in rows:
+        cells = (row + [""] * 4)[:4]
+        open_cells = [i for i, c in enumerate(cells) if _is_open(c)]
+        if open_cells:
+            problems.append(f"{cells[0] or '(unnamed)'}: a cell is empty or TBD")
+    if not services:
+        problems.append("### Local services lists no service")
+    for svc in services:
+        _, _, value = svc.partition(":")
+        if not value.strip() or _is_open(value) or not architecture.PORT_RE.search(value.strip()):
+            problems.append(f"local service {svc.split(':')[0]!r} needs an image and a port")
+    if problems:
+        return ConditionResult(False, "; ".join(problems[:6]) + (" …" if len(problems) > 6 else ""))
+    return ConditionResult(True, f"{len(rows)} variables, {len(services)} local services")
+
+
 CONDITIONS: tuple[tuple[str, str, Callable[[Path], ConditionResult]], ...] = (
     ("G-AR-REQUIREMENTS-ADDRESSED", "every requirement is addressed by an ADR", _requirements),
     ("G-AR-INFERENCES-PROPOSED", "every inference has a proposed implementation", _inferences),
@@ -93,6 +187,9 @@ CONDITIONS: tuple[tuple[str, str, Callable[[Path], ConditionResult]], ...] = (
     ("G-AR-REPO-STRUCTURE", "repository structure is declared", _repo),
     ("G-AR-STACK-COMPLETE", "stack fully named", _stack),
     ("G-AR-MANDATORY-TOPICS", "mandatory ADR topics covered", _topics),
+    ("G-AR-EXTERNAL-SERVICES", "every external service has a vendor ADR", _external_services),
+    ("G-AR-TOOLCHAIN", "toolchain pinned and verified", _toolchain),
+    ("G-AR-ENV-CONTRACT", "environment contract declared", _env_contract),
 )
 
 for _cid, _desc, _fn in CONDITIONS:

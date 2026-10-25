@@ -118,3 +118,135 @@ def test_unmined_sources_and_evidence_counts(tasklet_discovery: Path) -> None:
     ledger = tasklet_discovery / "research/DISCOVERY_LEDGER.md"
     ledger.write_text(ledger.read_text().replace("- Evidence: S-019\n", "- Evidence: S-017\n"))
     assert research.plan(tasklet_discovery)["partitions"][1]["unmined"] == ["S-019"]
+
+
+def test_next_candidates_by_rank_and_company_pages_excluded(tasklet_discovery: Path) -> None:
+    def ranked_entry(name: str, rank: int, hits: int = 0, nav: bool = False) -> dict:
+        e = entry(f"https://tasklet.example/docs/{name}", "docs")
+        return e | {"rank": rank, "scope_hits": hits, "nav": nav}
+
+    entries = [ranked_entry(f"p{i}", 100 + i) for i in range(30)]
+    entries += [ranked_entry("hit", 500, hits=2), ranked_entry("nav", 900, nav=True)]
+    entries += [entry("https://tasklet.example/about", "company")]
+    entries += [entry("https://docs.tasklet.example/tasks", "docs")]  # already S-001
+    write_cache(tasklet_discovery, entries)
+    cache = workspace.pf_dir(tasklet_discovery) / workspace.CACHE / "discover/tasklet.example.json"
+    data = json.loads(cache.read_text()) | {"truncated": 7}
+    cache.write_text(json.dumps(data))
+    plan = research.plan(tasklet_discovery)
+    docs = {p["name"]: p for p in plan["partitions"]}["official-docs"]
+    nxt = docs["next_candidates"]
+    assert len(nxt) == 20 and nxt[:3] == [
+        "https://tasklet.example/docs/nav",
+        "https://tasklet.example/docs/hit",
+        "https://tasklet.example/docs/p0",
+    ]
+    assert all("about" not in u and u != "https://docs.tasklet.example/tasks" for u in nxt)
+    assert docs["candidates"] == 32 and plan["truncated"] == 7
+    assert all(len(p["next_candidates"]) <= 20 for p in plan["partitions"])
+
+
+def test_old_cache_without_rank_orders_by_url(tasklet_discovery: Path) -> None:
+    write_cache(tasklet_discovery, [entry("https://tasklet.example/docs/b", "docs"),
+                                    entry("https://tasklet.example/docs/a", "docs")])  # fmt: skip
+    plan = research.plan(tasklet_discovery)
+    docs = {p["name"]: p for p in plan["partitions"]}["official-docs"]
+    assert docs["next_candidates"] == ["https://tasklet.example/docs/a",
+                                       "https://tasklet.example/docs/b"]  # fmt: skip
+    assert plan["truncated"] == 0
+
+
+def test_scope_terms_from_scope_areas_and_entities(
+    tasklet_discovery: Path, edit_state: Callable[..., None]
+) -> None:
+    edit_state(scope={"text": "Task tracking for small teams", "source": "user",
+                      "accepted": False})  # fmt: skip
+    terms = research.scope_terms(tasklet_discovery)
+    assert {"task", "track", "team", "board", "project", "notification", "workspace"} <= terms
+    assert "with" not in terms and "for" not in terms and "S-001" not in terms
+    assert not any(len(t) < 4 for t in terms)
+    edit_state(scope={"text": None, "source": None, "accepted": False})
+    assert "track" not in research.scope_terms(tasklet_discovery)
+    assert research.slug_tokens("https://x.example/help/Filing-Cases/new") == {"help", "filing",
+                                                                                "case"}  # fmt: skip
+    assert research.plan(tasklet_discovery)["scope_terms"] == sorted(
+        research.scope_terms(tasklet_discovery)
+    )
+
+
+# --- phase 01: depth, nav pages, unknown audit ---------------------------------------------
+
+
+def scoped(url: str, hits: int = 1, nav: bool = False, rank: int = 1, cat: str = "docs") -> dict:
+    return {**entry(url, cat), "scope_hits": hits, "nav": nav, "rank": rank}
+
+
+def test_depth_arithmetic_and_exclusions(tasklet_discovery: Path) -> None:
+    from pflib import exclusions
+
+    ws = tasklet_discovery
+    config.write_config(ws, {"research.max_excluded_share": 1.0})
+    read = [f"https://docs.tasklet.example/p{i}" for i in range(40)]
+    rest = [f"https://docs.tasklet.example/q{i}" for i in range(60)]
+    write_cache(
+        ws, [scoped(u) for u in read + rest] + [scoped("https://docs.tasklet.example/z", 0)]
+    )
+    d = research.depth(ws)
+    assert d["in_scope"] == 100 and d["read"] == 0 and d["needed"] == 60
+    exclusions.add(ws, read[:40], "off-scope")
+    d = research.depth(ws)
+    assert d["excluded"] == 40 and d["ratio"] == 0.4 and d["needed"] == 20
+    exclusions.add(ws, rest[:20], "dupes")
+    assert research.depth(ws)["needed"] == 0 and research.depth(ws)["ratio"] == 0.6
+    plan = research.plan(ws)
+    assert plan["depth_needed"] == 0 and plan["budget_needed"] == 0
+
+
+def test_depth_without_candidates_is_vacuous(tasklet_discovery: Path) -> None:
+    assert research.depth(tasklet_discovery)["ratio"] == 1.0
+    assert research.depth(tasklet_discovery)["needed"] == 0
+
+
+def test_budget_needed_and_nav_first(tasklet_discovery: Path) -> None:
+    ws = tasklet_discovery
+    config.write_config(ws, {"research.max_sources": 21})  # 1 remaining
+    write_cache(
+        ws,
+        [scoped(f"https://tasklet.example/p{i}", 2, rank=i + 1) for i in range(10)]
+        + [scoped("https://tasklet.example/nav", 0, nav=True, rank=99, cat="features")],
+    )
+    plan = research.plan(ws)
+    assert plan["depth_needed"] == 7 and plan["budget_needed"] == 6
+    assert plan["nav_unread"] == ["https://tasklet.example/nav"]
+    core = next(p for p in plan["partitions"] if p["name"] == "official-core")
+    assert core["next_candidates"][0] == "https://tasklet.example/nav"
+    # non-official or disallowed entries never count
+    write_cache(
+        ws,
+        [
+            scoped("https://x.example/a", cat="reddit"),
+            {**scoped("https://tasklet.example/b"), "allowed": False},
+        ],
+    )
+    assert research.depth(ws)["in_scope"] == 0
+
+
+def test_unknown_audit_two_token_rule_limit_and_exclusion(tasklet_discovery: Path) -> None:
+    from pflib import exclusions
+
+    ws = tasklet_discovery  # U-001: "How long does the product keep task activity history?"
+    hits = [f"https://docs.tasklet.example/task-history-{i}" for i in range(7)]
+    write_cache(
+        ws,
+        [scoped(u, 0, rank=i + 1) for i, u in enumerate(hits)]
+        + [
+            scoped("https://docs.tasklet.example/history", 0, rank=20),
+            scoped("https://docs.tasklet.example/unrelated-billing", 0, rank=21),
+        ],
+    )
+    audit = research.unknown_audit(ws)
+    assert audit["U-001"] == hits[:5]  # at most 5; one-token and unrelated slugs never match
+    exclusions.add(ws, hits[:3], "dupes")
+    assert research.unknown_audit(ws)["U-001"] == hits[3:7]
+    exclusions.add(ws, hits[3:], "dupes")
+    assert "U-001" not in research.unknown_audit(ws)

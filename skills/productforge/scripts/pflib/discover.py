@@ -7,8 +7,9 @@
 - reads ``sitemap.xml`` / sitemap indexes (gzip supported, bounded);
 - collects links from the homepage (off-site links are recorded, never fetched);
 - probes common subdomains (``docs.``, ``help.``, ``developers.``, ``status.`` …);
-- classifies every URL into a source category and caps candidates per host, round-robin across
-  categories so one big section (e.g. a blog) cannot crowd out the docs.
+- classifies every URL into a source category and ranks candidates per host before capping:
+  homepage-navigation links, then scope relevance, then category priority, then depth. Without
+  scope terms the cap falls back to round-robin across categories.
 
 Agents then read only ``allowed: true`` URLs. Every request waits ``research.request_delay_seconds``
 and sends ``research.user_agent``.
@@ -23,14 +24,14 @@ import urllib.error
 import urllib.request
 import urllib.robotparser
 import xml.etree.ElementTree as ET
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
-from pflib import discover_rules, urls, workspace
+from pflib import discover_rules, taxonomy, urls, workspace
 from pflib.io import atomic_write_text
 
 TIMEOUT_SECONDS = 10
@@ -286,13 +287,68 @@ def _probe_paths(
                 add(target, "path-probe")
 
 
-def _cap_round_robin(entries: list[dict[str, Any]], cap: int) -> tuple[list[dict[str, Any]], int]:
-    """Keep at most ``cap`` entries, taking one per category in turn (shallow URLs first)."""
-    if len(entries) <= cap:
-        return entries, 0
+# Category order for ranking (best first): pages that describe the product come before long tails.
+CATEGORY_PRIORITY: tuple[str, ...] = (
+    "homepage", "features", "enterprise", "pricing", "integrations", "docs", "api-docs",
+    "security", "changelog", "help-center", "official-tutorial", "official-demo", "product-blog",
+    "engineering-blog", "official-talk", "official-repo", "status", "company",
+)  # fmt: skip
+
+
+def _priority(category: str | None) -> int:
+    if category in CATEGORY_PRIORITY:
+        return CATEGORY_PRIORITY.index(str(category))
+    if category in taxonomy.BY_NAME:
+        return len(CATEGORY_PRIORITY)
+    return len(CATEGORY_PRIORITY) + 1  # unclassified
+
+
+def _depth(entry: dict[str, Any]) -> int:
+    return int(urlsplit(entry["url"]).path.count("/"))
+
+
+def _annotate(entries: list[dict[str, Any]], terms: set[str]) -> None:
+    for e in entries:
+        e["scope_hits"] = len(urls.slug_tokens(e["canonical_url"]) & terms) if terms else 0
+        e["nav"] = bool(e.get("nav"))
+
+
+def _finish(kept: list[dict[str, Any]], total: int) -> tuple[list[dict[str, Any]], int]:
+    for rank, e in enumerate(kept, 1):
+        e["rank"] = rank
+    return kept, total - len(kept)
+
+
+def _cap_ranked(
+    entries: list[dict[str, Any]], cap: int, terms: Iterable[str] = ()
+) -> tuple[list[dict[str, Any]], int]:
+    """Keep at most ``cap`` entries, best first, and store ``rank`` / ``scope_hits`` / ``nav``.
+
+    With scope terms: sort by (company page last, homepage-navigation link, scope hits, category
+    priority, depth, URL). Without terms: navigation links first, then round-robin across
+    categories.
+    """
+    terms = set(terms)
+    cap = max(0, cap)
+    _annotate(entries, terms)
+    if terms:
+        ordered = sorted(
+            entries,
+            key=lambda e: (
+                e["category"] == "company",  # navigation never lifts a company page
+                not e["nav"], -e["scope_hits"], _priority(e["category"]), _depth(e), e["url"],
+            ),
+        )  # fmt: skip
+        return _finish(ordered[:cap], len(entries))
+    return _finish(*_round_robin(entries, cap))
+
+
+def _round_robin(entries: list[dict[str, Any]], cap: int) -> tuple[list[dict[str, Any]], int]:
+    """One entry per category in turn; within a category navigation links, then shallow URLs."""
     buckets: dict[str, list[dict[str, Any]]] = {}
-    for e in sorted(entries, key=lambda e: (urlsplit(e["url"]).path.count("/"), e["url"])):
-        buckets.setdefault(e["category"] or "~unclassified", []).append(e)
+    for e in sorted(entries, key=lambda e: (not e["nav"], _depth(e), e["url"])):
+        name = "~company" if e["category"] == "company" else e["category"] or "~unclassified"
+        buckets.setdefault(name, []).append(e)  # company pages are never researched: last
     order = sorted(buckets)
     kept: list[dict[str, Any]] = []
     while len(kept) < cap:
@@ -303,7 +359,7 @@ def _cap_round_robin(entries: list[dict[str, Any]], cap: int) -> tuple[list[dict
                 progressed = True
         if not progressed:
             break
-    return kept, len(entries) - len(kept)
+    return kept, len(entries)
 
 
 def discover(
@@ -313,6 +369,7 @@ def discover(
     max_pages_per_host: int,
     slug: str = "",
     fetcher: Fetcher | None = None,
+    scope_terms: Iterable[str] = (),
 ) -> DiscoverResult:
     parts = urlsplit(root_url.strip())
     scheme, host = parts.scheme or "https", (parts.hostname or "").lower()
@@ -326,6 +383,7 @@ def discover(
         f"{sub}.{domain}" for sub in discover_rules.PROBE_SUBDOMAINS if f"{sub}.{domain}" != host
     ]
     per_host: dict[str, dict[str, dict[str, Any]]] = {}
+    terms = set(scope_terms)
 
     def add(url: str, source: str) -> None:
         canonical = urls.canonicalize(url)
@@ -336,6 +394,8 @@ def discover(
             return
         bucket = per_host.setdefault(h, {})
         if canonical in bucket:
+            if source == "homepage":
+                bucket[canonical]["nav"] = True
             return
         bucket[canonical] = {
             "url": url,
@@ -344,6 +404,7 @@ def discover(
             "category": discover_rules.classify(canonical, domain, slug),
             "allowed": robots.allowed(canonical),
             "source": source,
+            "nav": source == "homepage",
         }
 
     for i, h in enumerate(hosts):
@@ -404,7 +465,7 @@ def discover(
 
     for h in sorted(per_host):
         entries = list(per_host[h].values())
-        kept, dropped = _cap_round_robin(entries, max_pages_per_host)
+        kept, dropped = _cap_ranked(entries, max_pages_per_host, terms)
         result.truncated += dropped
         result.entries.extend(sorted(kept, key=lambda e: e["canonical_url"]))
     result.disallowed = sum(1 for e in result.entries if not e["allowed"])

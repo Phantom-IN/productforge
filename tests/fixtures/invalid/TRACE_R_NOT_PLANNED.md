@@ -48,7 +48,7 @@ Builds billing for tasklet-alt V1 (§10).
 
 ## References
 
-- IMPLEMENTATION_PLAN §10, ADR-011
+- IMPLEMENTATION_PLAN §10, ADR-011, ADR-013
 
 ## Open questions / risks
 

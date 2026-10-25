@@ -22,7 +22,8 @@ Release notes: [`CHANGELOG.md`](CHANGELOG.md). Real-product runs: [`docs/dogfood
 1. **Stages are enforced, never skipped.** The lifecycle
    `UNINITIALIZED → DISCOVERY → PRODUCT_MODEL → SCOPE_DEFINED → ARCHITECTURE_LOCKED → PHASE_PLAN_READY`
    lives in `.productforge/state.json` and only `pf.py` changes it. One transition per command, only
-   after the exit gate passes **and** the user confirms.
+   after the exit gate passes **and** the user confirms — per transition, or once for the whole run
+   through a recorded autonomy grant (`pf.py autonomy grant`, `advance --auto`).
 2. **Evidence and inference stay separate.** Every claim-bearing record has
    `CONFIRMED | PROBABLE | INFERRED | UNKNOWN`, and the mechanical rules in
    `references/confidence-rules.md` decide which one is allowed (CONFIRMED needs a Tier ≤ 2 source, etc.). Never present an assumption as fact.
@@ -45,7 +46,8 @@ Release notes: [`CHANGELOG.md`](CHANGELOG.md). Real-product runs: [`docs/dogfood
 9. **Runtime is stdlib-only, deterministic and offline** — except `pflib/discover.py`, the only module
    that touches the network (robots-respecting, rate-limited), and `pf.py deps`, which calls the
    local `claude plugin list` for detection and runs `claude plugin …` installs **only** with
-   `--confirmed` (the skill passes it only after the user agreed). Python **3.11+**, always invoked as
+   `--confirmed` (the skill passes it only after the user agreed), and `pflib/auto.py` (`pf.py auto`),
+   which starts only headless `claude -p` sessions, only after `auto start --confirmed`. Python **3.11+**, always invoked as
    `python3.11` (skill, hooks, Makefile, docs); `pf.py` exits with a clear error on older interpreters. Dev tools (pytest/ruff/mypy) never imported at runtime.
 10. **Guardrails are absolute.** Public sources only; robots.txt always honoured; no copying of
     proprietary code, brand assets or more than `quotes.max_words` words verbatim; independent
@@ -187,6 +189,8 @@ claude --plugin-dir .                 # then: /productforge status  (or /product
 - Advancing two stages in one command, or advancing without showing the gate report.
 - Fixtures or examples containing real third-party copy.
 - Network calls anywhere except `discover.py`; non-stdlib imports in runtime code.
+- Starting a process outside `deps`, `capabilities`, `observe` and `auto` (a test scans for it), or
+  an `auto` session without `--confirmed`.
 - Re-implementing something a provider in `capabilities.json` already does, or adding a provider
   without a fallback.
 - Running `claude plugin install` without the user's explicit consent, or treating a provider's

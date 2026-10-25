@@ -132,3 +132,12 @@ Small teams (S-007): owners and admins who run the workspace, members who do the
 | U-010 | Can members invite people or change roles, or only owners and admins? | Only owners and admins invite members and change roles | Low — easy to widen |
 | U-011 | May any member define labels and connect integrations, or only admins? | Only owners and admins manage labels and integrations | Low — easy to widen |
 <!-- pf:generated:end -->
+
+## Headline features cut from V1
+
+<!-- pf:generated:start headline-cuts -->
+| Feature | Computed | Final decision | Override reason |
+|---|---|---|---|
+| F-019 Global search | DEFER | DEFER | Search is marketed, but V1 filters by title; full-text search is a later phase |
+| F-031 Plans and pricing | DEFER | DEFER | Plans appear on the pricing page, but V1 has a single free plan |
+<!-- pf:generated:end -->

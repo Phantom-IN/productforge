@@ -68,3 +68,6 @@ phases can run in parallel.
   enforced by); plus stack, layout, commands, conventions, security, extension recipes,
   anti-patterns, testing expectations and the "Executing a phase" protocol.
 - `DEVELOPMENT.md`, `README.md`, `STARTUP_PROMPT.md` — the template headings, filled for the stack.
+- `ORCHESTRATOR_PROMPT.md` — the parallel build prompt: dependency-ready scheduler, one worktree and
+  port slot per phase, a shared Compose project, subagent brief, serial rebase/CI/merge, migration
+  renumbering and a resumable `plans/ORCHESTRATION_LOG.md`.

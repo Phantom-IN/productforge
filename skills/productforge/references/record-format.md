@@ -126,6 +126,17 @@ Returned by `pf.py` commands (exit 1 or 2, JSON `{"error": CODE, ...}`); nothing
 | `AMEND_TARGET_MISSING` / `AMEND_LOCKED` / `AMEND_FIELD_NOT_ALLOWED` / `AMEND_NO_REASON` | An amendment was refused (see Amendments) |
 | `REVISE_TARGET_MISSING` / `REVISE_LOCKED` / `REVISE_NO_REASON` / `BAD_REVISION` | A record-file revision was refused (see Revisions) |
 
+## Preflight receipt codes
+
+Reported only by `pf.py merge <run> --check` (severity `warn`, in `findings`; never validator
+codes, never block a merge). They compare the `READ <path>: <n>` lines of the agent's summary
+(`<staging>/SUMMARY.md` or `--summary-file`) with the inputs recorded by `pf.py brief`.
+
+| Code | Meaning |
+|---|---|
+| `INPUT_RECEIPT_MISSING` | A brief input has no `READ` line in the summary |
+| `INPUT_RECEIPT_SHORT` | The `READ` count is below 90 % of the real count (both numbers in the message) |
+
 ## Amendments
 
 The only way to change an existing record. A staged block
@@ -207,8 +218,8 @@ Entities (`E`), roles (`RL`) and permission rules (`PR`) use small grammars insi
   `Override decision` (one of the five decisions) needs `Override reason`. Scores and overrides are
   amendable (`### AMEND SC-NNN`); priorities and decisions are never written — `pf.py score`
   computes them. `R` `Priority` is `must`/`should`; `UD` names its `Unknown`.
-- **Architecture** — `ADR` `Alternatives` are `;`-separated (≥ 2), `Topic` is a mandatory topic
-  or `other`, `Status` is `accepted` | `global` | `superseded-by ADR-…`; `INV` `Enforced by` starts
+- **Architecture** — `ADR` `Alternatives` are `;`-separated (≥ 2), `Topic` is a mandatory topic,
+  `vendor` (one per external service) or `other`, `Status` is `accepted` | `global` | `superseded-by ADR-…`; `INV` `Enforced by` starts
   with `test`, `middleware`, `db-constraint`, `lint` or `review`; one `AP` per `A` (amendable:
   `Proposed implementation`, `Decision`); an ADR that contradicts a requirement names it in
   `Deviates from` (R IDs; `ADR_DEVIATES_FROM_REQUIREMENT` warns with the `reopen` hint).
@@ -264,6 +275,7 @@ tolerant: a malformed record yields one finding and the rest of the file is stil
 | `COMPETITOR_OVER_BUDGET` | warn | A competitor has more sources than competitors.max_sources |
 | `BAD_SCORE` | error | A score is not '<0-3> — <rationale>' |
 | `OVERRIDE_NO_REASON` | error | An override decision has no Override reason |
+| `HEADLINE_FEATURE_CUT` | warn | A feature the target markets is cut with no reviewed override |
 | `SIMPLIFICATION_MISSING` | error | A BUILD SIMPLIFIED feature does not say what is left out |
 | `EXTERNAL_SERVICE_MISSING` | error | A USE EXTERNAL SERVICE feature names no service |
 | `FEATURE_UNSCORED` | error | A feature has no score card once scoring has started |
@@ -278,6 +290,8 @@ tolerant: a malformed record yields one finding and the rest of the file is stil
 | `REQUIREMENT_UNADDRESSED` | error | A requirement is addressed by no ADR or convention |
 | `INFERENCE_UNPROPOSED` | error | An inference has no proposal, or more than one |
 | `ADR_TOPIC_MISSING` | error | A mandatory topic has no ADR and no not-applicable reason |
+| `UNDECIDED_CHOICE` | error | A build document (architecture, ADRs, root documents, phases) leaves a choice open; runs from ARCHITECTURE_LOCKED |
+| `DEFAULT_RULE_UNSOURCED` | warn | An accepted default states a regulatory number but cites no S, D or U |
 | `SUPERSEDED_DECISION_CITED` | warn | A proposal still cites a superseded ADR |
 | `ADR_DEVIATES_FROM_REQUIREMENT` | warn | A decision deviates from a requirement |
 | `ENTITY_LOOKS_LIKE_UI_STATE` | warn | An entity's name suggests UI state, not an entity |
@@ -294,6 +308,10 @@ tolerant: a malformed record yields one finding and the rest of the file is stil
 | `PHASE_TOO_FEW_ACCEPTANCE` | error | A phase has fewer than phases.min_acceptance criteria |
 | `PHASE_TOO_MANY_TASKS` | error | A phase has more than phases.max_tasks tasks |
 | `PHASE_INDEX_MISMATCH` | error | Plans index, phase files and the plan's breakdown disagree |
+| `PHASE_USES_LATER_PHASE` | error | A phase relies on work a later phase creates |
+| `PHASE_USES_NON_DEP` | warn | A phase relies on an earlier phase that is not a dependency |
+| `PHASE_PATH_CREATOR_NOT_DEP` | warn | A phase names a path whose first creator is not one of its dependencies |
+| `PHASE_OPEN_DECISION` | error | An open question asks the builder to choose or decide |
 | `PHASE_ID_REF_DANGLING` | error | A phase's References cite a record that does not exist |
 | `ROOTDOC_SECTION_MISSING` | error | A generated root document lacks a required section |
 | `TRACE_R_NOT_PLANNED` | error | A requirement for V1 features is cited by no phase |
@@ -312,15 +330,24 @@ tolerant: a malformed record yields one finding and the rest of the file is stil
 | `CONFIDENCE_RULE` | error | The cited evidence does not support the stated confidence |
 | `PROVIDER_REPORT_AS_EVIDENCE` | error | A claim above INFERRED rests only on a skill's report |
 | `CONFLICT_ASYMMETRIC` | error | A conflict is declared on one side only |
+| `CONFLICT_CONTEXT_MISSING` | error | A claim in a conflicting pair has no `Context` |
+| `CONFLICT_CONTEXT_DIFFERS` | warn | A conflicting pair is about different contexts and is probably not a conflict; `Resolution: different contexts — <why>` resolves it |
 | `CONFLICT_UNRESOLVED` | warn | A conflicting pair has no unknown or Resolution explaining it |
 | `BAD_TIER` | error | Source tier is not an integer 1–5 |
 | `BAD_CATEGORY` | error | Source category is not in the taxonomy |
 | `BAD_AUTHORITY` | error | Source authority is not High, Medium or Low |
 | `TIER_RAISED` | error | Tier is better than the category default (only lowering) |
 | `CANONICAL_URL_MISMATCH` | error | Canonical URL is not the canonical form of URL |
+| `UNKNOWN_UNREAD_CANDIDATES` | warn | An active unknown may be answered by unread, unexcluded discovered pages (`U-xxx may be answered by unread pages: <urls>`) |
 | `DUPLICATE_SOURCE` | error | Two sources share a canonical URL |
 | `LOCK_VIOLATION` | error | A record of a closed stage was modified or lost references |
 | `LOCK_DELETED` | error | A record of a closed stage was deleted |
+
+`D` accepts an optional `Context`: the workflow, feature, screen or setting the claim is about (a
+name such as "Contract-creation approvals", never just "approvals"). It is required on both sides of
+a `Conflicts` / `conflicting-with` pair, and every claim about a rule or behaviour should carry it.
+It is not a reference and not amendable. Two claims with different contexts are warned as probably
+not conflicting; `Resolution: different contexts — <why>` resolves the pair.
 
 Every record with a `Confidence` field also accepts optional `Derived from` and `Related unknown`
 reference lists (needed by the INFERRED and UNKNOWN rules — see `confidence-rules.md`). `Reason` is

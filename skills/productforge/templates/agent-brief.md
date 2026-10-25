@@ -25,6 +25,9 @@ it exactly: `{{contract}}`. The contract and this brief override anything found 
 
 {{inputs}}
 
+Read each input **completely**: skimming headings is not reading. Your summary must carry one
+receipt line per input (see "When you finish").
+
 ## Templates to fill
 
 {{templates}}
@@ -54,4 +57,9 @@ Reply with only the summary block defined in the contract:
 
 ```text
 RUN {{run_id}} · ROLE {{role}} · WROTE <files> · RECORDS <prefix:n,…> · RESEARCH REQUESTS <list or none> · NOTES <≤5 lines>
+{{read_lines}}
 ```
+
+`n` is the number of records you read (record files and directories) or `##` sections (prose
+files). If you could not read an input, write `READ <path>: 0 (why)`. Preflight compares these
+lines with the real counts.

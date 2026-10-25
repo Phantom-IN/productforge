@@ -44,6 +44,7 @@ def plan_set(ws: Path, index: WorkspaceIndex | None = None) -> phaselint.PlanSet
         max_tasks=int(config.resolve("phases.max_tasks", ws)),
         min_acceptance=int(config.resolve("phases.min_acceptance", ws)),
         extra_roots=catalog.WORKSPACE_ROOTS,
+        undecided_phrases=tuple(config.resolve("quality.undecided_phrases", ws)),
     )
 
 

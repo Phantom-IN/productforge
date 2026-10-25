@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pflib import catalog, plans
+from pflib import catalog, plans, validators
 from pflib.gates import ConditionResult, GateCondition, register
 
 STAGE = "PHASE_PLAN_READY"
@@ -17,7 +17,9 @@ def _root_docs(ws: Path) -> ConditionResult:
     if issues:
         return ConditionResult(False, "; ".join(f"{i.rel}: {i.message}" for i in issues[:4]))
     return ConditionResult(
-        True, "README, IMPLEMENTATION_PLAN, CLAUDE, DEVELOPMENT, STARTUP_PROMPT complete"
+        True,
+        "README, IMPLEMENTATION_PLAN, CLAUDE, DEVELOPMENT, STARTUP_PROMPT, "
+        "ORCHESTRATOR_PROMPT complete",
     )
 
 
@@ -25,12 +27,20 @@ def _phase_lint(ws: Path) -> ConditionResult:
     res = plans.lint(ws)
     if not res.phases:
         return ConditionResult(False, "no phase files yet (/productforge finalize)")
-    if res.issues:
-        codes = sorted({i.code for i in res.issues})
+    # Heuristic cross-phase warnings are advisory; only error-level findings block the gate.
+    errors = [
+        i
+        for i in res.issues
+        if validators.CODES.get(i.code, (validators.ERROR,))[0] != validators.WARN
+    ]
+    warnings = len(res.issues) - len(errors)
+    if errors:
+        codes = sorted({i.code for i in errors})
         return ConditionResult(
-            False, f"{len(res.issues)} lint finding(s): {', '.join(codes)} (pf.py lint-phases)"
+            False, f"{len(errors)} lint error(s): {', '.join(codes)} (pf.py lint-phases)"
         )
-    return ConditionResult(True, f"{len(res.phases)} phases, pf.py lint-phases clean")
+    tail = f"; {warnings} warning(s) to review" if warnings else ""
+    return ConditionResult(True, f"{len(res.phases)} phases, no lint errors{tail}")
 
 
 def _trace_clean(ws: Path) -> ConditionResult:
@@ -76,4 +86,4 @@ register(
     STAGE,
     GateCondition("G-PP-ROOT-DOCS", "root documents exist with required sections", _root_docs),
 )
-register(STAGE, GateCondition("G-PP-PHASE-LINT", "pf.py lint-phases is clean", _phase_lint))
+register(STAGE, GateCondition("G-PP-PHASE-LINT", "pf.py lint-phases reports no error", _phase_lint))

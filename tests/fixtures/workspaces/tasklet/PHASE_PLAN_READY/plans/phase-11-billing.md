@@ -18,7 +18,7 @@ Builds billing for tasklet-alt V1 (§10).
 
 ## Tasks
 
-1. `apps/api/src/billing/`: checkout session and subscription webhooks.
+1. `apps/api/src/billing/`: Payvault checkout session and subscription webhooks verified with `PAYVAULT_WEBHOOK_SECRET`.
 2. `apps/web/app/settings/billing/`: plan and billing page.
 
 ## Data & schema changes
@@ -42,7 +42,7 @@ Builds billing for tasklet-alt V1 (§10).
 
 ## References
 
-- IMPLEMENTATION_PLAN §10, R-011, ADR-011
+- IMPLEMENTATION_PLAN §10, R-011, ADR-011, ADR-013
 
 ## Open questions / risks
 

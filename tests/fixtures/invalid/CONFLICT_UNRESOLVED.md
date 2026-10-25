@@ -10,6 +10,7 @@ expect: CONFLICT_UNRESOLVED
 - Product impact:
 - Engineering impact:
 - Status: conflicting-with D-101
+- Context: Export availability
 
 ### D-101 — Exports are unavailable on any plan
 - Claim: Something new.
@@ -18,3 +19,4 @@ expect: CONFLICT_UNRESOLVED
 - Product impact:
 - Engineering impact:
 - Status: conflicting-with D-100
+- Context: Export availability

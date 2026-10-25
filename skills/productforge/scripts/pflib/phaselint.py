@@ -54,6 +54,25 @@ ROOT_FILES = ("Makefile", "Dockerfile", "LICENSE", "Procfile", "Justfile")
 EXT_RE = re.compile(r"\.[A-Za-z][A-Za-z0-9]{0,5}$")
 ID_LIST_RE = re.compile(r"^[A-Z]{1,3}(?:/[A-Z]{1,3})+$")  # "R/A", "W/D/F" — not paths
 FENCE_RE = re.compile(r"^(```|~~~)")
+# "from phase 21", "created in phase 21", "phase 21's …": a phase relying on another one's work.
+# "phase 21 adds", "a later phase" and "deferred to phase 21" do not match.
+USES_PHASE_RE = re.compile(
+    r"\b(?:(?:from|created in|built in|added by) phase (?P<a>\d{2})\b(?!\s+onwards?\b)"
+    r"|phase (?P<b>\d{2})['’]s\b)",
+    re.I,
+)
+# A phase reference counts as a dependency use only when a use verb precedes it in the same clause
+# ("uses `x` from phase 21", "calls phase 21's helper"); a note about what a later phase will do
+# ("phase 22's worker job calls them", "the CI job is phase 27's") is not one.
+USE_VERB_RE = re.compile(
+    r"\b(?:uses?|using|reuses?|reusing|calls?|calling|imports?|importing|reads?|reading|"
+    r"requires?|requiring|needs?|extends?|extending|relies|rely|relying|depends|depend|"
+    r"consumes?|consuming|takes?|via|through)\b",
+    re.I,
+)
+NEGATION_BEFORE_RE = re.compile(r"(?:\bnot|\bnever|n['’]t)\s+(?:\w+\s+)?$", re.I)
+CLAUSE_END_RE = re.compile(r"[.;:](?=\s|$)")
+DECISION_WORDS = ("ask the user", "choose", "decide", "pick")
 
 
 @dataclass
@@ -89,6 +108,7 @@ class PlanSet:
     max_tasks: int = 15
     min_acceptance: int = 3
     extra_roots: tuple[str, ...] = ()  # directories allowed besides the tree (e.g. workspace dirs)
+    undecided_phrases: tuple[str, ...] = ()  # quality.undecided_phrases (PHASE_OPEN_DECISION)
 
 
 @dataclass
@@ -372,8 +392,124 @@ def lint(ps: PlanSet) -> Result:
                     )
                 )
     res.issues.extend(cycles)
+    res.issues.extend(_contracts(ps, res.phases))
     res.issues.extend(_index(ps, res.phases))
     return res
+
+
+# ------------------------------------------------------------------- cross-phase contracts
+
+
+def closure(phases: list[Phase]) -> dict[str, set[str]]:
+    """Each phase's transitive dependencies (cycle-safe)."""
+    graph = {p.number: p.depends for p in phases}
+    out: dict[str, set[str]] = {}
+    for n in graph:
+        seen: set[str] = set()
+        stack = list(graph[n])
+        while stack:
+            d = stack.pop()
+            if d not in seen:
+                seen.add(d)
+                stack.extend(graph.get(d, []))
+        out[n] = seen - {n}
+    return out
+
+
+def _decision_pattern(phrases: tuple[str, ...]) -> re.Pattern[str]:
+    parts = [re.escape(x.strip()) for x in (*phrases, *DECISION_WORDS) if x.strip()]
+    return re.compile(r"(?<!\w)(?:" + "|".join(parts) + r")(?!\w)", re.I)
+
+
+def _bullets(body: str) -> list[str]:
+    """List items of a section, continuation lines joined."""
+    out: list[str] = []
+    for line in body.splitlines():
+        if re.match(r"^\s*(?:[-*]|\d+\.)\s", line):
+            out.append(line.strip())
+        elif out and line.strip() and line.startswith((" ", "\t")):
+            out[-1] += " " + line.strip()
+    return out
+
+
+def _prose(body: str) -> list[str]:
+    """Lines outside fenced blocks and outside a ``**Out / deferred:**`` list."""
+    out: list[str] = []
+    fenced = skipping = False
+    for line in body.splitlines():
+        if FENCE_RE.match(line):
+            fenced = not fenced
+            continue
+        if fenced:
+            continue
+        if re.match(r"^\*\*Out\b", line):
+            skipping = True
+        elif re.match(r"^\*\*In\b", line):
+            skipping = False
+        if not skipping:
+            out.append(line)
+    return out
+
+
+def _uses_in_clause(line: str, start: int, end: int) -> bool:
+    """A use verb in ``line[start:end]`` that is not negated ("do not use", "never uses")."""
+    return any(
+        not NEGATION_BEFORE_RE.search(line, start, v.start())
+        for v in USE_VERB_RE.finditer(line, start, end)
+    )
+
+
+def _contracts(ps: PlanSet, phases: list[Phase]) -> list[Issue]:
+    """Rules that compare phases with one another, and open questions that ask for a choice."""
+    out: list[Issue] = []
+    numbers = {p.number for p in phases}
+    deps = closure(phases)
+    creator: dict[str, str] = {}
+    decision = _decision_pattern(ps.undecided_phrases)
+    for p in phases:  # table order
+        for section in ("Context", "Tasks"):
+            reported: set[str] = set()
+            for line in _prose(p.sections.get(section, "")):
+                for m in USES_PHASE_RE.finditer(line):
+                    ends = [e.end() for e in CLAUSE_END_RE.finditer(line, 0, m.start())]
+                    if not _uses_in_clause(line, ends[-1] if ends else 0, m.start()):
+                        continue  # describes a later phase; does not rely on it
+                    n = m.group("a") or m.group("b")
+                    if n == p.number or n not in numbers or n in deps[p.number] or n in reported:
+                        continue
+                    reported.add(n)
+                    if n > p.number:
+                        msg = (
+                            f"## {section} relies on phase {n}, which comes later: {m.group(0)!r}"
+                            " (move the dependency, or say what the later phase adds)"
+                        )
+                        out.append(Issue("PHASE_USES_LATER_PHASE", p.rel, msg))
+                    else:
+                        msg = (
+                            f"## {section} relies on phase {n}, which is not a dependency: "
+                            f"{m.group(0)!r} (add it to **Depends on:**)"
+                        )
+                        out.append(Issue("PHASE_USES_NON_DEP", p.rel, msg))
+        for line in _numbered(p.sections.get("Tasks", "")):
+            for path in dict.fromkeys(path_tokens(line)):
+                key = repotree.strip_dot(path)
+                if "/" not in key.rstrip("/") or not checkable(key):
+                    continue  # root files and patterns are not created by one phase
+                if key.rstrip("/").rsplit("/", 1)[-1] in ROOT_FILES:
+                    continue
+                first = creator.setdefault(key, p.number)
+                if first != p.number and first not in deps[p.number]:
+                    msg = (
+                        f"task names {key}, first created by phase {first}, "
+                        "which is not a dependency"
+                    )
+                    out.append(Issue("PHASE_PATH_CREATOR_NOT_DEP", p.rel, msg))
+        for bullet in _bullets(p.sections.get("Open questions / risks", "")):
+            hit = decision.search(bullet)
+            if hit:
+                msg = f"open question asks for a choice ({hit.group(0)!r}): {bullet[:80]!r}"
+                out.append(Issue("PHASE_OPEN_DECISION", p.rel, msg))
+    return out
 
 
 def _cycles(phases: list[Phase]) -> tuple[list[Issue], set[tuple[str, str]]]:
@@ -480,7 +616,7 @@ PLAN_SECTIONS = (
     "Testing strategy",
     "Glossary",
 )
-_README, _PLAN, _CLAUDE, _DEVELOPMENT, _STARTUP = catalog.ROOT_DOCS
+_README, _PLAN, _CLAUDE, _DEVELOPMENT, _STARTUP, _ORCHESTRATOR = catalog.ROOT_DOCS
 ROOT_HEADINGS: dict[str, tuple[str, ...]] = {
     _README: ("What this is", "Status", "Documents", "How this was produced"),
     _CLAUDE: (
@@ -498,6 +634,8 @@ ROOT_HEADINGS: dict[str, tuple[str, ...]] = {
     _DEVELOPMENT: (
         "Prerequisites",
         "Setup",
+        "Chosen libraries and tools",
+        "Accounts and keys",
         "Running locally",
         "Testing",
         "Linting",
@@ -506,7 +644,17 @@ ROOT_HEADINGS: dict[str, tuple[str, ...]] = {
         "Troubleshooting",
     ),
     _STARTUP: ("Step 0 — Read", "Step 1 — Wait", "Execution protocol"),
+    _ORCHESTRATOR: (
+        "Ground rules",
+        "Setup",
+        "Scheduling",
+        "Phase subagents",
+        "Merging",
+        "Token discipline",
+        "Stop conditions",
+    ),
 }
+NUMBERED_HEADING_RE = re.compile(r"^\d+\.\s+")
 
 
 def lint_root_docs(texts: dict[str, str | None], invariant_count: int) -> list[Issue]:
@@ -537,7 +685,7 @@ def lint_root_docs(texts: dict[str, str | None], invariant_count: int) -> list[I
         if text is None:
             out.append(Issue("ROOTDOC_SECTION_MISSING", rel, "file is missing"))
             continue
-        order, bodies = level2(text)
+        bodies = {NUMBERED_HEADING_RE.sub("", k): v for k, v in level2(text)[1].items()}
         missing = [h for h in needed if h not in bodies]
         if missing:
             out.append(Issue("ROOTDOC_SECTION_MISSING", rel, f"missing ## {', ## '.join(missing)}"))

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
-from pflib import catalog, domain, records, render, score
+from pflib import catalog, config, domain, records, render, score, waivers
 from pflib.gates import ConditionResult, GateCondition, register
 from pflib.index import WorkspaceIndex
 
@@ -119,6 +119,35 @@ def _conflicts_resolved(ws: Path) -> ConditionResult:
     return ConditionResult(True, "every conflict is resolved or explained")
 
 
+def _competitor_signal(ws: Path) -> ConditionResult:
+    need = int(config.resolve("competitors.min_researched", ws))
+    n = len(domain.active(WorkspaceIndex(ws), "C"))
+    if n >= need:
+        return ConditionResult(True, f"{n} competitors researched")
+    waiver = waivers.get(ws, waivers.COMPETITORS)
+    if waiver:
+        return ConditionResult(True, f"waived: {waiver['reason']}")
+    return ConditionResult(
+        False,
+        f"{n} of {need} competitors researched (/productforge competitors, or "
+        'pf.py waive competitors --reason "…")',
+    )
+
+
+def _headline_reviewed(ws: Path) -> ConditionResult:
+    from pflib import validators
+
+    cut = sorted(
+        {f.record_id or "?" for f in validators.run(ws) if f.code == "HEADLINE_FEATURE_CUT"}
+    )
+    if cut:
+        return ConditionResult(
+            False,
+            f"headline features cut without a reviewed override (score cards): {_sample(cut)}",
+        )
+    return ConditionResult(True, "every cut headline feature has a reviewed override")
+
+
 CONDITIONS: tuple[tuple[str, str, Callable[[Path], ConditionResult]], ...] = (
     ("G-SC-ALL-SCORED", "every feature has a score card", _all_scored),
     ("G-SC-DECISIONS-COMPUTED", "decisions match a fresh pf.py score run", _decisions_computed),
@@ -129,6 +158,10 @@ CONDITIONS: tuple[tuple[str, str, Callable[[Path], ConditionResult]], ...] = (
     ("G-SC-UNKNOWNS-DEFAULTED", "every unknown has a V1 default", _unknowns_defaulted),
     ("G-SC-CONFLICTS-RESOLVED", "conflicting claims are resolved or explained",
      _conflicts_resolved),
+    ("G-SC-COMPETITOR-SIGNAL", "enough competitors researched, or a recorded waiver",
+     _competitor_signal),
+    ("G-SC-HEADLINE-REVIEWED", "no headline feature is cut without an override",
+     _headline_reviewed),
 )  # fmt: skip
 
 for _cid, _desc, _fn in CONDITIONS:

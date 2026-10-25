@@ -78,3 +78,23 @@ def duplicate_sources(ctx: Context) -> list[Finding]:
         else:
             seen[key] = loc.record.id
     return out
+
+
+@workspace_check
+def unknown_unread_candidates(ctx: Context) -> list[Finding]:
+    from pflib import research
+
+    out = []
+    for uid, found in research.unknown_audit(ctx.ws).items():
+        loc = ctx.get(uid)
+        if loc is None:
+            continue
+        out.append(
+            finding(
+                "UNKNOWN_UNREAD_CANDIDATES",
+                loc.rel,
+                uid,
+                f"{uid} may be answered by unread pages: {', '.join(found)}",
+            )
+        )
+    return out

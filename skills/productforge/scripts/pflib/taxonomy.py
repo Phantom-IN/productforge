@@ -38,6 +38,9 @@ CATEGORIES: tuple[Category, ...] = (
     Category("official-talk", 2, True, "Talks and podcasts given by the target's staff"),
     Category("official-tutorial", 2, True, "Official tutorials and guides outside the docs"),
     Category(
+        "company", 2, True, "Official company pages (about, careers, legal); never researched"
+    ),
+    Category(
         "observed-session",
         1,
         True,

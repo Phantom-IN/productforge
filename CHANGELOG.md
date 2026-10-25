@@ -3,6 +3,124 @@
 All notable changes to ProductForge are documented here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow [Semantic Versioning](https://semver.org/).
 
+## [3.0.0] — 2026-10-25
+
+Deeper research, safer scoping, build-ready architecture and plans, and an autonomous mode.
+
+### Added — research depth
+- DISCOVERY depth: gates `G-DISC-SCOPE-DEPTH` (share of in-scope official pages read or excluded,
+  `research.min_scope_depth` 0.6), `G-DISC-NAV-PAGES` and `G-DISC-UNKNOWNS-AUDITED`; warning
+  `UNKNOWN_UNREAD_CANDIDATES`; `pf.py exclude <url>… --reason` / `--list`
+  (`.productforge/exclusions.json`); `research-plan` reports `depth`, `depth_needed`,
+  `budget_needed`, `unknown_audit` and `nav_unread`; knob `auto.max_sources_ceiling` (400).
+- `/productforge research` gains a Depth pass and an Unknown audit pass
+ .
+- Claim `Context` field on `D`; `CONFLICT_CONTEXT_MISSING` (error) and `CONFLICT_CONTEXT_DIFFERS`
+  (warn) for conflicting pairs; `Resolution: different contexts — …` resolves a pair; agents never
+  fold claims of different contexts into one rule.
+- Agent input receipts: summaries carry `READ <path>: <n>` lines; `merge --check [--summary-file]`
+  warns `INPUT_RECEIPT_MISSING` / `INPUT_RECEIPT_SHORT`; briefs report `inputs`, `input_kb` and an
+  `INPUT_LARGE` partition warning (`agents.max_input_kb`).
+
+### Added — scope safeguards
+- `G-SC-COMPETITOR-SIGNAL` (at least `competitors.min_researched` competitors, or
+  `pf.py waive competitors --reason`); `competitors` is the default before `scope`.
+- Headline features (`scope.headline_categories`) flagged by `HEADLINE_FEATURE_CUT` and gated by
+  `G-SC-HEADLINE-REVIEWED`, a `Headline` column in the feature and parity matrices, and a "Headline
+  features cut from V1" view in `PRODUCT_SPEC.md`.
+
+### Added — build readiness
+- `spec/ARCHITECTURE.md` gains `## External services`, `## Toolchain` and `## Environments`
+  (with `### Local services`), each behind a gate: `G-AR-EXTERNAL-SERVICES`, `G-AR-TOOLCHAIN`,
+  `G-AR-ENV-CONTRACT`. ADR `Topic` gains `vendor`.
+- `UNDECIDED_CHOICE` (error) flags "TBD", "to be decided", "library choice" and similar phrases in
+  the architecture, ADRs, root documents and phase files from ARCHITECTURE_LOCKED on;
+  `DEFAULT_RULE_UNSOURCED` (warn) flags a regulatory number in an accepted default without a source.
+- Knobs `architecture.toolchain_concerns`, `quality.undecided_phrases` and
+  `quality.regulatory_terms`.
+- The systems architect verifies versions and images on the day and writes a `vendor` ADR per
+  external service; the phase planner names concrete libraries, images and env vars.
+- `lint-phases` checks contracts across phases: `PHASE_USES_LATER_PHASE`, `PHASE_USES_NON_DEP`,
+  `PHASE_PATH_CREATOR_NOT_DEP` and `PHASE_OPEN_DECISION`.
+- Finalize runs a consistency review (`references/plan-review.md`, up to `finalize.review_rounds`
+  rounds) and writes `ORCHESTRATOR_PROMPT.md`, a prompt that builds all phases in parallel
+  worktrees (the sixth root document). DEVELOPMENT.md gains `## Chosen libraries and tools` and
+  `## Accounts and keys`.
+
+### Added — autonomous mode
+- `pf.py autonomy show|grant|revoke` records a hashed, revocable, per-workspace consent;
+  `advance --auto` and `complete --auto` replace the per-transition confirmation (the gate still
+  decides; logged `auto-advance` / `auto-complete`); `pf.py decide` logs every choice made on the
+  user's behalf to `.productforge/decisions.jsonl`; `status` shows `autonomy` and `decisions`.
+- `pf.py auto start|status|stop` and `/productforge auto <url> --scope "…"`: the driver runs each
+  stage command as a fresh headless `claude -p` session, advances on passing gates, retries after
+  usage limits and stops on a stall, the retry limit or the session limit; log in
+  `.productforge/auto.log`. Knobs `auto.main_model`, `auto.subagent_model`, `auto.permission_args`,
+  `auto.max_sessions`, `auto.max_stalls`, `auto.retry_wait_seconds`, `auto.max_retries`,
+  `auto.parallel_runs`.
+- SKILL.md "Autonomous mode" section and `references/commands-auto.md`.
+- Eval `evals/depth-gate-and-auto-dry-run`; `docs/dogfood-v3.md` runbook.
+
+### Changed
+- Discovery ranks the full URL index before capping: homepage-navigation links, then scope
+  relevance, then category priority, then depth. Every kept entry stores `rank`, `scope_hits` and
+  `nav`; `research.max_pages_per_domain` is now 600 ("entries kept per host after ranking").
+- `pf.py discover` passes `research.scope_terms(ws)`; `research-plan --json` gains per-partition
+  `next_candidates` (up to 20 URLs by rank) plus `scope_terms` and `truncated`.
+- Discovery rules classify `/solutions/`, `/products/`, `/modules/`, `/platform/`, `enterprise-*`
+  and `/corporate/*` as `features`; about, careers, team, privacy, terms and legal pages are a new
+  official category `company` that is never researched and not part of the coverage gate.
+- Stage procedures: `scope` refuses to proceed past a failing `G-SC-COMPETITOR-SIGNAL` unless the
+  user waives; the architect fills External services, Toolchain and Environments; finalize
+  offers `STARTUP_PROMPT.md` and `ORCHESTRATOR_PROMPT.md`.
+
+### Fixed (dogfood)
+- `pf.py config set` decodes a JSON-quoted value for a string knob (`'"sonnet"'` → `sonnet`)
+  instead of storing the quotes.
+- `competitors` is also allowed while SCOPE_DEFINED is open (new C, FS and S records are appends to a
+  closed stage); refused from ARCHITECTURE_LOCKED with the `reopen PRODUCT_MODEL` hint.
+- `status.next_command` suggests `competitors` before `scope` (PRODUCT_MODEL) and while
+  `G-SC-COMPETITOR-SIGNAL` fails (SCOPE_DEFINED), unless waived, so the auto driver no longer skips it.
+- `competitor-candidates` drops comparison, review and directory sites (knob
+  `competitors.aggregator_names`) and one-word generic names ("URL", "API"), and reports
+  `comparison_sources`; a competitor discovery pass fills in names when fewer than
+  `competitors.min_researched` remain (autonomous: top `competitors.max` with a citation, logged).
+- `workflow-candidates` always includes one candidate per domain with at least 3 active features and
+  no workflow, largest domain first, before any extras; extras go round-robin by feature count, not
+  alphabetically. A `model.max_workflows` below that number no longer drops core domains: the
+  payload reports `cap_below_required` and `effective_cap` (and `required_domains`).
+- New `pf.py config get|list|set` (`set <key> <value> --reason "…"`, validated against the knob
+  types, logged as a `config-set` history event); the skill changes caps only through it.
+- Confidence rules (`CONFIDENCE_RULE`, `BAD_CONFIDENCE`, …) skip superseded and rejected records.
+- Autonomous mode never stops to ask: it applies the Recommended option (else the one keeping the
+  most scope and evidence) through `pf.py`, logs it with `decide`, and never ends a session with a
+  question.
+- The auto driver raises an unsatisfiable `model.max_workflows` to `effective_cap` before a
+  PRODUCT_MODEL session (bounded by the new `auto.max_workflows_ceiling`, 40), logging a
+  `config-raise` event and a `decide` entry.
+- `merge <run>` refuses with `MERGE_BEFORE_REPAIR` when the run's latest preflight had errors and
+  fewer than `agents.max_repair_loops` repair briefs were rendered; `--accept-findings` overrides.
+  Preflight results and the repair count are kept in the run's `.run.json`.
+
+### Fixed (review)
+- `auto start --confirmed` needs `--text-sha256` of the consent text whenever it grants; the text
+  now names the effective `auto.permission_args` and `claude` binary and the hash covers it
+  (`autonomy.text(ws)`); `autonomy revoke` without a grant changes nothing.
+- The `company` category matches only a first path segment (`/legal/security` is `security`);
+  navigation never lifts a company page; a negative page cap is 0.
+- `research-plan` counts each canonical URL once; `www.host` and `host` are one page for depth,
+  reads, exclusions and navigation (`urls.page_key`).
+- A corrupt `exclusions.json` is `BAD_EXCLUSIONS_FILE` (a gate `error`), not a traceback; the
+  decisions and auto logs skip unparsable lines.
+- Exclusions count toward depth only up to `research.max_excluded_share` (0.25); `pf.py waive`
+  needs `--confirmed`; `status` shows the exclusions count.
+- Auto loop: retries reset after a success, waits are sliced (15 s) and stop on `auto stop`, the
+  same failing rc three times is fatal, any `OSError` from the runner is handled, an unexpected
+  exception logs a `stop` event, and `--stack` rejects quotes, backticks and newlines.
+- `UNDECIDED_CHOICE` matches per paragraph (phrases split across lines), skipping fenced code and
+  ADR `Alternatives`; negated uses ("do not use ... from phase NN") are not phase dependencies;
+  `.brief.json` inputs outside the workspace are ignored.
+
 ## [2.0.0] — 2026-10-15
 
 Observe mode, and the hardening from the first full real-product run.

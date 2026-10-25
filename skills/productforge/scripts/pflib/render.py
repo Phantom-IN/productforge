@@ -32,7 +32,7 @@ REGION_RE = re.compile(
 FEATURE_MATRIX = catalog.FEATURE_MATRIX_PATH
 SURFACES = catalog.SURFACES_PATH
 MATRIX_COLUMNS = ("ID", "Domain", "Feature", "Parent", "Surface", "Evidence", "Confidence",
-                  "Plan tier", "Complexity", "MVP", "Decision", "Score")  # fmt: skip
+                  "Plan tier", "Complexity", "Headline", "MVP", "Decision", "Score")  # fmt: skip
 
 
 @dataclass(frozen=True)
@@ -81,9 +81,11 @@ def feature_regions(index: WorkspaceIndex) -> dict[str, str]:
         lines.append(f"- **{domain}**")
         for rec in sorted(roots[domain], key=lambda r: r.id):
             walk(rec, 1)
+    from pflib import features as features_mod
     from pflib import score
 
     scored = {r.feature: r for r in score.evaluate(index.ws, index)}  # empty before scoping
+    headline = features_mod.headline_features(index.ws, index)
     header = "| " + " | ".join(MATRIX_COLUMNS) + " |"
     rows = [header, "|" + "|".join("---" for _ in MATRIX_COLUMNS) + "|"]
     for f in sorted(feats, key=lambda r: (r.get("Domain").strip(), r.id)):
@@ -93,7 +95,12 @@ def feature_regions(index: WorkspaceIndex) -> dict[str, str]:
             mvp = "yes" if row.decision in score.IN_V1 else "no"
             prio = "" if row.priority is None else _num(row.priority)
             scope_cells = [mvp, row.decision + (" (override)" if row.override else ""), prio]
-        values = [f.id] + [f.get(col) for col in MATRIX_COLUMNS[1:9]] + scope_cells
+        values = (
+            [f.id]
+            + [f.get(col) for col in MATRIX_COLUMNS[1:9]]
+            + ["yes" if f.id in headline else ""]
+            + scope_cells
+        )
         rows.append("| " + " | ".join(_cell(v) for v in values) + " |")
     return {"hierarchy": "\n".join(lines) + "\n", "matrix": "\n".join(rows) + "\n"}
 
@@ -266,13 +273,16 @@ OUR_V1 = {"BUILD NOW": "✓", "BUILD SIMPLIFIED": "Simplified", "USE EXTERNAL SE
 
 def parity_regions(index: WorkspaceIndex) -> dict[str, str]:
     from pflib import domain, score
+    from pflib import features as features_mod
 
     rows = score.evaluate(index.ws, index)
     if not rows:
         return {"parity": "_No score cards yet._\n", "overrides": "_No overrides._\n"}
     feats = {f.id: f for f in domain.active(index, "F")}
     cards = {sc.id: sc for _, sc in index.records("SC")}
-    out = ["| Feature | Target | Our V1 | Future | Decision | Notes |", "|---|---|---|---|---|---|"]
+    headline = features_mod.headline_features(index.ws, index)
+    out = ["| Feature | Target | Our V1 | Future | Headline | Decision | Notes |",
+           "|---|---|---|---|---|---|---|"]  # fmt: skip
     overrides = []
     for r in rows:
         f, sc = feats.get(r.feature), cards[r.sc]
@@ -285,7 +295,8 @@ def parity_regions(index: WorkspaceIndex) -> dict[str, str]:
         if r.priority is None:
             notes.append(r.rule)
         decision = (r.decision or "—") + (" (override)" if r.override else "")
-        cells = [name, target, OUR_V1.get(r.decision or "", "—"), sc.get("Future"), decision,
+        cells = [name, target, OUR_V1.get(r.decision or "", "—"), sc.get("Future"),
+                 "yes" if r.feature in headline else "", decision,
                  "; ".join(n.strip() for n in notes if n and n.strip())]  # fmt: skip
         out.append("| " + " | ".join(_cell(c) for c in cells) + " |")
         if r.override:
@@ -298,7 +309,8 @@ def parity_regions(index: WorkspaceIndex) -> dict[str, str]:
 
 
 def product_spec_regions(index: WorkspaceIndex) -> dict[str, str]:
-    from pflib import metrics
+    from pflib import domain, metrics, score
+    from pflib import features as features_mod
 
     f = metrics.funnel(index.ws, index)
     labels = (
@@ -323,7 +335,25 @@ def product_spec_regions(index: WorkspaceIndex) -> dict[str, str]:
         accepted = "\n".join(defaults) + "\n"
     else:
         accepted = "_No defaults accepted yet._\n"
-    return {"funnel": "\n".join(funnel) + "\n", "defaults": accepted}
+    headline = features_mod.headline_features(index.ws, index)
+    cards = {sc.id: sc for _, sc in index.records("SC")}
+    feats = {f.id: f for f in domain.active(index, "F")}
+    cut = ["| Feature | Computed | Final decision | Override reason |", "|---|---|---|---|"]
+    n_cut = 0
+    for r in score.evaluate(index.ws, index):
+        if r.feature not in headline or r.decision not in (score.DEFER, score.DROP):
+            continue
+        n_cut += 1
+        feat = feats.get(r.feature)
+        name = f"{r.feature} {(feat.get('Feature').strip() or feat.title) if feat else '?'}"
+        reason = cards[r.sc].get("Override reason") if r.override else "— not reviewed"
+        cut.append("| " + " | ".join(_cell(c) for c in
+                   [name, r.computed or "—", r.decision or "—", reason]) + " |")  # fmt: skip
+    return {
+        "funnel": "\n".join(funnel) + "\n",
+        "defaults": accepted,
+        "headline-cuts": ("\n".join(cut) if n_cut else "_No headline feature was cut._") + "\n",
+    }
 
 
 def architecture_regions(index: WorkspaceIndex) -> dict[str, str]:
@@ -409,7 +439,12 @@ RENDERERS: dict[str, Renderer] = {
         parity_regions, {"parity": "## Matrix", "overrides": "## Overrides"}
     ),
     catalog.PRODUCT_SPEC_PATH: Renderer(
-        product_spec_regions, {"funnel": "## Reduction funnel", "defaults": "## Accepted defaults"}
+        product_spec_regions,
+        {
+            "funnel": "## Reduction funnel",
+            "defaults": "## Accepted defaults",
+            "headline-cuts": "## Headline features cut from V1",
+        },
     ),
     catalog.COMPETITORS_PATH: Renderer(
         competitor_regions,

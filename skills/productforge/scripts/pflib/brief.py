@@ -10,11 +10,11 @@ provisional IDs.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from pflib import config, ids, merge, state, workspace
+from pflib import config, ids, merge, receipts, state, workspace
 from pflib.errors import CheckFailed, UsageError
 from pflib.scaffold import TEMPLATES_DIR
 
@@ -32,6 +32,9 @@ class Brief:
     findings: int
     text: str
     max_repair_loops: int = 2
+    inputs: list[dict[str, Any]] = field(default_factory=list)
+    input_kb: float = 0.0
+    warnings: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -40,6 +43,9 @@ class Brief:
             "repair": self.repair,
             "findings": self.findings,
             "max_repair_loops": self.max_repair_loops,
+            "inputs": self.inputs,
+            "input_kb": self.input_kb,
+            "warnings": self.warnings,
             "brief": self.text,
         }
 
@@ -54,6 +60,7 @@ def _staged_files(run_dir: Path) -> list[Path]:
         for p in run_dir.rglob("*.md")
         if not any(part.startswith(".") for part in p.relative_to(run_dir).parts)
         and p.relative_to(run_dir).parts[0] != workspace.RAW
+        and p.relative_to(run_dir).as_posix() != workspace.SUMMARY
     ]
 
 
@@ -131,6 +138,8 @@ def render(
         if _staged_files(run_dir):
             repair = True
             findings, findings_text = _repair_findings(ws, run_id)
+            repairs = int(workspace.read_run_meta(ws, run_id).get("repairs") or 0)
+            workspace.update_run_meta(ws, run_id, repairs=repairs + 1)  # merge discipline counter
         raw = run_dir / workspace.RAW
         raw_files = sorted(str(p) for p in raw.rglob("*") if p.is_file()) if raw.is_dir() else []
     else:
@@ -166,6 +175,7 @@ def render(
         "task": task.strip(),
         "partition": partition or "none — the whole task",
         "inputs": _bullets(input_lines),
+        "read_lines": "\n".join(f"READ {rel}: <n>" for rel in inputs or []) or "none",
         "templates": _bullets(template_lines),
         "budget": budget or "no explicit budget; stay within the task",
         "validator_findings": findings_text,
@@ -178,7 +188,22 @@ def render(
     if leftover:
         raise CheckFailed(f"agent-brief.md has unknown placeholders: {leftover}", code="BAD_BRIEF")
     loops = int(config.resolve("agents.max_repair_loops", ws))
-    return Brief(run_id, run_dir, repair, findings, text, loops)
+    rels = list(inputs or [])
+    if rels:
+        receipts.save_inputs(run_dir, rels)
+    else:
+        rels = receipts.load_inputs(run_dir, ws)
+    size = receipts.size_kb(ws, rels)
+    limit = int(config.resolve("agents.max_input_kb", ws))
+    warnings = []
+    if size > limit:
+        warnings.append(
+            f"INPUT_LARGE: the inputs total {size} KB (limit agents.max_input_kb={limit}); "
+            "one agent may skim them, consider --partition"
+        )
+    return Brief(
+        run_id, run_dir, repair, findings, text, loops, receipts.describe(ws, rels), size, warnings
+    )
 
 
 BRIEF_BLOCK_RE = re.compile(r"^```brief\n(.*?)^```$", re.S | re.M)

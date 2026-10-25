@@ -75,4 +75,5 @@ The brief lists the computed decisions and any user overrides. Then:
 
 ## Reply
 
-Reply with only the summary block from the contract.
+Reply with only the summary block from the contract, including one `READ <workspace path>: <n>`
+line per input your brief lists (`READ <path>: 0 (why)` if you could not read it).

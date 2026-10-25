@@ -6,6 +6,7 @@ Pure functions, no network. ``canonicalize`` is the dedupe key for sources;
 
 from __future__ import annotations
 
+import re
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 # Common multi-label public suffixes (the stdlib has no public-suffix list).
@@ -49,6 +50,18 @@ def canonicalize(url: str) -> str:
     return urlunsplit((scheme, netloc, path, query, ""))
 
 
+def page_key(url: str) -> str:
+    """Comparison key: the canonical URL with a leading ``www.`` removed from the host.
+
+    ``www.host`` and ``host`` serve the same page; use this only to compare, never to store.
+    """
+    parts = urlsplit(canonicalize(url))
+    host = parts.netloc
+    if host.startswith("www."):
+        host = host[len("www.") :]
+    return urlunsplit((parts.scheme, host, parts.path, parts.query, ""))
+
+
 def host_of(url: str) -> str:
     return (urlsplit(url.strip()).hostname or "").lower()
 
@@ -64,3 +77,34 @@ def registrable_domain(host: str) -> str:
 def same_site(a: str, b: str) -> bool:
     """True when two URLs belong to the same registrable domain."""
     return registrable_domain(host_of(a)) == registrable_domain(host_of(b))
+
+
+_WORD = re.compile(r"[a-z]+")
+_SIBILANT_ES = re.compile(r"(s|x|z|ch|sh)es$")
+MIN_TOKEN = 4
+
+
+def stem(word: str) -> str:
+    """Lightly stem a lowercase word: strip ``ing``/``ed``/``es``/``s``, keeping 4+ letters.
+
+    ``es`` is stripped only after a sibilant (``classes`` -> ``class``); otherwise a plural is
+    just ``s`` (``cases`` -> ``case``).
+    """
+    for suffix in ("ing", "ed"):
+        if word.endswith(suffix) and len(word) - len(suffix) >= MIN_TOKEN:
+            return word[: -len(suffix)]
+    if _SIBILANT_ES.search(word) and len(word) - 2 >= MIN_TOKEN:
+        return word[:-2]
+    if word.endswith("s") and not word.endswith("ss") and len(word) - 1 >= MIN_TOKEN:
+        return word[:-1]
+    return word
+
+
+def tokens(text: str) -> set[str]:
+    """Lowercase stemmed words of ``text`` with at least ``MIN_TOKEN`` letters."""
+    return {s for w in _WORD.findall(text.lower()) if len(s := stem(w)) >= MIN_TOKEN}
+
+
+def slug_tokens(url: str) -> set[str]:
+    """Stemmed words of a URL's path (slugs split on any non-letter)."""
+    return tokens(urlsplit(url).path)

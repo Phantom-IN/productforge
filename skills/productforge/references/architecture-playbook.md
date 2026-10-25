@@ -52,6 +52,24 @@ may only touch paths inside this tree.
 `| Concern | Choice | ADR |` under `## Stack`; every choice named (`STACK_INCOMPLETE` on TBD, `?`,
 unknown or empty).
 
+## Build readiness
+
+Three more sections, each behind a gate, so a build session never has to stop and ask:
+
+- `## Toolchain` — `| Concern | Choice | Version | Verified |` for every concern in
+  `architecture.toolchain_concerns`. Verify every version and container image on the day against
+  its registry (npm, PyPI, crates, Docker Hub, the vendor page) with WebFetch; `Verified` reads
+  `YYYY-MM-DD <registry or URL>`. Prefer actively published images (`G-AR-TOOLCHAIN`).
+- `## External services` — `| Capability | Vendor | ADR | Test stand-in |`; each vendor has an ADR with
+  `Topic: vendor`: vendor, why, pricing note, sandbox, webhook verification, fallback. Without a
+  public API reference add "the adapter is written from `docs/vendors/<vendor>/`; finish on the stub
+  until it exists". No services: one row `none` (`G-AR-EXTERNAL-SERVICES`).
+- `## Environments` — `| Name | Secret | Used by | Development value |` and `### Local services`
+  (`- <service>: <image:tag>, <port>`) (`G-AR-ENV-CONTRACT`).
+
+Regulatory numbers (deadlines, rates, statutory periods) in a default need a cited source
+(`DEFAULT_RULE_UNSOURCED`); no document may leave a choice open (`UNDECIDED_CHOICE`).
+
 ## Changing a decision
 
 Never edit an accepted ADR's decision. Stage a new ADR and supersede the old one

@@ -127,7 +127,7 @@ def test_classification_sources_and_canonical_urls(site: dict[str, str]) -> None
     }
     for url, category in expected.items():
         assert entries[url]["category"] == category, url
-    assert entries["http://tasklet.example/about"]["category"] is None
+    assert entries["http://tasklet.example/about"]["category"] == "company"
     assert entries["http://tasklet.example/pricing"]["source"] in ("sitemap", "homepage")
     assert entries["http://status.tasklet.example/"]["source"] == "probe"
     assert not any("elsewhere.example" in u for u in entries)  # off-site sitemap ignored
@@ -240,7 +240,22 @@ def test_cache_round_trip(site: dict[str, str], tmp_path: Path) -> None:
         ("https://x.example/webinars/intro", "official-demo"),
         ("https://x.example/trust", "security"),
         ("https://x.example/", "homepage"),
-        ("https://x.example/careers", None),
+        ("https://x.example/careers", "company"),
+        ("https://x.example/about", "company"),
+        ("https://x.example/privacy", "company"),
+        ("https://x.example/terms-of-service", "company"),
+        ("https://x.example/legal/cookies", "company"),
+        ("https://x.example/teams", None),
+        ("https://x.example/solutions/litigation", "features"),
+        ("https://x.example/solution/litigation", "features"),
+        ("https://x.example/products/contracts", "features"),
+        ("https://x.example/product/contracts", "features"),
+        ("https://x.example/modules/billing", "features"),
+        ("https://x.example/platform/overview", "features"),
+        ("https://x.example/corporate/enterprise-contracts", "features"),
+        ("https://x.example/enterprise-billing", "features"),
+        ("https://x.example/enterprise", "enterprise"),
+        ("https://x.example/trust", "security"),
         ("https://github.com/x/sdk", "official-repo"),
         ("https://www.g2.com/products/x", "review-sites"),
         ("https://unknown.example/a", None),
@@ -248,3 +263,87 @@ def test_cache_round_trip(site: dict[str, str], tmp_path: Path) -> None:
 )
 def test_rules(url: str, category: str | None) -> None:
     assert discover_rules.classify(url, "x.example", slug="x") == category
+
+
+class FakeSite(discover.Fetcher):
+    """Serves one host: a homepage linking one page, and a sitemap of 300 help articles."""
+
+    def __init__(self) -> None:
+        super().__init__("ua", 0)
+        locs = [f"https://big.example/help/how-to-{i}" for i in range(300)]
+        locs += [f"https://big.example/help/matter-intake-{i}" for i in range(10)]
+        locs += [f"https://big.example/corporate/enterprise-module-{i}" for i in range(5)]
+        self.sitemap = "".join(f"<url><loc>{u}</loc></url>" for u in locs)
+
+    def fetch(self, url: str, method: str = "GET") -> discover.Response:
+        path = url.split("big.example", 1)[-1]
+        if not url.startswith("https://big.example/"):
+            return discover.Response(url, 0, error="no host")
+        if path == "/sitemap.xml":
+            body = f"<urlset>{self.sitemap}</urlset>".encode()
+        elif path == "/":
+            body = b'<a href="/pricing">Pricing</a><a href="/help/how-to-7">x</a>'
+        else:
+            return discover.Response(url, 404)
+        return discover.Response(url, 200, {}, body)
+
+
+def ranked(terms: set[str], cap: int = 50) -> discover.DiscoverResult:
+    return discover.discover("https://big.example/", "ua", 0, cap, fetcher=FakeSite(),
+                             scope_terms=terms)  # fmt: skip
+
+
+def test_ranked_cap_keeps_modules_navigation_and_scope_matches() -> None:
+    result = ranked({"matter", "intake"})
+    urls = {e["canonical_url"]: e for e in result.entries}
+    assert len(urls) == 50 and result.truncated == 317 - 50  # 300+10+5 + home + pricing
+    for i in range(5):  # every module page survives, though it is a minority
+        assert f"https://big.example/corporate/enterprise-module-{i}" in urls
+    for i in range(10):  # scope-matching articles
+        assert f"https://big.example/help/matter-intake-{i}" in urls
+    nav = urls["https://big.example/help/how-to-7"]
+    assert nav["nav"] is True and nav["source"] == "sitemap"  # sitemap listed it first
+    assert urls["https://big.example/pricing"]["nav"] is True
+    unrelated = [u for u in urls if "how-to-" in u and not urls[u]["nav"]]
+    assert len(unrelated) <= 50 - 15  # the long tail is what gets cut
+
+
+def test_ranked_entries_carry_rank_scope_hits_and_nav() -> None:
+    result = ranked({"matter", "intake"})
+    ranks = sorted(e["rank"] for e in result.entries)
+    assert ranks == list(range(1, 51))
+    by = {e["canonical_url"]: e for e in result.entries}
+    assert by["https://big.example/help/matter-intake-3"]["scope_hits"] == 2
+    assert by["https://big.example/"]["nav"] is True
+    best = min(result.entries, key=lambda e: e["rank"])
+    assert best["nav"] is True  # navigation outranks scope hits
+
+
+def test_without_terms_round_robin_fallback_is_unchanged() -> None:
+    entries = [
+        {"url": f"https://x.example/blog/p{i}", "canonical_url": f"https://x.example/blog/p{i}",
+         "category": "product-blog"} for i in range(30)
+    ] + [
+        {"url": f"https://x.example/{p}", "canonical_url": f"https://x.example/{p}",
+         "category": c} for p, c in [("docs/a", "docs"), ("pricing", "pricing"),
+                                     ("security/x", "security")]
+    ]  # fmt: skip
+    kept, dropped = discover._cap_ranked(entries, 4)
+    assert dropped == 29 and {e["category"] for e in kept} == {
+        "docs",
+        "pricing",
+        "security",
+        "product-blog",
+    }
+    assert [e["rank"] for e in kept] == [1, 2, 3, 4]
+    assert all(e["scope_hits"] == 0 and e["nav"] is False for e in kept)
+
+
+def test_old_cache_entries_without_new_fields_still_load(tmp_path: Path) -> None:
+    from pflib import workspace
+
+    d = workspace.pf_dir(tmp_path) / workspace.CACHE / "discover"
+    d.mkdir(parents=True)
+    (d / "old.example.json").write_text('{"host": "old.example", "entries": [{"url": "u"}]}')
+    (cache,) = discover.load_cache(tmp_path)
+    assert cache["entries"][0].get("rank", 0) == 0

@@ -62,8 +62,9 @@ def test_mark_a_late_found_conflict_on_both_sides(tasklet_discovery: Path) -> No
         "\n### D-?1 — The free plan allows three members\n"
         "- Claim: The free plan is limited to three "
         "members.\n- Evidence: S-006\n- Confidence: CONFIRMED\n- Product impact:\n"
-        "- Engineering impact:\n- Status: conflicting-with D-040\n- Resolution: S-006 was updated "
-        "after S-004.\n"
+        "- Engineering impact:\n- Status: conflicting-with D-040\n"
+        "- Context: Free plan member limit\n"
+        "- Resolution: S-006 was updated after S-004.\n"
     )
     report = merge.merge(tasklet_discovery, stage(tasklet_discovery, text))
     assert report.amended == ["D-040"]

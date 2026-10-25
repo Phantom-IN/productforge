@@ -76,6 +76,7 @@ One observable fact per claim; repeated sightings add evidence to the same claim
 - Product impact:
 - Engineering impact:
 - Status: conflicting-with D-010
+- Context: Guest access and pricing
 
 ### D-010 — Guests require a paid plan
 - Claim: The pricing page lists guests as a paid-plan feature.
@@ -84,6 +85,7 @@ One observable fact per claim; repeated sightings add evidence to the same claim
 - Product impact:
 - Engineering impact:
 - Status: conflicting-with D-009
+- Context: Guest access and pricing
 
 ### D-011 — Automatic AI triage is rumoured
 - Claim: An unverified post claims tasks are triaged automatically by AI.

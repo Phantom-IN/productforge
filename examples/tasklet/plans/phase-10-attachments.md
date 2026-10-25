@@ -42,7 +42,7 @@ Builds attachments for tasklet-alt V1 (§16).
 
 ## References
 
-- IMPLEMENTATION_PLAN §16, R-010, ADR-008, INV-07
+- IMPLEMENTATION_PLAN §16, R-010, ADR-008, ADR-015, INV-07
 
 ## Open questions / risks
 

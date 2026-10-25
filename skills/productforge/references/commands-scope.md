@@ -14,6 +14,15 @@ already exist: re-running `scope` is how the user changes a decision (v1.1 check
 workspace skipped the question). After an Accept, step 4 runs only for what is missing (features
 in V1 with no requirement after an override, unknowns without a V1 default).
 
+0. **Competitor signal.** `competitors` runs before `scope`. If `check` reports
+   `G-SC-COMPETITOR-SIGNAL` failing and no waiver is recorded, do not proceed to scoring: run
+   `/productforge competitors` now. It is allowed while SCOPE_DEFINED is open (new C, FS and S
+   records are appends), so neither ask nor reopen PRODUCT_MODEL. Offer a waiver only when the user
+   asks to skip it ("Run competitors (Recommended)" / "Waive"). Only
+   on the user's explicit waiver: `python3.11 "$PF" waive competitors --reason "<their words>"
+   --confirmed --workspace <ws> --json` (`--revoke` undoes it, without `--confirmed`). `--confirmed`
+   is passed only after the user agreed, or under autonomy after a `pf.py decide` entry for it;
+   without it `waive` refuses (`WAIVER_NOT_CONFIRMED`). Never waive it on your own.
 1. **Score pass** (when there are no score cards, or `G-SC-ALL-SCORED` names unscored features):
    scope-editor run(s): `brief --role scope-editor --task "Pass 1: score cards for <all features |
    these features: IDs>." --input research/FEATURE_MATRIX.md --input research/workflows --input
@@ -26,6 +35,10 @@ in V1 with no requirement after an override, unknowns without a V1 default).
    `counts` per decision; every override; every DEFER/DROP of a feature with `table_stakes` > 0;
    every row whose `rule` starts with `R1` (kept because other features depend on it, or — "R1
    parent floor" — because one of its sub-features is in V1).
+   **Headline cuts.** List every headline feature (`Headline` column, from `scope.headline_categories`)
+   that computes DEFER or DROP (`HEADLINE_FEATURE_CUT`). Show each for review: the user either
+   keeps the cut with an override and a reason, or restores it, both through `pf.py override <F-ID>
+   --decision "<DECISION>" --reason "…"`. `G-SC-HEADLINE-REVIEWED` fails until each has an override.
 3. **The user decides.** Ask with AskUserQuestion: "Accept this scope (Recommended)" or "Adjust".
    On **Adjust**, ask which features move to which decision and why; record each with
    `python3.11 "$PF" override <F-ID> --decision "<DECISION>" --reason "<the user's words>"

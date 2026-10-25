@@ -10,45 +10,47 @@ MVP / Decision / Score columns of `research/FEATURE_MATRIX.md` are generated fro
 ## Matrix
 
 <!-- pf:generated:start parity -->
-| Feature | Target | Our V1 | Future | Decision | Notes |
-|---|---|---|---|---|---|
-| F-001 Tasks | ✓ | ✓ | yes | BUILD NOW | table stakes (3 competitors) |
-| F-002 Assignment | ✓ | ✓ | yes | BUILD NOW | — |
-| F-003 Due dates and reminders | ✓ | ✓ | yes | BUILD NOW | — |
-| F-004 Statuses | ✓ | ✓ | yes | BUILD NOW | — |
-| F-005 Labels | ✓ | ✗ | yes | DEFER | — |
-| F-006 Attachments | ✓ | External | yes | USE EXTERNAL SERVICE | Object storage with signed download links |
-| F-007 Recurring tasks | ✓ | ✗ | yes | DEFER | — |
-| F-008 Board view | ✓ | ✓ | yes | BUILD NOW | table stakes (2 competitors) |
-| F-009 Live updates | ✓ | Simplified | yes | BUILD SIMPLIFIED (override) | Boards refresh on focus and every 30 s; no push channel in V1 |
-| F-010 Activity history | ✓ | ✓ | yes | BUILD NOW | — |
-| F-011 Projects | ✓ | ✓ | yes | BUILD NOW | — |
-| F-012 Project archive and restore | ✓ | ✗ | yes | DEFER | — |
-| F-013 Optional project membership | ✓ | ✓ | yes | BUILD NOW | — |
-| F-014 Comments | ✓ | ✓ | yes | BUILD NOW | table stakes (3 competitors) |
-| F-015 Mentions | ✓ | ✓ | yes | BUILD NOW | — |
-| F-016 In-app notifications | ✓ | ✓ | yes | BUILD NOW | — |
-| F-017 Email digests | ✓ | ✗ | yes | DEFER | — |
-| F-018 Guest access | ✓ | ✗ | yes | DEFER | — |
-| F-019 Global search | ✓ | ✗ | yes | DEFER | — |
-| F-020 Workspaces | ✓ | ✓ | yes | BUILD NOW | — |
-| F-021 Member invitations | ✓ | ✓ | yes | BUILD NOW | — |
-| F-022 Roles | ✓ | ✓ | yes | BUILD NOW | — |
-| F-023 Billing management | ✓ | External | yes | USE EXTERNAL SERVICE | A payment and subscription provider |
-| F-024 Sign-in | ✓ | External | yes | USE EXTERNAL SERVICE | An identity provider for magic links and Google sign-in |
-| F-025 Public REST API | ✓ | ✗ | yes | DEFER | — |
-| F-026 Personal access tokens | ✓ | ✗ | maybe | DEFER | — |
-| F-027 Webhooks | ✓ | ✗ | maybe | DROP | — |
-| F-028 Calendar sync | ✓ | ✗ | yes | DEFER | — |
-| F-029 Chat notifications | ✓ | ✗ | maybe | DEFER | — |
-| F-030 Git commit linking | ✓ | ✗ | no | DROP | — |
-| F-031 Plans and pricing | ✓ | ✗ | maybe | DEFER | — |
+| Feature | Target | Our V1 | Future | Headline | Decision | Notes |
+|---|---|---|---|---|---|---|
+| F-001 Tasks | ✓ | ✓ | yes | — | BUILD NOW | table stakes (3 competitors) |
+| F-002 Assignment | ✓ | ✓ | yes | — | BUILD NOW | — |
+| F-003 Due dates and reminders | ✓ | ✓ | yes | — | BUILD NOW | — |
+| F-004 Statuses | ✓ | ✓ | yes | — | BUILD NOW | — |
+| F-005 Labels | ✓ | ✗ | yes | — | DEFER | — |
+| F-006 Attachments | ✓ | External | yes | — | USE EXTERNAL SERVICE | Object storage with signed download links |
+| F-007 Recurring tasks | ✓ | ✗ | yes | — | DEFER | — |
+| F-008 Board view | ✓ | ✓ | yes | yes | BUILD NOW | table stakes (2 competitors) |
+| F-009 Live updates | ✓ | Simplified | yes | — | BUILD SIMPLIFIED (override) | Boards refresh on focus and every 30 s; no push channel in V1 |
+| F-010 Activity history | ✓ | ✓ | yes | — | BUILD NOW | — |
+| F-011 Projects | ✓ | ✓ | yes | — | BUILD NOW | — |
+| F-012 Project archive and restore | ✓ | ✗ | yes | — | DEFER | — |
+| F-013 Optional project membership | ✓ | ✓ | yes | — | BUILD NOW | — |
+| F-014 Comments | ✓ | ✓ | yes | — | BUILD NOW | table stakes (3 competitors) |
+| F-015 Mentions | ✓ | ✓ | yes | — | BUILD NOW | — |
+| F-016 In-app notifications | ✓ | ✓ | yes | — | BUILD NOW | — |
+| F-017 Email digests | ✓ | ✗ | yes | — | DEFER | — |
+| F-018 Guest access | ✓ | ✗ | yes | — | DEFER | — |
+| F-019 Global search | ✓ | ✗ | yes | yes | DEFER (override) | — |
+| F-020 Workspaces | ✓ | ✓ | yes | — | BUILD NOW | — |
+| F-021 Member invitations | ✓ | ✓ | yes | — | BUILD NOW | — |
+| F-022 Roles | ✓ | ✓ | yes | yes | BUILD NOW | — |
+| F-023 Billing management | ✓ | External | yes | yes | USE EXTERNAL SERVICE | A payment and subscription provider |
+| F-024 Sign-in | ✓ | External | yes | — | USE EXTERNAL SERVICE | An identity provider for magic links and Google sign-in |
+| F-025 Public REST API | ✓ | ✗ | yes | — | DEFER | — |
+| F-026 Personal access tokens | ✓ | ✗ | maybe | — | DEFER | — |
+| F-027 Webhooks | ✓ | ✗ | maybe | — | DROP | — |
+| F-028 Calendar sync | ✓ | ✗ | yes | — | DEFER | — |
+| F-029 Chat notifications | ✓ | ✗ | maybe | — | DEFER | — |
+| F-030 Git commit linking | ✓ | ✗ | no | — | DROP | — |
+| F-031 Plans and pricing | ✓ | ✗ | maybe | yes | DEFER (override) | — |
 <!-- pf:generated:end -->
 
 ## Overrides
 
 <!-- pf:generated:start overrides -->
 - SC-009 F-009: computed DEFER → BUILD SIMPLIFIED — Live updates are the target's selling point (D-007); V1 polls instead of pushing
+- SC-019 F-019: computed DEFER → DEFER — Search is marketed, but V1 filters by title; full-text search is a later phase
+- SC-031 F-031: computed DEFER → DEFER — Plans appear on the pricing page, but V1 has a single free plan
 <!-- pf:generated:end -->
 
 ## Scores
@@ -322,6 +324,8 @@ MVP / Decision / Score columns of `research/FEATURE_MATRIX.md` are generated fro
 - Time to implement: 3 — weeks
 - External availability: 2 — good services exist
 - Future: yes
+- Override decision: DEFER
+- Override reason: Search is marketed, but V1 filters by title; full-text search is a later phase
 
 ### SC-020 — Workspaces
 - Feature: F-020
@@ -492,3 +496,5 @@ MVP / Decision / Score columns of `research/FEATURE_MATRIX.md` are generated fro
 - Time to implement: 1 — days
 - External availability: 0 — no service fits
 - Future: maybe
+- Override decision: DEFER
+- Override reason: Plans appear on the pricing page, but V1 has a single free plan

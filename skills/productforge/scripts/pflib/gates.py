@@ -98,6 +98,21 @@ EXPECTED: dict[str, list[tuple[str, str, str]]] = {
         ("G-DISC-OVERVIEW", "product-overview.md sections are filled", "07"),
         ("G-DISC-SURFACES", "at least one product surface", "07"),
         ("G-DISC-MIN-CLAIMS", "at least research.min_claims_gate active claims", "07"),
+        (
+            "G-DISC-SCOPE-DEPTH",
+            "in-scope official pages are read or excluded (min_scope_depth)",
+            "v3-01",
+        ),
+        (
+            "G-DISC-NAV-PAGES",
+            "every in-scope homepage-navigation page is read or excluded",
+            "v3-01",
+        ),
+        (
+            "G-DISC-UNKNOWNS-AUDITED",
+            "no unknown has an unread page that probably answers it",
+            "v3-01",
+        ),
     ],
     "PRODUCT_MODEL": _GENERIC
     + [
@@ -118,6 +133,8 @@ EXPECTED: dict[str, list[tuple[str, str, str]]] = {
         ("G-SC-REQUIREMENTS-COVER-BUILD", "every built feature maps to a requirement", "13"),
         ("G-SC-UNKNOWNS-DEFAULTED", "every unknown has a V1 default", "13"),
         ("G-SC-CONFLICTS-RESOLVED", "conflicting claims are resolved or explained", "13"),
+        ("G-SC-COMPETITOR-SIGNAL", "enough competitors researched, or a recorded waiver", "v3-03"),
+        ("G-SC-HEADLINE-REVIEWED", "no headline feature is cut without an override", "v3-03"),
     ],
     "ARCHITECTURE_LOCKED": _GENERIC
     + [
@@ -127,11 +144,18 @@ EXPECTED: dict[str, list[tuple[str, str, str]]] = {
         ("G-AR-REPO-STRUCTURE", "repository structure is declared", "14"),
         ("G-AR-STACK-COMPLETE", "stack fully named", "14"),
         ("G-AR-MANDATORY-TOPICS", "mandatory ADR topics covered", "14"),
+        (
+            "G-AR-EXTERNAL-SERVICES",
+            "every external service names a vendor and a vendor ADR",
+            "v3-04",
+        ),
+        ("G-AR-TOOLCHAIN", "the toolchain is pinned and verified", "v3-04"),
+        ("G-AR-ENV-CONTRACT", "environment variables and local services are declared", "v3-04"),
     ],
     "PHASE_PLAN_READY": _GENERIC
     + [
         ("G-PP-ROOT-DOCS", "root documents exist with required sections", "15"),
-        ("G-PP-PHASE-LINT", "pf.py lint-phases is clean", "15"),
+        ("G-PP-PHASE-LINT", "pf.py lint-phases reports no error", "15"),
         ("G-PP-TRACE-CLEAN", "pf.py trace reports no errors", "16"),
         ("G-PP-TRACEABILITY-RENDERED", "TRACEABILITY.md matches a fresh render", "16"),
     ],

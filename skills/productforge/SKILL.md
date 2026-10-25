@@ -27,7 +27,7 @@ It is **not** a website cloner — read `references/philosophy.md` when unsure h
 
 1. **Never skip stages.** Only `pf.py` changes the lifecycle stage. Run `pf.py advance` at most once
    per `/productforge` invocation, and pass `--confirmed` only after the user explicitly agreed in
-   this turn.
+   this turn — or, while `status.autonomy.active` is true, use `--auto` (see **Autonomous mode**).
 2. **Never write workspace files yourself.** Do not create or edit anything under `research/`,
    `spec/`, `plans/` or `.productforge/`. Agents write only to their staging folder;
    `pf.py merge` is the only writer of canonical files. The one exception: saving a delegated
@@ -69,10 +69,11 @@ The text after `/productforge` is the command:
 | *(empty)* or `status` | Show the workspace report |
 | `<url> [--scope "…"] [--out DIR] [--name NAME]` | Start a new workspace for a public product URL |
 | `research` | DISCOVERY — sources, claims, unknowns, surfaces |
-| `features` · `workflows` · `model` · `competitors` | PRODUCT_MODEL |
+| `features` · `workflows` · `model` · `competitors` | PRODUCT_MODEL (`competitors` also while SCOPE_DEFINED is open) |
 | `scope` | SCOPE_DEFINED |
 | `architect [--stack "…"]` | ARCHITECTURE_LOCKED |
 | `finalize` | PHASE_PLAN_READY |
+| `auto <url> --scope "…" [--name …] [--stack …]` | Run every stage unattended to a completed plan (autonomous mode) |
 | `observe` | DISCOVERY or PRODUCT_MODEL — record the product as the user drives it (v2) |
 | `reopen <STAGE> --reason "…"` | Go back to an earlier stage (later stages become stale) |
 
@@ -81,6 +82,7 @@ Anything else: print this table and stop.
 ## Dispatch algorithm
 
 1. Empty input or `status` → **status** section.
+1a. First token `auto` → **`/productforge auto`** section.
 2. First token starts with `http://` or `https://` → **`/productforge <url>`** section.
 3. `reopen` → **reopen** section.
 4. A stage command from the table → run
@@ -98,8 +100,9 @@ The command belongs to the next stage, so the open stage must close first.
 1. If `gate.passed` is false: show the failing conditions as a compact table
    (`id | status | detail`), say the open stage is not finished, suggest
    `/productforge <suggested_command>`, and stop. Do not ask, do not advance.
-2. If `gate.passed` is true: show the gate summary (`progress`, condition IDs) and ask with
-   AskUserQuestion — question: "Close <open_stage> and open <target_stage>?"; options:
+2. If `gate.passed` is true and autonomy is active: run `advance --to <target_stage> --auto` (see
+   **Autonomous mode**), check `transitioned: true` and continue. Otherwise show the gate summary
+   (`progress`, condition IDs) and ask with AskUserQuestion — question: "Close <open_stage> and open <target_stage>?"; options:
    "Advance to <target_stage> (Recommended)" and "Stay in <open_stage>".
 3. On **Advance**: run `python3.11 "$PF" advance --to <target_stage> --confirmed --workspace <ws> --json`,
    check `transitioned: true`, then continue to the command's section.
@@ -124,13 +127,21 @@ Stage sections delegate work to role agents (`agents/*.md`) through this loop:
 2. **Spawn.** Call the Agent/Task tool with `subagent_type: productforge:<role>` and the `brief` text
    as the prompt. If that type is unavailable, use the **Inline fallback**.
 3. **Check the reply** is the contract's summary block (`RUN … · ROLE … · WROTE … · RECORDS … ·
-   RESEARCH REQUESTS … · NOTES …`). Anything else counts as a failed run: report it honestly.
+   RESEARCH REQUESTS … · NOTES …`, then one `READ <path>: <n>` line per `--input`). Anything else
+   counts as a failed run: report it honestly. Save the reply to `<staging_path>/SUMMARY.md` (never
+   merged) or keep it for `--summary-file`. A brief `warnings` entry `INPUT_LARGE` means the inputs
+   are too big for one agent: partition the work.
 4. **Preflight.** `python3.11 "$PF" merge <run_id> --check --workspace <ws> --json`. If `ok` is false
    and repair passes remain (at most `max_repair_loops`): render a repair brief with
    `pf.py brief --role <role> --task "<same task>" --run-id <run_id> --workspace <ws> --json`, spawn
-   the same role again with it, then preflight again.
-5. **Merge.** `python3.11 "$PF" merge <run_id> --workspace <ws> --json` — also when findings remain
-   after the last repair pass; they stay visible in `validate` and block the gate.
+   the same role again with it, then preflight again. Preflight reads the saved reply (or
+   `--summary-file <path>`): `INPUT_RECEIPT_MISSING` / `INPUT_RECEIPT_SHORT` warnings with repair
+   passes left trigger one repair asking for the unread inputs, then save the fresh reply.
+5. **Merge.** `python3.11 "$PF" merge <run_id> --workspace <ws> --json` — only after the last
+   repair pass. While the run's latest preflight had errors and repair passes remain, `merge`
+   refuses (`MERGE_BEFORE_REPAIR`): repair first. Add `--accept-findings` only when the user (or
+   autonomy, logged with `decide`) accepts the remaining findings; they stay visible in `validate`
+   and block the gate.
 6. **Validate.** `python3.11 "$PF" validate --stage <open stage> --workspace <ws> --json` for the
    end-of-command report.
 
@@ -213,6 +224,32 @@ Finish every command with at most 20 lines:
 - validation: errors and warnings, with the codes of any errors;
 - the next command: `/productforge <next_command>`.
 
+## Autonomous mode
+
+Applies only while `python3.11 "$PF" status --workspace <ws> --json` shows `autonomy.active: true`
+(the user granted it with `pf.py autonomy grant`). Never grant it yourself, except as the
+`/productforge auto` procedure does after the user's yes; never apply this section
+without an active grant. Read `references/commands-auto.md` for the detail. In short:
+
+1. **Transitions:** the Transition protocol runs `advance --to <target_stage> --auto` instead of
+   asking; still only when the gate passed, and still one transition per invocation.
+2. **Questions:** a procedure never stops to ask. Every AskUserQuestion, and every "stop and ask the
+   user to choose" (raising a cap, a dedupe pass, a targeted research pass), is replaced by the
+   option marked Recommended (domain split → "Use these domains"; scope → the first option); with no
+   mark, the option that keeps the most scope and evidence. Apply it through `pf.py` (e.g.
+   `config set <key> <value> --reason "…"`), then `pf.py decide --question … --choice … --why …
+   --command <cmd>`. Never end an autonomous session with a question.
+3. **Capabilities:** decline every offer: `deps use <capability> builtin`, then `deps offered`
+   and `decide`. Install nothing.
+4. **Competitors:** `competitors` always runs before `scope`; it is never skipped, and it runs in
+   SCOPE_DEFINED too when `G-SC-COMPETITOR-SIGNAL` fails (no reopen). When `competitor-candidates`
+   yields fewer than `competitors.min_researched` names, run the competitor discovery pass
+   (`commands-product-model.md`), pick the top `competitors.max` names with at least one citation,
+   `pf.py decide`. Never invent a name without a citing source.
+5. **Observe** is skipped (it needs a person); `decide` that it was skipped.
+6. **Parallel batches** use the configured maximum.
+7. The end-of-command report lists the decisions made this run (`pf.py decide --list`).
+
 ## Commands
 
 ### `/productforge <url> [--scope "…"] [--out DIR] [--name NAME]`
@@ -253,6 +290,14 @@ pass; surfaces → surface pass.
      --input <each of caches> --template research/sources.md --template research/product-overview.md
      --budget "at most <budget> new sources" --workspace <ws> --json`.
    Spawn them in one message; then preflight, repair and merge each run **one at a time**.
+   **Depth pass** (when `depth_needed > 0`; plan again first): the gate wants more in-scope official
+   pages read. Source runs over each partition's `next_candidates`, by rank, with `nav_unread`
+   (homepage-navigation pages) first, partitioned as above, then an evidence pass over them. Pages
+   that are not worth reading go to `python3.11 "$PF" exclude <url>… --reason "<why>" --workspace
+   <ws>`. When `budget_needed > 0`, ask with AskUserQuestion to raise `research.max_sources` by
+   that much, then `python3.11 "$PF" config set research.max_sources <n> --reason "<why>"
+   --workspace <ws>` (autonomous mode: the driver already raised it). Caps are only ever changed
+   through `pf.py config set`; never edit `.productforge/config.json`.
 4. **Evidence pass** (plan again first). For each partition with `unmined` sources, in parallel (at
    most 3): `brief --role research-agent --task "Evidence pass: extract claims and unknowns from
    <unmined IDs>. Uncovered official categories to explain with unknowns: <uncovered_official>."
@@ -260,6 +305,12 @@ pass; surfaces → surface pass.
    --input research/UNKNOWNS.md --input research/product-overview.md
    --template research/DISCOVERY_LEDGER.md --template research/UNKNOWNS.md`. Preflight, repair,
    merge one at a time.
+   **Unknown audit pass** (when `unknown_audit` is not empty: unknown → unread pages that probably
+   answer it): one research-agent run — `brief --role research-agent --task "Unknown audit: read
+   the listed URLs and answer each unknown with new claims plus a ### AMEND U-… Status:
+   superseded-by <D-ID>, or exclude the pages with pf.py exclude --reason: <unknown_audit>"
+   --input research/UNKNOWNS.md --input research/sources.md --input research/DISCOVERY_LEDGER.md
+   --template research/DISCOVERY_LEDGER.md --template research/sources.md`. Preflight, repair, merge.
 5. **Dedupe pass.** If `pf.py validate` reports `NEAR_DUPLICATE_TITLE` warnings for claims, brief one
    research-agent run: `--task "Dedupe pass: for each near-duplicate pair below, keep the better-
    evidenced claim and supersede the other with an amendment (see Amendments): <warnings>"
@@ -272,7 +323,8 @@ pass; surfaces → surface pass.
 7. **Research requests** per the Agent run protocol (`web.browse`, `docs.pdf`, `repo.intel`; at
    most 5 delegations per command).
 8. **Gate.** `python3.11 "$PF" check --workspace <ws> --json`: report the DISCOVERY gate as a compact
-   table plus merge reports' `dropped`/`over_cap`. If the gate passes, the next command is
+   table plus merge reports' `dropped`/`over_cap`; name the depth conditions (`G-DISC-SCOPE-DEPTH`,
+   `G-DISC-NAV-PAGES`, `G-DISC-UNKNOWNS-AUDITED`) when they fail and the pass each one needs. If the gate passes, the next command is
    `/productforge features` (it asks before closing DISCOVERY); otherwise `/productforge research`.
 
 ### PRODUCT_MODEL commands: `features` · `workflows` · `model` · `competitors`
@@ -290,6 +342,12 @@ Read `references/commands-architecture.md` and follow it.
 ### PHASE_PLAN_READY command: `finalize`
 
 Read `references/commands-finalize.md` and follow it.
+
+### `/productforge auto <url> --scope "…" [--name …] [--stack …]`
+
+Read `references/commands-auto.md` (section "The `auto` command") and follow it: init or resume,
+show the consent text, grant on yes, start the `pf.py auto start ... --text-sha256 <hash>` driver
+(headless sessions, one per stage command), and report how to follow and stop it. Never run stage work yourself in this turn.
 
 ### `/productforge observe`
 

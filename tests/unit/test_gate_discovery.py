@@ -83,3 +83,79 @@ def test_committed_fixtures_match_the_generator() -> None:
     proc = subprocess.run([sys.executable, str(REPO_ROOT / "tests/fixtures/build_tasklet.py"),
                            "--check"], capture_output=True, text=True)  # fmt: skip
     assert proc.returncode == 0, proc.stdout
+
+
+# --- phase 01: depth gates -----------------------------------------------------------------
+
+
+def write_index(ws: Path, entries: list[dict]) -> None:
+    d = ws / ".productforge/cache/discover"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "docs.tasklet.example.json").write_text(
+        json.dumps({"host": "docs.tasklet.example", "entries": entries, "external": []})
+    )
+
+
+def cand(path: str, hits: int = 1, nav: bool = False, host: str = "docs.tasklet.example") -> dict:
+    url = f"https://{host}/{path}"
+    return {"url": url, "canonical_url": url, "category": "docs", "allowed": True,
+            "rank": 1, "scope_hits": hits, "nav": nav}  # fmt: skip
+
+
+def detail(ws: Path, cid: str) -> str:
+    return next(r.detail for r in gates.evaluate(ws, "DISCOVERY").results if r.id == cid)
+
+
+def test_scope_depth_fails_then_passes_with_exclusions(ws: Path) -> None:
+    from pflib import exclusions
+
+    assert "G-DISC-SCOPE-DEPTH" not in failing(ws)  # empty index passes
+    assert "no in-scope" in detail(ws, "G-DISC-SCOPE-DEPTH")
+    # tasks guide is already a source (S-001): 40 of 100 read
+    entries = [cand(f"article-{i}") for i in range(99)] + [cand("tasks")]
+    write_index(ws, entries)
+    src = ws / "research/sources.md"
+    text = src.read_text()
+    for i in range(39):
+        text += (
+            f"\n### S-{200 + i} — Article {i}\n- URL: https://docs.tasklet.example/article-{i}\n"
+            f"- Canonical URL: https://docs.tasklet.example/article-{i}\n- Category: docs\n"
+            "- Tier: 1\n- Authority: High\n- Relevant area: Tasks\n- Published: unknown\n"
+            "- Last inspected: 2026-10-08\n- Notes:\n"
+        )
+    src.write_text(text)
+    assert failing(ws) == ["G-DISC-SCOPE-DEPTH"]
+    assert detail(ws, "G-DISC-SCOPE-DEPTH").startswith(
+        "40/100 (need 60, research.min_scope_depth 0.6)"
+    )
+    exclusions.add(ws, [f"https://docs.tasklet.example/article-{i}" for i in range(50, 70)], "x")
+    assert failing(ws) == []
+
+
+def test_nav_pages_unread_fails_read_or_excluded_passes(ws: Path) -> None:
+    from pflib import exclusions
+
+    config.write_config(ws, {"research.min_scope_depth": 0})
+    write_index(
+        ws,
+        [
+            cand("pricing-tour", 0, nav=True, host="tasklet.example"),
+            cand("other", 0, nav=True, host="x.example"),
+        ],
+    )
+    assert failing(ws) == ["G-DISC-NAV-PAGES"]  # only the target's own host counts
+    exclusions.add(ws, ["https://tasklet.example/pricing-tour"], "marketing")
+    assert failing(ws) == []
+
+
+def test_unknowns_audited_fails_with_the_url_and_validator_warns(ws: Path) -> None:
+    from pflib import exclusions, validators
+
+    config.write_config(ws, {"research.min_scope_depth": 0})
+    url = "https://docs.tasklet.example/task-activity-history-retention"
+    write_index(ws, [cand("task-activity-history-retention", 0)])
+    assert failing(ws) == ["G-DISC-UNKNOWNS-AUDITED"]
+    found = [f for f in validators.run(ws) if f.code == "UNKNOWN_UNREAD_CANDIDATES"]
+    assert found and url in found[0].message and found[0].record_id == "U-001"
+    exclusions.add(ws, [url], "read elsewhere")
+    assert failing(ws) == []

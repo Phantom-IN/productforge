@@ -89,8 +89,10 @@ def test_fixture_report_is_deterministic(tasklet_scope: Path) -> None:
     assert first == score.report(tasklet_scope)
     assert first["counts"] == {"BUILD NOW": 14, "BUILD SIMPLIFIED": 1, "USE EXTERNAL SERVICE": 3,
                                "DEFER": 11, "DROP": 2}  # fmt: skip
-    (override,) = first["overrides"]
-    assert override["feature"] == "F-009" and override["computed"] == score.DEFER
+    overrides = {o["feature"]: o for o in first["overrides"]}
+    assert set(overrides) == {"F-009", "F-019", "F-031"}
+    override = overrides["F-009"]
+    assert override["computed"] == score.DEFER
     assert override["decision"] == score.BUILD_SIMPLIFIED
     stakes = {r["feature"]: r["table_stakes"] for r in first["rows"] if r["table_stakes"]}
     assert stakes == {"F-001": 3, "F-008": 2, "F-014": 3}
@@ -130,3 +132,33 @@ def test_an_override_on_the_parent_wins_over_the_floor() -> None:
     rows = [_row("F-001", score.DEFER, override=score.DEFER), _row("F-002", score.BUILD_NOW)]
     out = {r.feature: r for r in score.parent_floor(rows, {"F-002": "F-001"})}
     assert out["F-001"].decision == score.DEFER
+
+
+# ------------------------------------------------ v3 phase 03: headline marks in the views
+
+
+def test_matrix_and_parity_mark_headline_rows() -> None:
+    from conftest import TASKLET
+
+    from pflib import render
+
+    ws = TASKLET / "SCOPE_DEFINED"
+    matrix = render.regions((ws / "research/FEATURE_MATRIX.md").read_text())["matrix"]
+    header = matrix.splitlines()[0]
+    assert "| Headline |" in header
+    col = [c.strip() for c in header.strip("|").split("|")].index("Headline")
+    cells = {
+        ln.split("|")[1].strip(): [c.strip() for c in ln.strip("|").split("|")][col]
+        for ln in matrix.splitlines()[2:]
+    }
+    assert cells["F-019"] == "yes" and cells["F-002"] == "—"
+    parity = render.regions((ws / "spec/PARITY_MATRIX.md").read_text())["parity"]
+    assert "| Headline |" in parity.splitlines()[0]
+    assert any(ln.startswith("| F-019") and "| yes |" in ln for ln in parity.splitlines())
+
+
+def test_headline_knobs_are_registered() -> None:
+    assert config.DEFAULTS["competitors.min_researched"].default == 2
+    assert config.DEFAULTS["scope.headline_categories"].default == [
+        "homepage", "features", "enterprise", "pricing",
+    ]  # fmt: skip

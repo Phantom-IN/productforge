@@ -110,6 +110,7 @@ folder, paste `STARTUP_PROMPT.md`, and say `execute phase 00`.
 | `/productforge <url> [--scope "…"] [--name "…"] [--out DIR]` | — | Create a workspace and begin research |
 | `/productforge research` | DISCOVERY | More sources, claims, unknowns and surfaces |
 | `/productforge features` · `workflows` · `model` · `competitors` | PRODUCT_MODEL | Build the product model |
+| `/productforge auto <url> --scope "…" [--name "…"] [--stack "…"]` | all | Run every stage unattended (see Autonomous mode) |
 | `/productforge observe` | DISCOVERY or PRODUCT_MODEL | Record the product as **you** use it (see below) |
 | `/productforge scope` | SCOPE_DEFINED | Prioritise, decide V1, write requirements |
 | `/productforge architect [--stack "…"]` | ARCHITECTURE_LOCKED | Design our architecture |
@@ -138,6 +139,35 @@ that passes every check:
 ```bash
 python3.11 skills/productforge/scripts/pf.py explain R-010 --workspace examples/tasklet
 ```
+
+## Autonomous mode (optional)
+
+One command takes a product URL to a completed, build-ready plan:
+
+```
+/productforge auto https://example.com --scope "task tracking" --name mytracker
+```
+
+ProductForge shows what autonomy covers and asks once. After your yes, a driver
+(`pf.py auto start`) runs **one fresh headless Claude session per stage command**, advances each
+stage when its gate passes, and logs every choice it makes for you (`pf.py decide --list`: it takes
+the option marked Recommended, declines capability installs, researches competitors and skips
+observe). Gates still decide every transition.
+
+- **What it starts:** `claude -p` sessions with `--plugin-dir`, the orchestrator on `auto.main_model`
+  (`opus`), role agents on `auto.subagent_model` (`sonnet`), and `auto.permission_args`
+  (default `--dangerously-skip-permissions`, named in the consent text; set a stricter mode in
+  `.productforge/config.json`).
+- **Cost and time:** expect many sessions and several hours for a large product, mostly agent runs
+  on the subagent model; usage limits make it wait `auto.retry_wait_seconds` and retry. Set
+  `research.max_sources` and the other caps low for a first try.
+- **Follow, stop, resume:** `pf.py auto status` (or `.productforge/auto.log`); `pf.py auto stop`
+  stops between sessions; re-running `auto start` resumes where the workspace is. `pf.py auto start
+  --dry-run` prints the next session and changes nothing. `pf.py autonomy revoke` ends the grant.
+- **Stops, with a reason:** a stall (`auto.max_stalls` sessions with no change), the retry limit, the
+  session limit (`auto.max_sessions`), a refused command or a failing gate on `advance`.
+
+It ends with `complete --auto`; ProductForge still writes no application code.
 
 ## Observe mode (optional)
 
@@ -175,7 +205,7 @@ Full details: [`SECURITY.md`](SECURITY.md#observe-mode-v2-opt-in) ·
 ## How it stays trustworthy
 
 - **Stages are enforced.** Closed stages are append-only; changing one means `reopen`, which marks
-  later stages stale. One transition per command, and only after you confirm.
+  later stages stale. One transition per command, and only after you confirm — per transition, or once for the whole run through a recorded, revocable autonomy grant (`pf.py autonomy grant`).
 - **Scripts do the arithmetic.** IDs, merges, scores, decisions, gate verdicts, phase lint and
   traceability come from `pf.py`, never from the model.
 - **Agents only stage.** Seven role agents (research, product, UX, domain, scope, systems,

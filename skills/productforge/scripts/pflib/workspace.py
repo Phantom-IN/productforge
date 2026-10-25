@@ -21,11 +21,13 @@ STAGING = "staging"
 MERGED = "_merged"
 DISCARDED = "_discarded"
 ARCHIVES = (MERGED, DISCARDED)
+SUMMARY = "SUMMARY.md"  # the agent's saved reply inside a run; never merged
 RAW = "raw"  # delegated-provider output inside a run; never merged
 CACHE = "cache"  # .productforge/cache/ (discover results, …)
 OBSERVE = "observe"  # .productforge/observe/<session>/ (observe mode; local only)
 RUN_META = ".run.json"
 HISTORY = "history.log"
+DECISIONS = "decisions.jsonl"  # autonomous-mode decisions (append-only)
 IDS_FILE = "ids.json"
 MERGE_LOCK = "merge.lock"
 
@@ -105,6 +107,29 @@ def create_staging_run(ws: Path, role: str) -> tuple[str, Path]:
     raise UsageError("could not allocate a unique run id", code="BAD_RUN_ID")
 
 
+def update_run_meta(ws: Path, run_id: str, **fields: Any) -> dict[str, Any]:
+    """Merge ``fields`` into the run's ``.run.json`` (preflight result, repair counter)."""
+    path = staging_dir(ws, run_id) / RUN_META
+    meta: dict[str, Any] = {}
+    if path.is_file():
+        try:
+            meta = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            meta = {}
+    meta.update(fields)
+    atomic_write_text(path, json.dumps(meta, indent=2) + "\n")
+    return meta
+
+
+def read_run_meta(ws: Path, run_id: str) -> dict[str, Any]:
+    path = staging_dir(ws, run_id) / RUN_META
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
 def pending_runs(ws: Path) -> list[dict[str, Any]]:
     """Unmerged staging runs: id, role, created_at, staged .md files and records (raw/ excluded)."""
     root = staging_root(ws)
@@ -117,6 +142,7 @@ def pending_runs(ws: Path) -> list[dict[str, Any]]:
         files = [
             f for f in path.rglob("*.md")
             if not any(part.startswith(".") or part == RAW for part in f.relative_to(path).parts)
+            and f.relative_to(path).as_posix() != SUMMARY
         ]  # fmt: skip
         recs = sum(
             1 for f in files for line in f.read_text(encoding="utf-8").splitlines()

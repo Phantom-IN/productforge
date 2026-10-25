@@ -24,10 +24,16 @@ def source_index(ctx: Context) -> confidence.SourceIndex:
 
 @record_check()
 def confidence_rules(ctx: Context, loc: Loc) -> list[Finding]:
+    if not records.is_active(loc.record):
+        return []  # superseded or rejected records stay in the file, out of every rule
     return [
         finding(v.code, loc.rel, loc.record.id, f"{loc.record.id}: {v.message}")
         for v in confidence.check_record(loc.record, source_index(ctx))
     ]
+
+
+def _norm(text: str) -> str:
+    return " ".join(text.lower().split())
 
 
 @workspace_check
@@ -60,6 +66,37 @@ def conflicts(ctx: Context) -> list[Finding]:
             if pair in reported:
                 continue
             reported.add(pair)
+            ctx_a, ctx_b = _norm(rec.get("Context")), _norm(partner.record.get("Context"))
+            for side, side_ctx in ((rec, ctx_a), (partner.record, ctx_b)):
+                if not side_ctx:
+                    out.append(
+                        finding(
+                            "CONFLICT_CONTEXT_MISSING",
+                            loc.rel,
+                            side.id,
+                            f"{side.id} is in a conflict with "
+                            f"{pair[1] if side.id == pair[0] else pair[0]} but has no Context; "
+                            f"name the workflow, feature, screen or setting the claim is about",
+                        )
+                    )
+            has_resolution = bool(
+                rec.get("Resolution").strip() or partner.record.get("Resolution").strip()
+            )
+            if ctx_a and ctx_b and ctx_a != ctx_b and not has_resolution:
+                first, second = (
+                    (rec, partner.record) if rec.id == pair[0] else (partner.record, rec)
+                )
+                out.append(
+                    finding(
+                        "CONFLICT_CONTEXT_DIFFERS",
+                        loc.rel,
+                        pair[0],
+                        f"{pair[0]} ({first.get('Context')}) and {pair[1]} "
+                        f"({second.get('Context')})"
+                        f" are about different contexts, so this is probably not a conflict; "
+                        f"add 'Resolution: different contexts — <why>' or fix a Context",
+                    )
+                )
             resolved = bool(
                 rec.get("Resolution").strip() or partner.record.get("Resolution").strip()
             )

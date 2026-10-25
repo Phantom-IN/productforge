@@ -76,6 +76,7 @@ One observable fact per claim; repeated sightings add evidence to the same claim
 - Product impact:
 - Engineering impact:
 - Status: conflicting-with D-010
+- Context: Guest access and pricing
 
 ### D-010 — Guests require a paid plan
 - Claim: The pricing page lists guests as a paid-plan feature.
@@ -84,6 +85,7 @@ One observable fact per claim; repeated sightings add evidence to the same claim
 - Product impact:
 - Engineering impact:
 - Status: conflicting-with D-009
+- Context: Guest access and pricing
 
 ### D-011 — Automatic AI triage is rumoured
 - Claim: An unverified post claims tasks are triaged automatically by AI.
@@ -326,6 +328,7 @@ One observable fact per claim; repeated sightings add evidence to the same claim
 - Product impact:
 - Engineering impact:
 - Status: active
+- Context: Free plan member limit
 
 ### D-041 — Uptime history is published per component
 - Claim: The status page shows historic uptime for each component.
@@ -368,6 +371,7 @@ One observable fact per claim; repeated sightings add evidence to the same claim
 - Product impact:
 - Engineering impact:
 - Status: conflicting-with D-046
+- Context: Attachment upload limit
 
 ### D-046 — The upload cap is 25 MB per file
 - Claim: Each attachment may be at most 25 MB.
@@ -376,3 +380,4 @@ One observable fact per claim; repeated sightings add evidence to the same claim
 - Product impact:
 - Engineering impact:
 - Status: conflicting-with D-045
+- Context: Attachment upload limit

@@ -114,7 +114,11 @@ When your brief asks for an evidence pass, you turn sources into **claims** (`D-
    sources (`S-`) only.
 6. **Contradictions stay visible.** When two sources disagree, keep both claims, mark each
    `Status: conflicting-with <other>`, and write an unknown citing both (or a `- Resolution:` line
-   naming the deciding source, e.g. a newer Tier 1 page).
+   naming the deciding source, e.g. a newer Tier 1 page). Declare a conflict only within one
+   Context: fill `- Context: <workflow, feature, screen or setting>` on every claim about a rule or
+   behaviour, name the workflow or screen (never just "approvals"), and when two true claims have
+   different `Context` values keep both and do not mark them as conflicting. Both sides of a
+   conflict need a `Context` (`CONFLICT_CONTEXT_MISSING`); `Context` cannot be amended later.
 7. **Unknowns.** Write a `U-` record for every important question public sources cannot answer — and
    one for every official category the brief lists as uncovered after your search (e.g. "Does the
    product have a public status page?"). Fields: `Question`, `Reason it matters`,
@@ -165,5 +169,6 @@ add OB evidence instead of duplicating it. What the session suggests but does no
 
 ## Reply
 
-Reply with only the summary block from the contract. Under `RESEARCH REQUESTS` list one item per
+Reply with only the summary block from the contract, including one `READ <workspace path>: <n>`
+line per input your brief lists (`READ <path>: 0 (why)` if you could not read it). Under `RESEARCH REQUESTS` list one item per
 line using `browse <url>`, `pdf <url>`, `repo <url>`, or a short free-text gap.

@@ -86,8 +86,8 @@ CLAIMS = [
     d(6, "Reviewers praise keyboard shortcuts", "Small-team reviewers highlight keyboard-driven navigation.", "S-012", "PROBABLE", "Keyboard shortcuts are an expected strength."),
     d(7, "Edits by one user show up for others without refresh", "Changes made by one user appear to other users without a page reload.", "S-009, S-015", "CONFIRMED"),
     d(8, "Task changes need near-realtime propagation", "The system needs near-realtime propagation of task changes to connected clients.", "S-009", "INFERRED", "", "Requires a realtime event-distribution mechanism.", derived_from="D-007"),
-    d(9, "Guests are free on every plan", "The help center says guests are included on every plan.", "S-004", "CONFIRMED", "", "", status="conflicting-with D-010"),
-    d(10, "Guests require a paid plan", "The pricing page lists guests as a paid-plan feature.", "S-006", "CONFIRMED", "", "", status="conflicting-with D-009"),
+    d(9, "Guests are free on every plan", "The help center says guests are included on every plan.", "S-004", "CONFIRMED", "", "", status="conflicting-with D-010", context="Guest access and pricing"),
+    d(10, "Guests require a paid plan", "The pricing page lists guests as a paid-plan feature.", "S-006", "CONFIRMED", "", "", status="conflicting-with D-009", context="Guest access and pricing"),
     d(11, "Automatic AI triage is rumoured", "An unverified post claims tasks are triaged automatically by AI.", "S-014", "UNKNOWN", related_unknown="U-003"),
     d(12, "Every task keeps an activity history", "Each task shows a history of changes.", "S-001", "CONFIRMED", "", "An append-only activity log per task."),
     d(13, "Labels can be attached to tasks", "Tasks can carry labels.", "S-016", "CONFIRMED", "", "", status="superseded-by D-014"),
@@ -118,7 +118,7 @@ CLAIMS = [
     d(37, "Boards show columns per status", "The board view shows one column per task status.", "S-017", "CONFIRMED"),
     d(38, "Comments can mention members", "Comments support @-mentions of workspace members.", "S-001", "CONFIRMED"),
     d(39, "Files can be attached to tasks", "Members can attach files to a task.", "S-001", "CONFIRMED", "", "Needs object storage for uploads."),
-    d(40, "The free plan allows five members", "The free plan is limited to five members per workspace.", "S-006", "CONFIRMED"),
+    d(40, "The free plan allows five members", "The free plan is limited to five members per workspace.", "S-006", "CONFIRMED", context="Free plan member limit"),
     d(41, "Uptime history is published per component", "The status page shows historic uptime for each component.", "S-019", "CONFIRMED"),
     d(42, "Recurring tasks launched in February 2026", "Recurring tasks were announced as generally available in February 2026.", "S-020", "CONFIRMED"),
     d(43, "Search needs a combined index", "Search needs to index tasks and projects together.", "S-017", "INFERRED", "", "A multi-entity search index.", derived_from="D-036"),
@@ -747,7 +747,9 @@ SCORES = {
     "F-016": (2, 3, 1, 1, 2, 1, 0, 1, 1, 1, "yes", {}),
     "F-017": (1, 1, 0, 0, 1, 1, 0, 1, 1, 2, "yes", {}),
     "F-018": (1, 1, 0, 1, 2, 0, 3, 0, 2, 0, "yes", {}),
-    "F-019": (2, 2, 0, 2, 3, 3, 1, 2, 3, 2, "yes", {}),
+    "F-019": (2, 2, 0, 2, 3, 3, 1, 2, 3, 2, "yes", {
+        "Override decision": "DEFER",
+        "Override reason": "Search is marketed, but V1 filters by title; full-text search is a later phase"}),
     "F-020": (3, 3, 3, 0, 1, 1, 2, 0, 1, 0, "yes", {}),
     "F-021": (2, 1, 2, 0, 1, 0, 2, 0, 1, 1, "yes", {}),
     "F-022": (2, 1, 3, 0, 2, 0, 3, 0, 1, 0, "yes", {}),
@@ -759,7 +761,9 @@ SCORES = {
     "F-028": (1, 1, 0, 1, 2, 1, 1, 1, 2, 1, "yes", {}),
     "F-029": (0, 1, 0, 1, 1, 1, 0, 0, 1, 1, "maybe", {}),
     "F-030": (0, 0, 0, 1, 2, 1, 1, 1, 2, 0, "no", {}),
-    "F-031": (1, 0, 0, 0, 0, 0, 0, 0, 1, 0, "maybe", {}),
+    "F-031": (1, 0, 0, 0, 0, 0, 0, 0, 1, 0, "maybe", {
+        "Override decision": "DEFER",
+        "Override reason": "Plans appear on the pricing page, but V1 has a single free plan"}),
 }  # fmt: skip
 FEATURE_NAMES = {
     m.group(1): m.group(2) for m in re.finditer(r"^### (F-\d+) — (.+)$", "".join(FEATURES), re.M)
@@ -867,8 +871,8 @@ def scope_defined(pm: dict[str, str], failing: bool = False) -> dict[str, str]:
         }
         if failing:
             extra["research/DISCOVERY_LEDGER.md"] = files["research/DISCOVERY_LEDGER.md"] + "".join([
-                d(45, "Attachments are limited to 10 MB", "Each attachment may be at most 10 MB.", "S-001", "CONFIRMED", status="conflicting-with D-046"),
-                d(46, "The upload cap is 25 MB per file", "Each attachment may be at most 25 MB.", "S-008", "CONFIRMED", status="conflicting-with D-045"),
+                d(45, "Attachments are limited to 10 MB", "Each attachment may be at most 10 MB.", "S-001", "CONFIRMED", status="conflicting-with D-046", context="Attachment upload limit"),
+                d(46, "The upload cap is 25 MB per file", "Each attachment may be at most 25 MB.", "S-008", "CONFIRMED", status="conflicting-with D-045", context="Attachment upload limit"),
             ])  # fmt: skip
         for rel, text in extra.items():
             (ws / rel).write_text(text, encoding="utf-8")
@@ -902,6 +906,10 @@ ADRS = [
     adr(9, "Containers with managed PostgreSQL", "deployment", "Small-team scale; data encrypted at rest (A-011)", "Docker images for web, api and worker on a container platform; managed PostgreSQL and object storage with encryption at rest", "Kubernetes; serverless functions; a single VM", "Fewest moving parts that still separate web, api and worker", "Platform lock-in for networking and secrets", "A-011, R-007"),
     adr(10, "TypeScript with Next.js and a Node API", "other", "One language across web, api and worker; the user prefers Next.js and PostgreSQL", "Next.js for the web app, a Node.js API service and worker sharing TypeScript packages", "Python API with a React SPA; Ruby on Rails; Go API", "Matches the preference and lets web, api and worker share types and the policy module", "Node's single thread needs care for CPU-heavy work (none in V1)", "R-001, R-005"),
     adr(11, "Billing through a payment provider", "other", "Owners and admins manage subscriptions; we never store card data (R-011)", "Use a payment provider's hosted checkout and subscription webhooks; we store only the plan and status", "build card processing; invoices by hand; a reseller", "Card data never touches our system", "Webhook handling must be idempotent", "R-011"),
+    adr(12, "Authlane as the identity provider", "vendor", "Sign-in needs emailed one-time links and Google sign-in (R-009, ADR-003)", "Use Authlane (https://authlane.example) for hosted sign-in; the API verifies its signed tokens. Pricing: free tier up to 1,000 monthly active members, then per active member. Sandbox: a separate Authlane tenant per developer. Webhooks: none used; tokens are verified against the tenant's published keys. Fallback: any OpenID Connect provider, because the API depends only on the token format", "Keycloak; Auth0-style hosted providers; building magic links ourselves", "A hosted tenant removes password storage and token issuing from V1", "A vendor dependency for sign-in; a migration needs a member re-invite", "R-009"),
+    adr(13, "Payvault for subscriptions", "vendor", "Owners manage subscriptions and we never store card data (R-011, ADR-011)", "Use Payvault (https://payvault.example) hosted checkout and subscription webhooks. Pricing: a percentage per successful charge, no monthly fee. Sandbox: test mode keys and test card numbers. Webhooks: every delivery is verified with the HMAC signature header and the endpoint secret before it is processed. Fallback: Stripe-compatible checkout behind the same billing module", "A second hosted payment provider; invoicing by bank transfer", "Hosted checkout keeps card data out of our systems", "Fees scale with revenue; webhook handling must be idempotent", "R-011"),
+    adr(14, "Mailpost for transactional email", "vendor", "Sign-in links and invitations are emailed (R-007, R-009)", "Use Mailpost (https://mailpost.example) over its HTTPS API for transactional email. Pricing: free up to 3,000 messages a month, then per thousand. Sandbox: a sandbox domain that accepts mail and delivers nothing. Webhooks: delivery events are verified with the signature header. Fallback: any SMTP relay through the same mail port", "A generic SMTP relay; the identity provider's own mailer", "A single API with delivery events and a sandbox", "Delivery depends on a verified sending domain", "R-007, R-009"),
+    adr(15, "Stowage for object storage", "vendor", "Attachments are stored privately and served by signed URL (R-010, ADR-008)", "Use Stowage (https://stowage.example), an S3-compatible object store. Pricing: per stored gigabyte and per outbound gigabyte. Sandbox: a local S3-compatible emulator in development and a test bucket in CI. Webhooks: none used. Fallback: any S3-compatible store, because the code uses only the S3 protocol", "A database blob column; a self-hosted S3-compatible server", "S3-compatible access with encryption at rest and no servers to run", "Outbound traffic is billed; signed URLs expire in 5 minutes", "R-010"),
 ]  # fmt: skip
 
 
@@ -950,7 +958,10 @@ PROPOSALS = [
 
 ARCH_SECTIONS = {
     "## Overview": "```mermaid\nflowchart LR\n  Browser --> Web[Next.js web]\n  Web --> API[Node API]\n  API --> DB[(PostgreSQL)]\n  Worker --> DB\n  API --> Files[(Object storage)]\n  API --> IdP[Identity provider]\n  API --> Pay[Payment provider]\n```\n",
-    "## Stack": "| Concern | Choice | ADR |\n|---|---|---|\n| Web | Next.js (TypeScript) | ADR-010 |\n| API and worker | Node.js (TypeScript) | ADR-010 |\n| Database and jobs | PostgreSQL | ADR-005, ADR-007 |\n| Sign-in | Hosted identity provider | ADR-003 |\n| Files | S3-compatible object storage | ADR-008 |\n| Payments | Payment provider | ADR-011 |\n| Deployment | Docker on a container platform | ADR-009 |\n",
+    "## Stack": "| Concern | Choice | ADR |\n|---|---|---|\n| Web | Next.js (TypeScript) | ADR-010 |\n| API and worker | Node.js (TypeScript) | ADR-010 |\n| Database and jobs | PostgreSQL | ADR-005, ADR-007 |\n| Sign-in | Authlane (hosted identity provider) | ADR-003, ADR-012 |\n| Files | Stowage (S3-compatible object storage) | ADR-008, ADR-015 |\n| Payments | Payvault (payment provider) | ADR-011, ADR-013 |\n| Email | Mailpost (transactional email) | ADR-014 |\n| Deployment | Docker on a container platform | ADR-009 |\n",
+    "## External services": "| Capability | Vendor | ADR | Test stand-in |\n|---|---|---|---|\n| Identity | Authlane | ADR-012 | a developer tenant on Authlane's sandbox |\n| Payments | Payvault | ADR-013 | Payvault test mode with test card numbers |\n| Transactional email | Mailpost | ADR-014 | Mailpit locally, the Mailpost sandbox domain in CI |\n| Object storage | Stowage | ADR-015 | an S3-compatible emulator (S3Mock) |\n",
+    "## Toolchain": "| Concern | Choice | Version | Verified |\n|---|---|---|---|\n| runtime | Node.js | 22.11.0 | 2026-10-13 nodejs.org/dist/index.json |\n| language | TypeScript | 5.6.3 | 2026-10-13 registry.npmjs.org/typescript |\n| framework | Next.js | 15.0.3 | 2026-10-13 registry.npmjs.org/next |\n| data access | Drizzle ORM | 0.36.0 | 2026-10-13 registry.npmjs.org/drizzle-orm |\n| migrations | drizzle-kit | 0.28.0 | 2026-10-13 registry.npmjs.org/drizzle-kit |\n| tests | Vitest | 2.1.5 | 2026-10-13 registry.npmjs.org/vitest |\n| lint | ESLint | 9.14.0 | 2026-10-13 registry.npmjs.org/eslint |\n| package manager | pnpm | 9.12.3 | 2026-10-13 registry.npmjs.org/pnpm |\n| ci | GitHub Actions on ubuntu-24.04 | ubuntu-24.04 | 2026-10-13 docs.github.com/actions/using-github-hosted-runners |\n",
+    "## Environments": "| Name | Secret | Used by | Development value |\n|---|---|---|---|\n| DATABASE_URL | yes | api, worker | postgres://tasklet:tasklet@localhost:5432/tasklet |\n| AUTHLANE_ISSUER_URL | no | api, web | https://dev-tasklet.authlane.example |\n| AUTHLANE_CLIENT_SECRET | yes | api | dev-secret-not-real |\n| PAYVAULT_API_KEY | yes | api | pv_test_not_real |\n| PAYVAULT_WEBHOOK_SECRET | yes | api | whsec_not_real |\n| MAILPOST_API_KEY | yes | api, worker | mp_sandbox_not_real |\n| STOWAGE_ENDPOINT | no | api | http://localhost:9090 |\n| STOWAGE_BUCKET | no | api | tasklet-dev |\n\n### Local services\n\n- postgres: postgres:16.4, 5432\n- s3mock: adobe/s3mock:3.11.0, 9090\n- mailpit: axllent/mailpit:v1.21.0, 8025\n",
     "## Components": "- Web: Next.js app for boards, projects and settings (R-001, R-002, ADR-010)\n- API: HTTP API with the policy module (R-008, ADR-004)\n- Worker: runs queued jobs such as notifications (R-006, ADR-007)\n- Database: PostgreSQL with row-level security (R-007, ADR-002, ADR-005)\n",
     "## Data storage": "PostgreSQL holds everything relational, the activity history and the job queue (ADR-005, ADR-007).\n",
     "## Identity & tenancy": "UUIDv7 keys plus per-workspace task numbers (ADR-001); one database with row-level security per workspace (ADR-002).\n",
@@ -1020,12 +1031,12 @@ PHASES = [
       ("apps/worker/", "worker process shell"), ("tests/integration/", "test harness against a disposable database")],
      ["`npm test` runs and passes on a clean checkout", "web, api and worker start locally", "CI-ready lint passes"], "§3, §4, §5, ADR-010"),
     ("01", "database-and-tenancy", "Database and tenancy", "00", "PostgreSQL schema with workspace row-level security.",
-     [("packages/db/migrations/", "workspaces, members and RLS policies"), ("packages/db/src/session.ts", "per-request workspace setting"),
+     [("packages/db/migrations/", "workspaces, members and RLS policies with drizzle-kit 0.28.0 against `postgres:16.4`, read from `DATABASE_URL`"), ("packages/db/src/session.ts", "per-request workspace setting"),
       ("tests/integration/tenancy.test.ts", "cross-workspace reads are denied")],
      ["every tenant table has workspace_id and an RLS policy", "a query without a workspace setting returns no rows", "UUIDv7 keys are generated"], "§6, §18, ADR-001, ADR-002, ADR-005, INV-01, INV-04, R-007"),
     ("02", "sign-in", "Sign-in", "01", "Members sign in through the identity provider.",
-     [("apps/api/src/auth/", "token verification and sessions"), ("apps/web/app/sign-in/", "magic-link and Google sign-in pages")],
-     ["a magic link signs a member in once", "Google sign-in works", "unauthenticated API calls are refused"], "§7, ADR-003, R-009"),
+     [("apps/api/src/auth/", "token verification and sessions against Authlane (`AUTHLANE_ISSUER_URL`, `AUTHLANE_CLIENT_SECRET`) with magic-link mail sent through Mailpost (`MAILPOST_API_KEY`)"), ("apps/web/app/sign-in/", "magic-link and Google sign-in pages")],
+     ["a magic link signs a member in once", "Google sign-in works", "unauthenticated API calls are refused"], "§7, ADR-003, ADR-012, ADR-014, R-009"),
     ("03", "authorization-policy", "Authorization policy", "02", "One policy module enforces the permissions matrix.",
      [("packages/shared/src/policy.ts", "role × resource × action table"), ("apps/api/src/policy/", "router middleware requiring a policy per handler"),
       ("tests/integration/policy.test.ts", "one test per permission cell")],
@@ -1052,10 +1063,10 @@ PHASES = [
      ["assigning a task notifies the assignee within 5 s", "running a job twice creates one notification", "notifications are visible only to their recipient"], "§11, R-006, ADR-007, INV-05"),
     ("10", "attachments", "Attachments", "06", "Members attach files stored in object storage.",
      [("apps/api/src/files/", "upload and signed-URL endpoints"), ("tests/integration/files.test.ts", "direct storage access is denied")],
-     ["a member attaches a file to a task", "downloads use signed URLs that expire in 5 minutes", "a non-reader cannot download the file"], "§16, R-010, ADR-008, INV-07"),
+     ["a member attaches a file to a task", "downloads use signed URLs that expire in 5 minutes", "a non-reader cannot download the file"], "§16, R-010, ADR-008, ADR-015, INV-07"),
     ("11", "billing", "Billing", "04", "Owners manage the subscription through the payment provider.",
-     [("apps/api/src/billing/", "checkout session and subscription webhooks"), ("apps/web/app/settings/billing/", "plan and billing page")],
-     ["an owner upgrades through hosted checkout", "subscription webhooks are idempotent", "no card data reaches our servers"], "§10, R-011, ADR-011"),
+     [("apps/api/src/billing/", "Payvault checkout session and subscription webhooks verified with `PAYVAULT_WEBHOOK_SECRET`"), ("apps/web/app/settings/billing/", "plan and billing page")],
+     ["an owner upgrades through hosted checkout", "subscription webhooks are idempotent", "no card data reaches our servers"], "§10, R-011, ADR-011, ADR-013"),
     ("12", "deployment-and-hardening", "Deployment and hardening", "07, 09, 10, 11", "Production images, encrypted stores and observability.",
      [("infra/docker/", "images for web, api and worker"), ("docs/runbook.md", "deploy, rollback and secrets"), ("tests/e2e/", "smoke test of the core flow")],
      ["images build and start on the container platform", "stores are encrypted at rest", "the e2e smoke test passes against staging"], "§14, §15, §17, ADR-009, INV-06"),
@@ -1087,9 +1098,9 @@ PLAN_BODIES = {
     4: "| Concern | Choice | ADR |\n|---|---|---|\n| Web | Next.js | ADR-010 |\n| API and worker | Node.js | ADR-010 |\n| Database | PostgreSQL | ADR-005 |",
     5: "```text\ntasklet-alt/\n├── apps/\n│   ├── web/\n│   ├── api/\n│   └── worker/\n├── packages/\n│   ├── db/\n│   └── shared/\n├── infra/\n│   └── docker/\n├── tests/\n└── docs/\n```",
     6: "Workspaces, members, projects, tasks, comments, attachments and activity (E-01 to E-11); UUIDv7 keys (ADR-001).",
-    7: "A hosted identity provider (ADR-003).", 8: "One policy module (ADR-004, INV-02).",
+    7: "Authlane as the hosted identity provider (ADR-003, ADR-012).", 8: "One policy module (ADR-004, INV-02).",
     9: "Workspaces, projects, tasks, board, comments, notifications, attachments, billing.",
-    10: "Identity provider and payment provider (ADR-003, ADR-011).", 11: "Outbox and job queue (ADR-007).",
+    10: "Authlane, Payvault, Mailpost and Stowage (ADR-003, ADR-011, ADR-012 to ADR-015).", 11: "Outbox and job queue (ADR-007).",
     12: "Polling every 30 s (ADR-006).", 13: "Not in V1 (SC-019).", 14: "INV-01, INV-02, INV-06.",
     15: "Structured logs and error tracking.", 16: "Managed PostgreSQL and object storage (ADR-005, ADR-008).",
     17: "Containers on a platform (ADR-009).", 18: "INV-01 to INV-07.",
@@ -1097,12 +1108,27 @@ PLAN_BODIES = {
 }  # fmt: skip
 
 
+ORCHESTRATOR_VALUES = (
+    ("gitignore_entries", "`node_modules/`, `dist/`, `.data/`, `infra/docker/.env`, `*.log` and `.DS_Store`"),
+    ("tooling_check", "`node -v` is 22.x and Docker is running"),
+    ("port_scheme", "`API_PORT=3000+10k`, `WORKER_HEALTH_PORT=3001+10k`, web port `5173+10k`"),
+    ("env_file", "infra/docker/.env"),
+    ("compose_project", "tasklet-dev"),
+    ("service_owners", "01: `postgres`; 10: `objectstore`"),
+    ("install_command", "npm ci"),
+    ("ci_command", "npm run ci"),
+    ("e2e_setup_command", "npx playwright install chromium"),
+    ("migrations_path", "packages/db/migrations/"),
+    ("local_run_commands", "`docker compose -p tasklet-dev up -d`, then `npm run dev`"),
+)  # fmt: skip
+
+
 def project_docs(n_invariants: int) -> dict[str, str]:
     root = Path(__file__).resolve().parents[2] / "skills/productforge/templates"
 
     def fill(s: str) -> str:
         for key, value in (("our_name", "tasklet-alt"), ("product_name", "Tasklet"),
-                           ("target_url", "https://tasklet.example")):  # fmt: skip
+                           ("target_url", "https://tasklet.example"), *ORCHESTRATOR_VALUES):  # fmt: skip
             s = s.replace("{{" + key + "}}", value)
         return s
 
@@ -1136,7 +1162,7 @@ def project_docs(n_invariants: int) -> dict[str, str]:
     readme = readme.replace("|---|---|---|---|---|\n", "|---|---|---|---|---|\n" + rows, 1)
     docs = {
         name: fill((root / f"project/{name}").read_text())
-        for name in ("README.md", "DEVELOPMENT.md", "STARTUP_PROMPT.md")
+        for name in ("README.md", "DEVELOPMENT.md", "STARTUP_PROMPT.md", "ORCHESTRATOR_PROMPT.md")
     }
     docs.update({"IMPLEMENTATION_PLAN.md": plan, "CLAUDE.md": claude, "plans/README.md": readme})
     docs["spec/TRACEABILITY.md"] = fill((root / "spec/TRACEABILITY.md").read_text())

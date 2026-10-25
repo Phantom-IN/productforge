@@ -18,7 +18,7 @@ Builds sign-in for tasklet-alt V1 (§7).
 
 ## Tasks
 
-1. `apps/api/src/auth/`: token verification and sessions.
+1. `apps/api/src/auth/`: token verification and sessions against Authlane (`AUTHLANE_ISSUER_URL`, `AUTHLANE_CLIENT_SECRET`) with magic-link mail sent through Mailpost (`MAILPOST_API_KEY`).
 2. `apps/web/app/sign-in/`: magic-link and Google sign-in pages.
 
 ## Data & schema changes
@@ -42,7 +42,7 @@ Builds sign-in for tasklet-alt V1 (§7).
 
 ## References
 
-- IMPLEMENTATION_PLAN §7, ADR-003, R-009
+- IMPLEMENTATION_PLAN §7, ADR-003, ADR-012, ADR-014, R-009
 
 ## Open questions / risks
 

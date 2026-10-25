@@ -6,4 +6,4 @@ Runtime code in this package is standard-library only, deterministic and offline
 
 from __future__ import annotations
 
-__version__ = "2.0.0"
+__version__ = "3.0.0"

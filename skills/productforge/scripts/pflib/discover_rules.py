@@ -35,7 +35,17 @@ ON_SITE_RULES: tuple[tuple[str | None, str | None, str], ...] = (
     (None, r"/(docs|documentation|guides?|manual)(/|$)", "docs"),
     (None, r"/(help|support|faq|kb|knowledge-base)(/|$)", "help-center"),
     (None, r"/(changelog|releases?|release-notes|whats-new|updates)(/|$)", "changelog"),
-    (None, r"/(security|trust|compliance|privacy|gdpr|soc-?2)(/|$)", "security"),
+    # A security page under a legal/company path is still a security page.
+    (None, r"/(security|trust|compliance|gdpr|soc-?2)(/|$)", "security"),
+    # Company pages only when the company word is the FIRST path segment: "/solutions/legal" or
+    # "/features/team" describe the product.
+    (
+        None,
+        r"^/(about(-us)?|careers?|team|privacy(-policy)?"
+        r"|terms(-of-(service|use)|-and-conditions)?|legal)(/|$)",
+        "company",
+    ),
+    (None, r"/privacy(/|$)", "security"),
     (None, r"/(pricing|plans)(/|$)", "pricing"),
     (None, r"/(enterprise)(/|$)", "enterprise"),
     (None, r"/(integrations?|apps|marketplace|extensions)(/|$)", "integrations"),
@@ -43,7 +53,12 @@ ON_SITE_RULES: tuple[tuple[str | None, str | None, str], ...] = (
     (None, r"/(blog|news|announcements)(/|$)", "product-blog"),
     (None, r"/(webinars?|demos?|videos?)(/|$)", "official-demo"),
     (None, r"/(tutorials?|academy|learn|courses?)(/|$)", "official-tutorial"),
-    (None, r"/(features?|product|platform|solutions?|use-cases)(/|$)", "features"),
+    (
+        None,
+        r"/(features?|products?|platform|solutions?|modules?|use-cases|corporate)(/|$)",
+        "features",
+    ),
+    (None, r"/enterprise-[^/]+", "features"),
     (None, r"^/?$", "homepage"),
 )
 

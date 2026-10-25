@@ -119,3 +119,45 @@ def test_empty_existing_run_renders_a_normal_brief(tasklet_discovery: Path) -> N
     run_id, _ = workspace.create_staging_run(tasklet_discovery, "research-agent")
     b = brief.render(tasklet_discovery, role="research-agent", task="Go.", run_id=run_id)
     assert b.run_id == run_id and not b.repair
+
+
+# ---- input receipts (v3 phase 06) --------------------------------------------------------
+
+
+def test_brief_lists_inputs_with_expected_counts(tasklet_scope: Path) -> None:
+    b = brief.render(
+        tasklet_scope,
+        role="systems-architect",
+        task="Architect.",
+        inputs=["spec/PRODUCT_SPEC.md", "spec/DOMAIN_MODEL.md", "spec/decisions", "nope.md"],
+    )
+    by_path = {i["path"]: i for i in b.to_dict()["inputs"]}
+    spec_text = (tasklet_scope / "spec/PRODUCT_SPEC.md").read_text(encoding="utf-8")
+    assert by_path["spec/PRODUCT_SPEC.md"] == {
+        "path": "spec/PRODUCT_SPEC.md",
+        "kind": "records",
+        "expected": spec_text.count("\n### R-") + spec_text.startswith("### R-"),
+    }
+    assert by_path["spec/PRODUCT_SPEC.md"]["expected"] > 0
+    assert by_path["spec/decisions"]["kind"] == "directory"
+    assert by_path["nope.md"]["expected"] == 0
+    assert b.input_kb > 0 and b.warnings == []
+    assert "READ spec/PRODUCT_SPEC.md: <n>" in b.text and "{{" not in b.text
+
+
+def test_prose_input_expects_its_section_count(tasklet_discovery: Path) -> None:
+    (tasklet_discovery / "notes.md").write_text("# T\n\n## A\nx\n\n## B\ny\n", encoding="utf-8")
+    b = brief.render(tasklet_discovery, role="research-agent", task="x", inputs=["notes.md"])
+    assert b.inputs == [{"path": "notes.md", "kind": "prose", "expected": 2}]
+
+
+def test_large_inputs_carry_the_partition_warning(tasklet_discovery: Path, pf_cli: object) -> None:
+    (tasklet_discovery / "big.md").write_text("## A\n" + "x" * 2048 + "\n", encoding="utf-8")
+    cfg = tasklet_discovery / ".productforge" / "config.json"
+    cfg.write_text('{"agents.max_input_kb": 1}', encoding="utf-8")
+    b = brief.render(tasklet_discovery, role="research-agent", task="x", inputs=["big.md"])
+    assert len(b.warnings) == 1
+    assert b.warnings[0].startswith("INPUT_LARGE") and "--partition" in b.warnings[0]
+    cfg.write_text("{}", encoding="utf-8")
+    small = brief.render(tasklet_discovery, role="research-agent", task="x", inputs=["big.md"])
+    assert small.warnings == []  # 2 KB is far below the 400 KB default

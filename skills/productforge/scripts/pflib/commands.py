@@ -14,8 +14,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from pflib import gates, state
+from pflib import competitors, config, gates, state, waivers
 from pflib.errors import UsageError
+from pflib.index import WorkspaceIndex
 from pflib.state import State
 
 COMMAND_STAGE: dict[str, State] = {
@@ -85,12 +86,29 @@ CONDITION_COMMAND: dict[str, str] = {
 }
 
 
+COMPETITOR_CONDITION = "G-SC-COMPETITOR-SIGNAL"
+
+
+def _competitors_missing(ws: Path) -> bool:
+    """Fewer than ``competitors.min_researched`` active C records and no competitors waiver."""
+    need = int(config.resolve("competitors.min_researched", ws))
+    if competitors.researched(WorkspaceIndex(ws)) >= need:
+        return False
+    return waivers.get(ws, waivers.COMPETITORS) is None
+
+
 def next_command(ws: Path, st: state.WorkspaceState, report: gates.GateReport | None = None) -> str:
     """Keep working on the open stage until its gate passes — on the command that addresses the
-    first failing condition — then enter the next stage."""
+    first failing condition — then enter the next stage (`competitors` first when the scope
+    stage would fail its competitor signal)."""
     report = report or gates.evaluate(ws, st.state.value)
     nxt = st.state.next()
+    if st.state == State.SCOPE_DEFINED and COMPETITOR_CONDITION in report.failing():
+        if _competitors_missing(ws):
+            return "competitors"
     if report.passed and nxt in PRIMARY_COMMAND:
+        if st.state == State.PRODUCT_MODEL and _competitors_missing(ws):
+            return "competitors"
         return PRIMARY_COMMAND[nxt]
     for cid in report.failing():
         if cid in CONDITION_COMMAND:
@@ -120,6 +138,16 @@ def check_command(ws: Path, cmd: str) -> Decision:
         known = ", ".join([*COMMAND_STAGE, *MULTI_STAGE, *ALWAYS_ALLOWED])
         raise UsageError(
             f"unknown productforge command {cmd!r} (known: {known})", code="UNKNOWN_COMMAND"
+        )
+    if cmd == "competitors" and open_ == State.SCOPE_DEFINED:
+        return Decision(
+            ALLOWED,
+            cmd,
+            open_.value,
+            open_.value,
+            f"{cmd} adds evidence (C, FS, S records) as appends to the closed "
+            f"{target.value}; {open_.value} is open",
+            cmd,
         )
     if target == open_:
         return Decision(

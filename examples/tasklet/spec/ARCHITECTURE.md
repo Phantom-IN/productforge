@@ -27,10 +27,53 @@ flowchart LR
 | Web | Next.js (TypeScript) | ADR-010 |
 | API and worker | Node.js (TypeScript) | ADR-010 |
 | Database and jobs | PostgreSQL | ADR-005, ADR-007 |
-| Sign-in | Hosted identity provider | ADR-003 |
-| Files | S3-compatible object storage | ADR-008 |
-| Payments | Payment provider | ADR-011 |
+| Sign-in | Authlane (hosted identity provider) | ADR-003, ADR-012 |
+| Files | Stowage (S3-compatible object storage) | ADR-008, ADR-015 |
+| Payments | Payvault (payment provider) | ADR-011, ADR-013 |
+| Email | Mailpost (transactional email) | ADR-014 |
 | Deployment | Docker on a container platform | ADR-009 |
+
+## External services
+
+| Capability | Vendor | ADR | Test stand-in |
+|---|---|---|---|
+| Identity | Authlane | ADR-012 | a developer tenant on Authlane's sandbox |
+| Payments | Payvault | ADR-013 | Payvault test mode with test card numbers |
+| Transactional email | Mailpost | ADR-014 | Mailpit locally, the Mailpost sandbox domain in CI |
+| Object storage | Stowage | ADR-015 | an S3-compatible emulator (S3Mock) |
+
+## Toolchain
+
+| Concern | Choice | Version | Verified |
+|---|---|---|---|
+| runtime | Node.js | 22.11.0 | 2026-10-13 nodejs.org/dist/index.json |
+| language | TypeScript | 5.6.3 | 2026-10-13 registry.npmjs.org/typescript |
+| framework | Next.js | 15.0.3 | 2026-10-13 registry.npmjs.org/next |
+| data access | Drizzle ORM | 0.36.0 | 2026-10-13 registry.npmjs.org/drizzle-orm |
+| migrations | drizzle-kit | 0.28.0 | 2026-10-13 registry.npmjs.org/drizzle-kit |
+| tests | Vitest | 2.1.5 | 2026-10-13 registry.npmjs.org/vitest |
+| lint | ESLint | 9.14.0 | 2026-10-13 registry.npmjs.org/eslint |
+| package manager | pnpm | 9.12.3 | 2026-10-13 registry.npmjs.org/pnpm |
+| ci | GitHub Actions on ubuntu-24.04 | ubuntu-24.04 | 2026-10-13 docs.github.com/actions/using-github-hosted-runners |
+
+## Environments
+
+| Name | Secret | Used by | Development value |
+|---|---|---|---|
+| DATABASE_URL | yes | api, worker | postgres://tasklet:tasklet@localhost:5432/tasklet |
+| AUTHLANE_ISSUER_URL | no | api, web | https://dev-tasklet.authlane.example |
+| AUTHLANE_CLIENT_SECRET | yes | api | dev-secret-not-real |
+| PAYVAULT_API_KEY | yes | api | pv_test_not_real |
+| PAYVAULT_WEBHOOK_SECRET | yes | api | whsec_not_real |
+| MAILPOST_API_KEY | yes | api, worker | mp_sandbox_not_real |
+| STOWAGE_ENDPOINT | no | api | http://localhost:9090 |
+| STOWAGE_BUCKET | no | api | tasklet-dev |
+
+### Local services
+
+- postgres: postgres:16.4, 5432
+- s3mock: adobe/s3mock:3.11.0, 9090
+- mailpit: axllent/mailpit:v1.21.0, 8025
 
 ## Components
 
@@ -178,6 +221,10 @@ tasklet-alt/
 | ADR-009 | Containers with managed PostgreSQL | deployment | accepted | A-011, R-007 |
 | ADR-010 | TypeScript with Next.js and a Node API | other | accepted | R-001, R-005 |
 | ADR-011 | Billing through a payment provider | other | accepted | R-011 |
+| ADR-012 | Authlane as the identity provider | vendor | accepted | R-009 |
+| ADR-013 | Payvault for subscriptions | vendor | accepted | R-011 |
+| ADR-014 | Mailpost for transactional email | vendor | accepted | R-007, R-009 |
+| ADR-015 | Stowage for object storage | vendor | accepted | R-010 |
 <!-- pf:generated:end -->
 
 ## Requirement coverage
@@ -191,9 +238,9 @@ tasklet-alt/
 | R-004 | Every task keeps its history | ADR-005 |
 | R-005 | Members discuss tasks | ADR-010, convention |
 | R-006 | Members are notified in the app | ADR-007 |
-| R-007 | Workspaces hold members | ADR-001, ADR-002, ADR-009 |
+| R-007 | Workspaces hold members | ADR-001, ADR-002, ADR-009, ADR-014 |
 | R-008 | Roles decide what members may do | ADR-002, ADR-004 |
-| R-009 | Sign-in uses an identity provider | ADR-003 |
-| R-010 | Files attach to tasks | ADR-008 |
-| R-011 | Billing runs through a payment provider | ADR-011 |
+| R-009 | Sign-in uses an identity provider | ADR-003, ADR-012, ADR-014 |
+| R-010 | Files attach to tasks | ADR-008, ADR-015 |
+| R-011 | Billing runs through a payment provider | ADR-011, ADR-013 |
 <!-- pf:generated:end -->

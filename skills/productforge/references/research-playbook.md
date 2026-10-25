@@ -73,6 +73,23 @@ source, paraphrased. Engineering consequences ("needs a multi-entity search inde
 - Do not resolve contradictions by picking a side silently — they become conflicting claims with an
   unknown or a written Resolution (`confidence-rules.md`).
 
+## Claim context
+
+Give every claim about a rule or behaviour a `Context`: the workflow, feature, screen or setting it
+is about (use the workflow or screen name, not a vague word like "approvals"). A conflict exists only
+between claims of the same context. Worked example, two true claims:
+
+```markdown
+### D-?1 — Clause-deviation approvals restart at Level 1
+- Context: Clause-deviation approval workflow
+### D-?2 — Contract-creation approvals resume at the rejecting level
+- Context: Contract-creation approval workflow
+```
+
+They look contradictory but describe different workflows. Keep both, without `conflicting-with`; if
+they were already marked, add `Resolution: different contexts — clause approvals vs creation
+approvals`. Never merge them into one lifecycle rule downstream.
+
 ## JavaScript-only sites
 
 If WebFetch returns an empty shell, the agent lists the URL as `browse <url>`; the orchestrator

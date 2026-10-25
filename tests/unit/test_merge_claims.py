@@ -68,3 +68,38 @@ def test_unioned_evidence_can_rescue_a_weak_claim_on_preflight(tasklet_discovery
     stage_dir = workspace.staging_dir(tasklet_discovery, run) / "research/DISCOVERY_LEDGER.md"
     stage_dir.write_text(weak.replace("S-010", "S-010, S-011"))  # second, independent site
     assert merge.preflight(tasklet_discovery, run)["ok"]
+
+
+def test_merge_refuses_unrepaired_preflight_errors(tasklet_discovery: Path) -> None:
+    import pytest
+
+    from pflib import brief, config
+    from pflib.errors import UsageError
+
+    weak = CLAIM.format(title="Shortcuts cover every action", claim="Every action has one.",
+                        ev="S-010", conf="PROBABLE")  # fmt: skip
+    run = stage(tasklet_discovery, weak)
+    merge.check_repaired(tasklet_discovery, run)  # no preflight yet: nothing to enforce
+    assert not merge.preflight(tasklet_discovery, run)["ok"]
+    for used in range(int(config.resolve("agents.max_repair_loops", tasklet_discovery))):
+        with pytest.raises(UsageError) as exc:
+            merge.check_repaired(tasklet_discovery, run)
+        assert exc.value.code == "MERGE_BEFORE_REPAIR"
+        brief.render(tasklet_discovery, role="research-agent", task="t", run_id=run)  # a repair
+        assert workspace.read_run_meta(tasklet_discovery, run)["repairs"] == used + 1
+    merge.check_repaired(tasklet_discovery, run)  # repair passes used up: merging is allowed
+
+
+def test_merge_cli_accept_findings(pf_cli, tasklet_discovery: Path) -> None:  # type: ignore[no-untyped-def]
+    import json
+
+    weak = CLAIM.format(title="Shortcuts cover every action", claim="Every action has one.",
+                        ev="S-010", conf="PROBABLE")  # fmt: skip
+    run = stage(tasklet_discovery, weak)
+    ws = str(tasklet_discovery)
+    code, _, _ = pf_cli("merge", run, "--check", "--workspace", ws, "--json")
+    assert code == 1
+    code, out, _ = pf_cli("merge", run, "--workspace", ws, "--json")
+    assert code == 2 and json.loads(out)["error"] == "MERGE_BEFORE_REPAIR"
+    code, out, _ = pf_cli("merge", run, "--accept-findings", "--workspace", ws, "--json")
+    assert code == 0 and json.loads(out)["new_ids"]

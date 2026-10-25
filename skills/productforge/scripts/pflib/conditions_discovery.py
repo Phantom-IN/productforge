@@ -94,6 +94,43 @@ def _min_claims(ws: Path) -> ConditionResult:
     )
 
 
+def _scope_depth(ws: Path) -> ConditionResult:
+    d = research.depth(ws)
+    if not d["in_scope"]:
+        return ConditionResult(True, "no in-scope candidates in the discovery index")
+    done = d["read"] + d["excluded"]
+    need = done + d["needed"]
+    wanted = float(config.resolve("research.min_scope_depth", ws))
+    text = (
+        f"{done}/{d['in_scope']} (need {need}, research.min_scope_depth {wanted:g}); "
+        f"{d['read']} read, {d['excluded']} excluded"
+        + (
+            f"; {d['excluded_uncounted']} more exclusions not counted (research.max_excluded_share)"
+            if d["excluded_uncounted"]
+            else ""
+        )
+    )
+    return ConditionResult(d["needed"] == 0, text)
+
+
+def _nav_pages(ws: Path) -> ConditionResult:
+    unread = research.nav_unread(ws)
+    if unread:
+        shown = ", ".join(unread[:5]) + (" …" if len(unread) > 5 else "")
+        return ConditionResult(False, f"{len(unread)} navigation pages unread: {shown}")
+    return ConditionResult(True, "every in-scope navigation page is read or excluded")
+
+
+def _unknowns_audited(ws: Path) -> ConditionResult:
+    audit = research.unknown_audit(ws)
+    if audit:
+        shown = "; ".join(f"{u}: {', '.join(v[:2])}" for u, v in list(audit.items())[:3])
+        return ConditionResult(
+            False, f"{len(audit)} unknowns may be answered by unread pages ({shown})"
+        )
+    return ConditionResult(True, "no unknown has an unread candidate page")
+
+
 for _cid, _desc, _fn in (
     ("G-DISC-MIN-SOURCES", "at least research.min_sources_gate sources", _min_sources),
     ("G-DISC-TIER1", "at least one Tier 1 source", _tier1),
@@ -101,5 +138,20 @@ for _cid, _desc, _fn in (
     ("G-DISC-OVERVIEW", "product-overview.md sections are filled", _overview),
     ("G-DISC-SURFACES", "at least one product surface", _surfaces),
     ("G-DISC-MIN-CLAIMS", "at least research.min_claims_gate active claims", _min_claims),
+    (
+        "G-DISC-SCOPE-DEPTH",
+        "in-scope official pages are read or excluded (min_scope_depth)",
+        _scope_depth,
+    ),
+    (
+        "G-DISC-NAV-PAGES",
+        "every in-scope homepage-navigation page is read or excluded",
+        _nav_pages,
+    ),
+    (
+        "G-DISC-UNKNOWNS-AUDITED",
+        "no unknown has an unread page that probably answers it",
+        _unknowns_audited,
+    ),
 ):
     register(STAGE, GateCondition(_cid, _desc, _fn))

@@ -49,7 +49,7 @@ Workspaces, members, projects, tasks, comments, attachments and activity (E-01 t
 
 ## 7. Authentication
 
-A hosted identity provider (ADR-003).
+Authlane as the hosted identity provider (ADR-003, ADR-012).
 
 ## 8. Authorization
 
@@ -61,7 +61,7 @@ Workspaces, projects, tasks, board, comments, notifications, attachments, billin
 
 ## 10. Integrations
 
-Identity provider and payment provider (ADR-003, ADR-011).
+Authlane, Payvault, Mailpost and Stowage (ADR-003, ADR-011, ADR-012 to ADR-015).
 
 ## 11. Async processing
 

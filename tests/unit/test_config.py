@@ -74,3 +74,61 @@ def test_configuration_doc_lists_exactly_the_registered_keys() -> None:
     assert documented == set(config.DEFAULTS)
     for key, spec in config.DEFAULTS.items():
         assert spec.description in text, key
+
+
+def test_set_value_parses_validates_and_logs(ws: Path) -> None:
+    out = config.set_value(ws, "model.max_workflows", "12", "cap below domain count")
+    assert (out["old"], out["new"]) == (25, 12)
+    assert config.resolve("model.max_workflows", ws) == 12
+    config.set_value(ws, "architecture.preferences", '["Next.js", "PostgreSQL"]', "stack")
+    config.set_value(ws, "observe.screenshots", "blur", "privacy")
+    assert config.resolve("observe.screenshots", ws) == "blur"
+    config.set_value(ws, "model.max_workflows", "25", "back to default")
+    assert "model.max_workflows" not in json.loads(
+        (ws / ".productforge" / "config.json").read_text()
+    )  # only non-default overrides are stored
+    events = [
+        json.loads(line) for line in (ws / ".productforge" / "history.log").read_text().splitlines()
+    ]
+    first = events[0]
+    assert first["event"] == "config-set" and first["key"] == "model.max_workflows"
+    assert (first["old"], first["new"], first["reason"]) == (25, 12, "cap below domain count")
+
+
+@pytest.mark.parametrize(
+    "key, raw",
+    [("model.max_workflows", "lots"), ("model.max_workflows", "true"), ("nope.key", "1"),
+     ("architecture.preferences", '"x"')],
+)  # fmt: skip
+def test_set_value_rejects_bad_input(ws: Path, key: str, raw: str) -> None:
+    with pytest.raises(PFError):
+        config.set_value(ws, key, raw, "why")
+    assert not (ws / ".productforge" / "config.json").exists()
+
+
+def test_set_value_needs_a_reason(ws: Path) -> None:
+    with pytest.raises(PFError):
+        config.set_value(ws, "model.max_workflows", "3", "  ")
+
+
+def test_config_cli(pf_cli, ws: Path) -> None:  # type: ignore[no-untyped-def]
+    w = str(ws)
+    code, out, _ = pf_cli("config", "set", "model.max_workflows", "9", "--reason", "r",
+                          "--workspace", w, "--json")  # fmt: skip
+    assert code == 0 and json.loads(out)["new"] == 9
+    code, out, _ = pf_cli("config", "get", "model.max_workflows", "--workspace", w, "--json")
+    assert json.loads(out)["value"] == 9 and json.loads(out)["default"] == 25
+    code, out, _ = pf_cli("config", "list", "--workspace", w, "--json")
+    rows = {r["key"]: r for r in json.loads(out)["config"]}
+    assert rows["model.max_workflows"]["overridden"]
+    assert not rows["research.max_sources"]["overridden"]
+    code, _, _ = pf_cli("config", "set", "model.max_workflows", "9", "--workspace", w)
+    assert code == 2  # --reason is required
+    code, _, _ = pf_cli("config", "get", "nope", "--workspace", w)
+    assert code == 2
+
+
+def test_string_knob_accepts_a_json_quoted_value() -> None:
+    assert config.parse_value("auto.main_model", '"sonnet"') == "sonnet"
+    assert config.parse_value("auto.main_model", "sonnet") == "sonnet"
+    assert config.parse_value("auto.main_model", '"') == '"'

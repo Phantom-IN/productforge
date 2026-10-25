@@ -11,6 +11,36 @@ from pflib.index import WorkspaceIndex
 SOFT_CAP = 120  # beyond this, minor capabilities should become sub-features
 
 
+def headline_features(ws: Path, index: WorkspaceIndex | None = None) -> set[str]:
+    """F IDs the target markets prominently: ``Evidence`` or ``Surface`` cites a source of the
+    target (not of a competitor) whose ``Category`` is in ``scope.headline_categories``. A cited
+    claim (D) or surface (PS) counts through its own ``Evidence`` sources, one hop."""
+    index = index or WorkspaceIndex(ws)
+    wanted = {str(c).strip() for c in config.resolve("scope.headline_categories", ws)}
+    marketing = {
+        rec.id
+        for _, rec in index.records("S")
+        if rec.get("Category").strip() in wanted
+        and not rec.get("Relevant area").strip().lower().startswith("competitor:")
+    }
+    via: dict[str, set[str]] = {}
+    for prefix in ("D", "PS"):
+        for _, rec in index.records(prefix):
+            via[rec.id] = set(records.parse_refs(rec.get("Evidence")))
+    out: set[str] = set()
+    for _, f in index.records("F"):
+        if not records.is_active(f):
+            continue
+        cited = set(records.parse_refs(f.get("Evidence"))) | set(
+            records.parse_refs(f.get("Surface"))
+        )
+        direct = {r for r in cited if r in marketing}
+        hop = any(via.get(r, set()) & marketing for r in cited if r in via)
+        if direct or hop:
+            out.add(f.id)
+    return out
+
+
 def domains(ws: Path) -> list[dict[str, str]]:
     """Domains from ``## Domains`` in FEATURE_MATRIX.md: ``- <Domain>: <description>`` lines."""
     path = ws / catalog.FEATURE_MATRIX_PATH

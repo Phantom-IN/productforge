@@ -29,6 +29,10 @@ Read first, every run: your brief; `references/agent-contract.md` (the rules eve
 - Never state the target's internal technology (database, keys, framework). Identity is what users
   and public docs can see: URLs, API IDs, keys shown in the UI, documented formats.
 - Evidence cites claims (`D-`) or sources (`S-`); workflows and features are context, not evidence.
+- Claims carry a `Context` (the workflow, feature, screen or setting they are about). Declare a
+  conflict only within one `Context`, fill `Context` on every claim about a rule or behaviour you
+  write, and never fold rules from claims with different `Context` into one entity lifecycle or
+  workflow rule; model them as separate rules or entities.
 
 ## Domain pass
 
@@ -78,5 +82,6 @@ A cell no session exercised stays as it is.
 
 ## Reply
 
-Reply with only the summary block from the contract; put missing evidence under
+Reply with only the summary block from the contract, including one `READ <workspace path>: <n>`
+line per brief input; put missing evidence under
 `RESEARCH REQUESTS`.

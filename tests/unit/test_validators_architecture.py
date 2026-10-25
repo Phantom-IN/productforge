@@ -45,6 +45,7 @@ def test_not_applicable_topic_counts_as_covered(tasklet_arch: Path) -> None:
 
 def test_convention_line_addresses_a_requirement(tasklet_arch: Path) -> None:
     edit(tasklet_arch, "- Satisfies: R-011", "- Satisfies: R-009", rel=adr(tasklet_arch, 11))
+    edit(tasklet_arch, "- Satisfies: R-011", "- Satisfies: R-009", rel=adr(tasklet_arch, 13))
     assert "REQUIREMENT_UNADDRESSED" in codes(tasklet_arch)
     edit(
         tasklet_arch,
@@ -75,3 +76,72 @@ def test_enforcement_kinds() -> None:
 
 def test_before_design_nothing_is_required(tasklet_scope: Path) -> None:
     assert validators.run(tasklet_scope) == []
+
+
+# ------------------------------------------------------------------ UNDECIDED_CHOICE
+
+
+def test_undecided_phrase_in_an_adr_is_an_error(tasklet_arch: Path) -> None:
+    edit(
+        tasklet_arch,
+        "Delivery depends on a verified sending domain",
+        "the library choice is open",
+        rel=adr(tasklet_arch, 14),
+    )
+    found = [f for f in validators.run(tasklet_arch) if f.code == "UNDECIDED_CHOICE"]
+    assert len(found) == 1 and found[0].severity == "error"
+    assert "library choice" in found[0].message and "line" in found[0].message
+
+
+def test_undecided_phrases_match_whole_phrases_case_insensitively(tasklet_arch: Path) -> None:
+    edit(
+        tasklet_arch, "Fees scale with revenue", "Vendor Is Open for now", rel=adr(tasklet_arch, 13)
+    )
+    assert "UNDECIDED_CHOICE" in codes(tasklet_arch)
+    edit(tasklet_arch, "Vendor Is Open for now", "the TBDs are gone", rel=adr(tasklet_arch, 13))
+    assert "UNDECIDED_CHOICE" not in codes(tasklet_arch)
+
+
+def test_undecided_phrase_in_a_phase_file_and_html_comments(tasklet_plan: Path) -> None:
+    rel = "plans/phase-02-sign-in.md"
+    edit(
+        tasklet_plan,
+        "## Open questions / risks\n\n- None.",
+        "## Open questions / risks\n\n- The library choice is open.",
+        rel=rel,
+    )
+    found = [f for f in validators.run(tasklet_plan) if f.code == "UNDECIDED_CHOICE"]
+    assert [f.artifact for f in found] == [rel]
+    edit(tasklet_plan, "- The library choice is open.", "<!-- library choice -->\n- None.", rel=rel)
+    assert "UNDECIDED_CHOICE" not in codes(tasklet_plan)
+
+
+def test_undecided_choice_is_ignored_before_architecture_locked(tasklet_arch: Path) -> None:
+    import json
+
+    edit(
+        tasklet_arch,
+        "Delivery depends on a verified sending domain",
+        "TBD",
+        rel=adr(tasklet_arch, 14),
+    )
+    assert "UNDECIDED_CHOICE" in codes(tasklet_arch)
+    st = tasklet_arch / ".productforge/state.json"
+    data = json.loads(st.read_text())
+    data["state"] = "SCOPE_DEFINED"
+    st.write_text(json.dumps(data))
+    assert "UNDECIDED_CHOICE" not in codes(tasklet_arch)
+
+
+def test_undecided_phrases_are_configurable(tasklet_arch: Path) -> None:
+    from pflib import config
+
+    edit(
+        tasklet_arch,
+        "Delivery depends on a verified sending domain",
+        "pick one soon",
+        rel=adr(tasklet_arch, 14),
+    )
+    assert "UNDECIDED_CHOICE" not in codes(tasklet_arch)
+    config.write_config(tasklet_arch, {"quality.undecided_phrases": ["pick one soon"]})
+    assert "UNDECIDED_CHOICE" in codes(tasklet_arch)

@@ -18,7 +18,9 @@ this file is the day-to-day contract. When they disagree, the plan wins — fix 
 
 ## Stack
 
-<!-- The stack table from IMPLEMENTATION_PLAN §4, briefly. -->
+<!-- The stack table from IMPLEMENTATION_PLAN §4, briefly, then one row per external service
+     (vendor, ADR) and one per toolchain concern (choice, pinned version) from
+     spec/ARCHITECTURE.md. -->
 
 ## Layout
 

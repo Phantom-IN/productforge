@@ -379,7 +379,7 @@ def test_domain_architect_and_model_section() -> None:
 def test_systems_architect_and_integration_pass() -> None:
     agent = (AGENTS / "systems-architect.md").read_text(encoding="utf-8")
     tools = frontmatter(agent)["tools"]
-    assert "Bash" not in tools and "WebFetch" not in tools
+    assert "Bash" not in tools and "WebFetch" in tools  # WebFetch only to verify versions
     for phrase in (
         "Target implementation: UNKNOWN",
         "Never propose a technology",
@@ -498,6 +498,27 @@ def test_systems_architect_design_pass_and_architect_command() -> None:
     assert "`architect`" not in stubs(SKILL.read_text(encoding="utf-8"))
 
 
+def test_build_readiness_rules() -> None:
+    agent = " ".join((AGENTS / "systems-architect.md").read_text(encoding="utf-8").split())
+    for phrase in ("### Build readiness", "Verify each version and each container image on the day",
+                   "YYYY-MM-DD <registry or URL>", "Prefer actively published images",
+                   "`Topic: vendor`", "pricing note", "webhooks are verified", "fallback",
+                   "docs/vendors/<vendor>/", "finish on the stub until it exists",
+                   "architecture.toolchain_concerns", "`## Environments`",
+                   "`### Local services`", "UNDECIDED_CHOICE"):  # fmt: skip
+        assert phrase in agent, phrase
+    planner = " ".join((AGENTS / "phase-planner.md").read_text(encoding="utf-8").split())
+    for phrase in ("## Concrete names", "the library with its pinned version",
+                   "container image with its tag and port", "env var names",
+                   "never asks anyone to choose or decide", "## Chosen libraries and tools",
+                   "## Accounts and keys"):  # fmt: skip
+        assert phrase in planner, phrase
+    playbook = (REFERENCES / "architecture-playbook.md").read_text(encoding="utf-8")
+    for phrase in ("## Build readiness", "G-AR-TOOLCHAIN", "G-AR-EXTERNAL-SERVICES",
+                   "G-AR-ENV-CONTRACT", "DEFAULT_RULE_UNSOURCED"):  # fmt: skip
+        assert phrase in playbook, phrase
+
+
 def test_phase_planner_and_finalize_command() -> None:
     agent = " ".join((AGENTS / "phase-planner.md").read_text(encoding="utf-8").split())
     assert (
@@ -586,3 +607,90 @@ def test_scope_always_asks_the_user_while_the_stage_is_open() -> None:
     text = (REPO / "skills/productforge/references/commands-scope.md").read_text(encoding="utf-8")
     resume = text.split("Re-running the command resumes", 1)[1].split("\n\n", 1)[0]
     assert "run **every time**" in resume and "Accept/Adjust" in resume
+
+
+@pytest.mark.parametrize("agent", ["research-agent", "product-analyst", "domain-architect"])
+def test_agents_carry_the_claim_context_rule(agent: str) -> None:
+    text = " ".join((AGENTS / f"{agent}.md").read_text(encoding="utf-8").split())
+    assert "Context" in text
+    assert "only within one" in text or "only between claims of one" in text
+    assert "different `Context`" in text
+    if agent != "research-agent":
+        assert "never fold rules" in text
+
+
+def test_input_receipts_are_in_every_prompt() -> None:
+    contract = (SKILL_DIR / "references" / "agent-contract.md").read_text(encoding="utf-8")
+    assert "READ <workspace path>: <n>" in contract and "INPUT_RECEIPT_SHORT" in contract
+    template = (SKILL_DIR / "templates" / "agent-brief.md").read_text(encoding="utf-8")
+    assert "{{read_lines}}" in template and "READ <path>: 0 (why)" in template
+    for path in sorted((SKILL_DIR.parents[1] / "agents").glob("*.md")):
+        text = path.read_text(encoding="utf-8")
+        assert "READ <workspace path>: <n>" in section(text, "Reply"), path.name
+    skill = SKILL.read_text(encoding="utf-8")
+    assert "SUMMARY.md" in skill and "--summary-file" in skill and "INPUT_RECEIPT_MISSING" in skill
+
+
+def test_plan_review_and_orchestrator_are_wired() -> None:
+    review = (REFERENCES / "plan-review.md").read_text(encoding="utf-8")
+    assert len(review.splitlines()) < 150
+    for phrase in ("### REVISE", "Registries defined before use", "Migrations", "Leftovers"):
+        assert phrase in review, phrase
+    section = " ".join(commands_text().split("### `/productforge finalize`", 1)[1].split())
+    for phrase in ("Consistency review", "references/plan-review.md", "finalize.review_rounds",
+                   "--template project/ORCHESTRATOR_PROMPT.md"):  # fmt: skip
+        assert phrase in section, phrase
+    agent = (AGENTS / "phase-planner.md").read_text(encoding="utf-8")
+    assert "ORCHESTRATOR_PROMPT.md" in agent
+    assert "ORCHESTRATOR_PROMPT.md" in (REFERENCES / "phase-plan-method.md").read_text(
+        encoding="utf-8"
+    )
+    startup = (REFERENCES.parent / "templates/project/STARTUP_PROMPT.md").read_text(
+        encoding="utf-8"
+    )
+    assert "ORCHESTRATOR_PROMPT.md" in startup
+
+
+def test_v3_procedures() -> None:
+    refs = Path(__file__).resolve().parents[2] / "skills" / "productforge" / "references"
+    skill = " ".join(SKILL.read_text(encoding="utf-8").split())
+    for phrase in (
+        "Depth pass",
+        "depth_needed",
+        "nav_unread",
+        "Unknown audit pass",
+        "budget_needed",
+    ):
+        assert phrase in skill, phrase
+    scope = " ".join((refs / "commands-scope.md").read_text(encoding="utf-8").split())
+    for phrase in ("G-SC-COMPETITOR-SIGNAL", "waive competitors", "Headline cuts"):
+        assert phrase in scope, phrase
+    arch = " ".join((refs / "commands-architecture.md").read_text(encoding="utf-8").split())
+    for phrase in ("External services", "Toolchain", "Environments", "Vendor ADR pass"):
+        assert phrase in arch, phrase
+    fin = " ".join((refs / "commands-finalize.md").read_text(encoding="utf-8").split())
+    for phrase in ("Consistency review", "ORCHESTRATOR_PROMPT.md"):
+        assert phrase in fin, phrase
+    ev = Path(__file__).resolve().parents[2] / "evals" / "gate-blocks-thin-discovery"
+    assert (ev / "prompt.md").is_file() and len(list((ev / "graders").glob("*.md"))) >= 3
+
+
+def test_autonomous_mode_never_stops_to_ask() -> None:
+    skill = SKILL.read_text(encoding="utf-8")
+    auto_ref = (SKILL_DIR / "references" / "commands-auto.md").read_text(encoding="utf-8")
+    section = skill.split("## Autonomous mode", 1)[1].split("\n## ", 1)[0]
+    for text in (section, auto_ref):
+        assert "Never end an autonomous session with a question" in text
+    for phrase in ("raising a cap", "dedupe pass", "targeted research pass",
+                   "keeps the most scope and evidence", "config set"):  # fmt: skip
+        assert phrase in section, phrase
+    for phrase in ("most scope", "most evidence", "config set model.max_workflows",
+                   "is decided by the rule above"):  # fmt: skip
+        assert phrase in auto_ref, phrase
+    assert "stop and report it" not in auto_ref
+
+
+def test_skill_documents_config_set_and_merge_discipline() -> None:
+    skill = SKILL.read_text(encoding="utf-8")
+    assert '"$PF" config set research.max_sources' in skill and "--reason" in skill
+    assert "MERGE_BEFORE_REPAIR" in skill and "--accept-findings" in skill

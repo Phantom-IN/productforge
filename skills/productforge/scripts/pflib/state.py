@@ -25,6 +25,7 @@ from pflib.io import atomic_write_text
 SCHEMA_VERSION = 1
 STATE_FILE = "state.json"
 SCOPE_SOURCES = ("user", "recommended")
+AUTONOMY_KEYS = ("granted_at", "text_sha256")
 
 
 class State(StrEnum):
@@ -73,6 +74,10 @@ class WorkspaceState:
     capabilities: dict[str, Any] = field(default_factory=dict)
     # {"at": ISO time, "text_sha256": hash of the consent text the user agreed to} (observe mode)
     observe_consent: dict[str, Any] = field(default_factory=dict)
+    # {"granted_at": ISO time, "text_sha256": hash of the autonomy consent text} (autonomous mode)
+    autonomy: dict[str, Any] = field(default_factory=dict)
+    # {waiver name: {"reason": text, "at": ISO time}} — e.g. {"competitors": {...}}
+    waivers: dict[str, dict[str, str]] = field(default_factory=dict)
     schema_version: int = SCHEMA_VERSION
 
     def to_dict(self) -> dict[str, Any]:
@@ -86,6 +91,8 @@ class WorkspaceState:
             "locks": self.locks,
             "capabilities": self.capabilities,
             **({"observe_consent": self.observe_consent} if self.observe_consent else {}),
+            **({"autonomy": self.autonomy} if self.autonomy else {}),
+            **({"waivers": self.waivers} if self.waivers else {}),
         }
 
     @classmethod
@@ -106,6 +113,8 @@ class WorkspaceState:
             locks=data["locks"],
             capabilities=data.get("capabilities", {}),
             observe_consent=data.get("observe_consent", {}),
+            autonomy=data.get("autonomy", {}),
+            waivers=data.get("waivers", {}),
             schema_version=data["schema_version"],
         )
 
@@ -130,6 +139,20 @@ def validate_dict(data: Any) -> list[str]:
             problems.append(f"{key} must be a {typ.__name__}")
     if not isinstance(data.get("capabilities", {}), dict):
         problems.append("capabilities must be an object")
+    autonomy = data.get("autonomy", {})
+    if not isinstance(autonomy, dict):
+        problems.append("autonomy must be an object")
+    elif autonomy and not all(isinstance(autonomy.get(k), str) for k in AUTONOMY_KEYS):
+        problems.append("autonomy needs string granted_at and text_sha256")
+    waivers = data.get("waivers", {})
+    if not isinstance(waivers, dict):
+        problems.append("waivers must be an object")
+    else:
+        for key, w in waivers.items():
+            if not isinstance(w, dict) or not isinstance(w.get("reason"), str) or not w["reason"]:
+                problems.append(f"waivers.{key} must be an object with a non-empty reason")
+            elif not isinstance(w.get("at"), str):
+                problems.append(f"waivers.{key}.at must be a string")
     if problems:
         return problems
     names = {s.value for s in State}

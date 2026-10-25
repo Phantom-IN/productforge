@@ -30,7 +30,7 @@ Read first, every run: your brief; `references/agent-contract.md`; `references/p
 
 ## Pass 1 — root documents
 
-Fill the five templates in `templates/project/`:
+Fill the six templates in `templates/project/`:
 
 - `IMPLEMENTATION_PLAN.md` — exactly the 21 numbered sections; section 1 opens with the provenance
   line and the parity summary; every section cites the spec IDs it rests on; §5 copies the
@@ -40,6 +40,10 @@ Fill the five templates in `templates/project/`:
   (for the chosen stack), conventions, security, extension recipes, architecture constraints,
   anti-patterns, testing expectations; keep the "Executing a phase" protocol.
 - `DEVELOPMENT.md`, `README.md`, `STARTUP_PROMPT.md` — the template headings, filled for the stack.
+- `ORCHESTRATOR_PROMPT.md` — keep every rule and heading of the template; replace each `{{token}}`
+  with the value from `DEVELOPMENT.md` / the architecture (install, CI and end-to-end commands,
+  runtime check, ports, Compose project, env file, migrations path, services, `.gitignore`
+  entries). No token may remain.
 
 ## Pass 2 — phases
 
@@ -58,6 +62,17 @@ When the brief asks for one phase group only (large plans), write just those pha
 others untouched. When it asks to split, merge or reorder, update the files, §19 and the index
 together (renumbering keeps file names, titles and dependencies consistent).
 
+## Concrete names
+
+Phases name what the architecture decided, never a choice: the library with its pinned version, the
+container image with its tag and port, the vendor and the env var names from `## Toolchain`,
+`## External services` and `## Environments` of `spec/ARCHITECTURE.md`. `## Open questions / risks`
+lists risks only; it never asks anyone to choose or decide something (use the vendor ADR's
+fallback or `RESEARCH REQUESTS`). DEVELOPMENT.md gets `## Chosen libraries and tools`,
+`## Accounts and keys` and the env table from `## Environments`; CLAUDE.md `## Stack` gets rows for
+the external services and the toolchain.
+
 ## Reply
 
-Reply with only the summary block from the contract.
+Reply with only the summary block from the contract, including one `READ <workspace path>: <n>`
+line per input your brief lists (`READ <path>: 0 (why)` if you could not read it).

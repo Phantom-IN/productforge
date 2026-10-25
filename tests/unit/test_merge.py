@@ -344,3 +344,82 @@ def test_allocate_next_reserves_ids(ws: Path) -> None:
         ws, stage(ws, {"research/DISCOVERY_LEDGER.md": claim("D-?1", "X", "S-001")})
     )
     assert report.id_map == {"D-?1": "D-003"}
+
+
+# ---- input receipts (v3 phase 06) --------------------------------------------------------
+
+
+def _receipt_run(ws: Path, inputs: list[str]) -> str:
+    from pflib import receipts
+
+    run_id, run_dir = workspace.create_staging_run(ws, "systems-architect")
+    receipts.save_inputs(run_dir, inputs)
+    return run_id
+
+
+def _codes(result: dict) -> list[tuple[str, str]]:
+    return [
+        (f["code"], f["artifact"]) for f in result["findings"] if f["code"].startswith("INPUT_")
+    ]
+
+
+def test_short_receipt_reports_both_numbers(tasklet_scope: Path) -> None:
+    run_id = _receipt_run(tasklet_scope, ["spec/PRODUCT_SPEC.md"])
+    summary = tasklet_scope / "reply.txt"
+    summary.write_text("RUN x · ROLE y\nREAD spec/PRODUCT_SPEC.md: 1\n", encoding="utf-8")
+    result = merge.preflight(tasklet_scope, run_id, summary)
+    (f,) = [f for f in result["findings"] if f["code"] == "INPUT_RECEIPT_SHORT"]
+    real = (tasklet_scope / "spec/PRODUCT_SPEC.md").read_text(encoding="utf-8").count("\n### R-")
+    assert f["severity"] == "warn" and f["artifact"] == "spec/PRODUCT_SPEC.md"
+    assert "READ spec/PRODUCT_SPEC.md: 1" in f["message"] and f"holds {real}" in f["message"]
+    assert result["ok"] is True and result["warnings"] >= 1
+
+
+def test_missing_receipt_and_no_summary_at_all(tasklet_scope: Path) -> None:
+    run_id = _receipt_run(tasklet_scope, ["spec/PRODUCT_SPEC.md", "spec/DOMAIN_MODEL.md"])
+    summary = tasklet_scope / "reply.txt"
+    full = (tasklet_scope / "spec/PRODUCT_SPEC.md").read_text(encoding="utf-8").count("\n### R-")
+    summary.write_text(f"READ spec/PRODUCT_SPEC.md: {full}\n", encoding="utf-8")
+    result = merge.preflight(tasklet_scope, run_id, summary)
+    assert _codes(result) == [("INPUT_RECEIPT_MISSING", "spec/DOMAIN_MODEL.md")]
+    none = merge.preflight(tasklet_scope, run_id)  # no SUMMARY.md saved
+    assert [c for c, _ in _codes(none)] == ["INPUT_RECEIPT_MISSING"] * 2
+
+
+def test_full_receipts_give_no_warning_and_staging_summary_is_read(tasklet_scope: Path) -> None:
+    run_id = _receipt_run(tasklet_scope, ["spec/PRODUCT_SPEC.md"])
+    full = (tasklet_scope / "spec/PRODUCT_SPEC.md").read_text(encoding="utf-8").count("\n### R-")
+    run_dir = workspace.staging_dir(tasklet_scope, run_id)
+    # absolute paths and 90 % of the count are accepted; SUMMARY.md is never merged
+    n = -(-full * 9 // 10)  # ceil(0.9 * full)
+    (run_dir / "SUMMARY.md").write_text(
+        f"READ {tasklet_scope}/spec/PRODUCT_SPEC.md: {n}\n", encoding="utf-8"
+    )
+    result = merge.preflight(tasklet_scope, run_id)
+    assert _codes(result) == [] and result["merge_error"] is None
+    assert workspace.pending_runs(tasklet_scope)[0]["files"] == 0
+
+
+def test_runs_without_recorded_inputs_have_no_receipt_findings(tasklet_discovery: Path) -> None:
+    run_id, _ = workspace.create_staging_run(tasklet_discovery, "research-agent")
+    assert _codes(merge.preflight(tasklet_discovery, run_id)) == []
+
+
+def test_new_competitors_merge_after_product_model_closed(tasklet_scope: Path) -> None:
+    ws = tasklet_scope
+    comp = (
+        "### C-?1 — Zipboard\n- Name: Zipboard\n- URL: https://zipboard.example/\n"
+        "- Positioning: Boards\n- Target users: Teams\n- Pricing model: Free\n"
+        "- Table-stakes features: F-001\n- Differentiators: None\n- Common complaints: None\n"
+        "- Evidence: S-023\n- Confidence: CONFIRMED\n"
+    )
+    run = stage(ws, {"research/COMPETITORS.md": "## Records\n\n" + comp
+                     + "\n## Feature signals\n\n"
+                     "### FS-?1 — Tasks is rare\n- Feature: F-002\n- Signal: rare\n"
+                     "- Competitors: C-?1\n- Evidence: S-023\n- Notes:\n"})  # fmt: skip
+    report = merge.merge(ws, run)
+    assert any(i.startswith("C-") for i in report.new_ids)
+    assert any(i.startswith("FS-") for i in report.new_ids)
+    from pflib import validators
+
+    assert not [f for f in validators.run(ws) if f.code.startswith("LOCK_")]

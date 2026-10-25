@@ -4,6 +4,10 @@
 systems-architect; this module reads the structured parts:
 
 - ``## Stack`` — a table ``| Concern | Choice | ADR |`` with no TBD/unknown choices
+- ``## External services`` — ``| Capability | Vendor | ADR | Test stand-in |`` (each vendor has a
+  ``Topic: vendor`` ADR), ``## Toolchain`` — ``| Concern | Choice | Version | Verified |`` and
+  ``## Environments`` — ``| Name | Secret | Used by | Development value |`` plus
+  ``### Local services``
 - ``## Components`` — ``- <name>: <role> (R-/A-/ADR- IDs)`` lines, each justified by an ID
 - ``## Repository structure`` — a fenced tree (``pflib/repotree.py``)
 - ``## Not applicable topics`` — ``- <topic>: <reason>`` for mandatory topics without an ADR
@@ -19,9 +23,12 @@ from pathlib import Path
 from pflib import catalog, records, repotree
 from pflib.index import WorkspaceIndex
 
+VERIFIED_RE = re.compile(r"^\d{4}-\d{2}-\d{2}\s+\S.*$")
+UNPINNED_RE = re.compile(r"^\s*(latest|\*|x|n/?a)\s*$", re.I)
+PORT_RE = re.compile(r"[,\s]\s*(?:port\s+)?\d{2,5}\s*$", re.I)
 MANDATORY_TOPICS = ("identity", "tenancy", "authn", "authz", "storage", "realtime", "async",
                     "search", "files", "deployment")  # fmt: skip
-TOPICS = (*MANDATORY_TOPICS, "other")
+TOPICS = (*MANDATORY_TOPICS, "vendor", "other")
 ENFORCEMENT = ("test", "middleware", "db-constraint", "lint", "review")
 DISCLAIMER = "This is our architecture, not a claim about"
 INCOMPLETE_RE = re.compile(r"^\s*(|tbd|\?|unknown|todo|—|-)\s*$", re.I)
@@ -47,13 +54,36 @@ def bullets(body: str) -> dict[str, str]:
     return out
 
 
-def stack_rows(text: str) -> list[list[str]]:
+def table_rows(body: str) -> list[list[str]]:
+    """Data rows (header and separator dropped) of the first pipe table in ``body``."""
     rows = []
-    for line in section(text, "Stack").splitlines():
+    for line in body.splitlines():
         if line.startswith("|") and not re.match(r"^\|\s*:?-{3}", line):
             cells = [c.strip() for c in line.strip().strip("|").split("|")]
             rows.append(cells)
     return rows[1:] if rows else []  # drop the header row
+
+
+def stack_rows(text: str) -> list[list[str]]:
+    return table_rows(section(text, "Stack"))
+
+
+def external_service_rows(text: str) -> list[list[str]]:
+    return table_rows(section(text, "External services"))
+
+
+def toolchain_rows(text: str) -> list[list[str]]:
+    return table_rows(section(text, "Toolchain"))
+
+
+def environment_rows(text: str) -> list[list[str]]:
+    return table_rows(section(text, "Environments").split("### Local services", 1)[0])
+
+
+def local_services(text: str) -> list[str]:
+    """``- <service>: <image>, <port>`` lines under ``### Local services``."""
+    body = section(text, "Environments").partition("### Local services")[2]
+    return [ln[2:].strip() for ln in body.splitlines() if ln.startswith("- ") and ln[2:].strip()]
 
 
 def enforcement_kind(value: str) -> str | None:

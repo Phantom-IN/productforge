@@ -29,6 +29,9 @@ def test_brief_and_merge_check_cli(pf_cli: Cli, tasklet_discovery: Path) -> None
         "repair",
         "findings",
         "max_repair_loops",
+        "inputs",
+        "input_kb",
+        "warnings",
         "brief",
     }
     code, out, _ = pf_cli("brief", "--role", "research-agent", "--task", "x", "--workspace", ws)
